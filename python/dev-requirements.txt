@@ -1,0 +1,26 @@
+# Copyright 2022 The Feathub Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+setuptools>=18.0
+wheel
+sklearn
+ply>=3.11
+pandas>=1.1.5
+black>=22.3.0
+autopep8>=1.6.0
+pandas>=1.0,<1.2.0
+pytest==4.4.1
+flake8==4.0.1
+mypy==0.910
+numpy>=1.14.3,<1.20
