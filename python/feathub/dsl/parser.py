@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import logging
+from typing import Dict, Any
+
 import ply.lex as lex
 import ply.yacc as yacc
 from ply.lex import TOKEN
@@ -27,11 +29,12 @@ from feathub.dsl.ast import VariableNode
 from feathub.dsl.ast import ExprAST
 
 
+# TODO: Support parsing Flink sql expression. i.e., CAST(x AS type), x IS NULL,
+#  string1 LIKE string2, etc.
 class ExprParser:
-
     literals = ["+", "-", "*", "/"]
 
-    reserved = {
+    reserved: Dict[str, str] = {
         # 'if': 'IF',
         # 'then': 'THEN',
         # 'else': 'ELSE',
@@ -77,7 +80,7 @@ class ExprParser:
         ("right", "UMINUS"),
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         logging.basicConfig(
             level=logging.DEBUG,
             filename=".parser.out",
@@ -89,31 +92,31 @@ class ExprParser:
         self.yacc = yacc.yacc(module=self, write_tables=False, debuglog=log)
 
     @TOKEN(r"((\d*\.\d+)(E[\+-]?\d+)?|([1-9]\d*E[\+-]?\d+))")
-    def t_FLOAT(self, t):
+    def t_FLOAT(self, t: lex.LexToken) -> lex.LexToken:
         t.value = float(t.value)
         return t
 
     @TOKEN(r"\d+")
-    def t_INTEGER(self, t):
+    def t_INTEGER(self, t: lex.LexToken) -> lex.LexToken:
         t.value = int(t.value)
         return t
 
     @TOKEN(r"[a-zA-Z_][a-zA-Z0-9_]*")
-    def t_ID(self, t):
+    def t_ID(self, t: lex.LexToken) -> lex.LexToken:
         t.type = ExprParser.reserved.get(t.value, "ID")  # Check for reserved words
         return t
 
     # Define a rule so we can track line numbers
     @TOKEN(r"\n+")
-    def t_newline(self, t):
+    def t_newline(self, t: lex.LexToken) -> None:
         t.lexer.lineno += len(t.value)
 
     # Error handling rule
-    def t_error(self, t):
+    def t_error(self, t: lex.LexToken) -> None:
         print(f"Illegal character '{t.value[0]}'")
         t.lexer.skip(1)
 
-    def p_expression_binop(self, p):
+    def p_expression_binop(self, p: yacc.YaccProduction) -> None:
         """
         expression : expression '+' expression
                    | expression '-' expression
@@ -122,11 +125,11 @@ class ExprParser:
         """
         p[0] = BinaryOp(op_type=p[2], left_child=p[1], right_child=p[3])
 
-    def p_expression_uminus(self, p):
+    def p_expression_uminus(self, p: yacc.YaccProduction) -> None:
         "expression : '-' expression %prec UMINUS"
         p[0] = UminusOp(p[2])
 
-    def p_expression_compare(self, p):
+    def p_expression_compare(self, p: yacc.YaccProduction) -> None:
         """
         expression : expression LT expression
                    | expression LE expression
@@ -137,28 +140,28 @@ class ExprParser:
         """
         p[0] = CompareOp(op_type=p[2], left_child=p[1], right_child=p[3])
 
-    def p_expression_group(self, p):
+    def p_expression_group(self, p: yacc.YaccProduction) -> None:
         "expression : LPAREN expression RPAREN"
         p[0] = p[2]
 
-    def p_expression_number(self, p):
+    def p_expression_number(self, p: yacc.YaccProduction) -> None:
         """
         expression : FLOAT
                    | INTEGER
         """
         p[0] = ValueNode(p[1])
 
-    def p_expression_string(self, p):
+    def p_expression_string(self, p: yacc.YaccProduction) -> None:
         """
         expression : STRING
         """
         p[0] = ValueNode(p[1][1:-1])
 
-    def p_expression_function_call(self, p):
+    def p_expression_function_call(self, p: yacc.YaccProduction) -> None:
         "expression : ID LPAREN arglist RPAREN"
         p[0] = FuncCallOp(p[1], p[3])
 
-    def p_expression_arglist(self, p):
+    def p_expression_arglist(self, p: yacc.YaccProduction) -> None:
         """
         arglist : arglist COMMA expression
                 | expression
@@ -169,21 +172,21 @@ class ExprParser:
         else:
             p[0] = ArgListNode([p[1]])
 
-    def p_expression_variable(self, p):
+    def p_expression_variable(self, p: yacc.YaccProduction) -> None:
         "expression : ID"
         try:
             p[0] = VariableNode(p[1])
         except LookupError:
             raise RuntimeError(f"Undefined variable name '{p[1]}'.")
 
-    def p_error(self, p):
+    def p_error(self, p: yacc.YaccProduction) -> None:
         if p:
             print(f"Syntax error at '{p.value}'")
         else:
             print("Syntax error at EOF")
 
     # Analyze the given data
-    def tokenize(self, data):
+    def tokenize(self, data: str) -> None:
         self.lexer.input(data)
         while True:
             tok = self.lexer.token()
@@ -191,5 +194,5 @@ class ExprParser:
                 break
             print(tok)
 
-    def parse(self, expr) -> ExprAST:
+    def parse(self, expr: str) -> ExprAST:
         return self.yacc.parse(expr)

@@ -18,11 +18,13 @@ import shutil
 import pandas as pd
 
 from feathub.common import types
+from feathub.common.types import from_numpy_dtype
 from feathub.processors.local.local_processor import LocalProcessor
 from feathub.registries.local_registry import LocalRegistry
 from feathub.sources.file_source import FileSource
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
+from feathub.table.schema import Schema
 
 
 class LocalRegistryTest(unittest.TestCase):
@@ -47,12 +49,17 @@ class LocalRegistryTest(unittest.TestCase):
 
     def _create_file_source(self, df: pd.DataFrame) -> FileSource:
         path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
-        df.to_csv(path, index=False)
+        schema = Schema(
+            field_names=df.keys().tolist(),
+            field_types=[from_numpy_dtype(dtype) for dtype in df.dtypes],
+        )
+        df.to_csv(path, index=False, header=False)
 
         return FileSource(
             name="source",
             path=path,
             file_format="csv",
+            schema=schema,
             timestamp_field="time",
             timestamp_format="%Y-%m-%d %H:%M:%S",
         )

@@ -18,7 +18,7 @@ from feathub.dsl.parser import ExprParser
 
 
 class ExprParserTest(unittest.TestCase):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.parser = ExprParser()
 
@@ -37,6 +37,8 @@ class ExprParserTest(unittest.TestCase):
     def test_uminus(self):
         expr = "-6 + 9"
         self.assertEqual(3, self._eval(expr))
+        expr = "-a + 9"
+        self.assertEqual(3, self._eval(expr, {"a": 6}))
 
     def test_compare_oop(self):
         expr = "(1 + 2) > 3"
@@ -51,6 +53,8 @@ class ExprParserTest(unittest.TestCase):
         self.assertEqual(True, self._eval(expr))
         expr = "(1 + 2) <> 3"
         self.assertEqual(False, self._eval(expr))
+        expr = "(a + b) <> 3"
+        self.assertEqual(False, self._eval(expr, {"a": 1, "b": 2}))
 
     def test_variable(self):
         expr = "1 + 2 * x"
@@ -67,3 +71,8 @@ class ExprParserTest(unittest.TestCase):
         self.assertEqual(12.3, self._eval(expr))
         expr = "cast_int('12')"
         self.assertEqual(12, self._eval(expr))
+
+        expr = """
+        unix_timestamp("2020-01-01 00:24:39") - unix_timestamp(ts)
+        """
+        self.assertEqual(59, self._eval(expr, {"ts": "2020-01-01 00:23:40"}))

@@ -14,8 +14,12 @@
 
 from enum import Enum
 from abc import ABC, abstractmethod
+from typing import Type, Dict
+
 import numpy as np
 import json
+
+from feathub.common.exceptions import FeathubTypeException
 
 
 class BasicDType(Enum):
@@ -29,47 +33,55 @@ class BasicDType(Enum):
     FLOAT64 = 5
     FLOAT32 = 6
     BOOL = 7
-    UNIX_TIMESTAMP = 8
+    TIMESTAMP = 8
 
 
 class DType(ABC):
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @abstractmethod
-    def to_json(self):
+    def to_json(self) -> Dict:
         pass
 
-    def __str__(self):
+    def __str__(self) -> str:
         return json.dumps(self.to_json(), indent=2, sort_keys=True)
 
 
 class PrimitiveType(DType):
-    def __init__(self, basic_dtype: BasicDType):
+    def __init__(self, basic_dtype: BasicDType) -> None:
         super().__init__()
         self.basic_dtype = basic_dtype
 
-    def to_json(self):
-        return f"{self.basic_dtype.name}"
+    def to_json(self) -> Dict:
+        return {"type": "PrimitiveType", "basic_dtype": f"{self.basic_dtype.name}"}
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, PrimitiveType) and self.basic_dtype == other.basic_dtype
+        )
 
 
 class VectorType(DType):
-    def __init__(self, basic_dtype: BasicDType):
+    def __init__(self, basic_dtype: BasicDType) -> None:
         super().__init__()
         self.basic_dtype = basic_dtype
 
-    def to_json(self):
-        return f"VectorType({self.basic_dtype.name})"
+    def to_json(self) -> Dict:
+        return {"type": "VectorType", "basic_dtype": f"{self.basic_dtype.name}"}
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, VectorType) and self.basic_dtype == other.basic_dtype
 
 
-def from_numpy_dtype(dtype: np.dtype) -> DType:
+def from_numpy_dtype(dtype: Type) -> DType:
     if dtype == np.str:
         return String
     elif dtype == np.bool:
         return Bool
     elif dtype == np.int:
         return Int32
-    elif dtype == np.long:
+    elif dtype == np.int64:
         return Int64
     elif dtype == np.float:
         return Float32
@@ -78,7 +90,26 @@ def from_numpy_dtype(dtype: np.dtype) -> DType:
     elif dtype == np.object:
         return Unknown
 
-    raise RuntimeError(f"Unsupported numpy type {dtype}.")
+    raise FeathubTypeException(f"Unsupported numpy type {dtype}.")
+
+
+def to_numpy_dtype(dtype: DType) -> Type:
+    if dtype == String:
+        return np.str
+    elif dtype == Bool:
+        return np.bool
+    elif dtype == Int32:
+        return np.int
+    elif dtype == Int64:
+        return np.int64
+    elif dtype == Float32:
+        return np.float
+    elif dtype == Float64:
+        return np.double
+    elif dtype == Unknown:
+        return np.object
+
+    raise FeathubTypeException(f"Converting {dtype} to numpy type is not supported.")
 
 
 Unknown = PrimitiveType(BasicDType.UNKNOWN)
@@ -89,7 +120,7 @@ Int32 = PrimitiveType(BasicDType.INT32)
 Int64 = PrimitiveType(BasicDType.INT64)
 Float32 = PrimitiveType(BasicDType.FLOAT32)
 Float64 = PrimitiveType(BasicDType.FLOAT64)
-UnixTimestamp = PrimitiveType(BasicDType.UNIX_TIMESTAMP)
+Timestamp = PrimitiveType(BasicDType.TIMESTAMP)
 
 Int32Vector = VectorType(BasicDType.INT32)
 Int64Vector = VectorType(BasicDType.INT64)

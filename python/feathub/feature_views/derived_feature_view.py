@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import List, Union
+from typing import Union, Dict, Sequence
 
 from feathub.table.table_descriptor import TableDescriptor
 from feathub.feature_views.feature import Feature
@@ -33,7 +33,7 @@ class DerivedFeatureView(FeatureView):
         self,
         name: str,
         source: Union[str, TableDescriptor],
-        features: List[Union[str, Feature]],
+        features: Sequence[Union[str, Feature]],
         keep_source_fields: bool = False,
     ):
         """
@@ -82,7 +82,7 @@ class DerivedFeatureView(FeatureView):
             keep_source_fields=self.keep_source_fields,
         )
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return {
             "type": "DerivedFeatureView",
             "name": self.name,

@@ -20,8 +20,8 @@ class LocalJob(ProcessorJob):
     A job instantiated by a LocalProcessor.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def wait(self, timeout_ms: int = None):
+    def wait(self, timeout_ms: int = None) -> None:
         pass

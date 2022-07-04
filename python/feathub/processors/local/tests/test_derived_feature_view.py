@@ -146,3 +146,42 @@ class DerivedFeatureViewTest(LocalProcessorTestCase):
         self.assertIsNone(source.keys)
         self.assertListEqual(["name"], features.keys)
         self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_window_agg_transform_with_millisecond_window_size(self):
+        df = pd.DataFrame(
+            [
+                ["Alex", 100, 100, "2022-01-01 08:00:00.001"],
+                ["Emma", 400, 250, "2022-01-01 08:00:00.002"],
+                ["Alex", 300, 200, "2022-01-01 08:00:00.003"],
+                ["Emma", 200, 250, "2022-01-01 08:00:00.004"],
+                ["Jack", 500, 500, "2022-01-01 08:00:00.005"],
+                ["Alex", 600, 800, "2022-01-01 08:00:00.006"],
+            ],
+            columns=["name", "cost", "distance", "time"],
+        )
+
+        source = self._create_file_source(df, timestamp_format="%Y-%m-%d %H:%M:%S.%f")
+
+        features = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                Feature(
+                    name="cost_sum",
+                    dtype=types.Int64,
+                    transform=WindowAggTransform(
+                        expr="cost",
+                        agg_func="SUM",
+                        group_by_keys=["name"],
+                        window_size=timedelta(milliseconds=3),
+                    ),
+                ),
+            ],
+        )
+
+        expected_result_df = df
+        expected_result_df["cost_sum"] = pd.Series([100, 400, 400, 600, 500, 900])
+        expected_result_df.drop(["cost", "distance"], axis=1, inplace=True)
+
+        result_df = self.processor.get_table(features=features).to_pandas()
+        self.assertTrue(expected_result_df.equals(result_df))

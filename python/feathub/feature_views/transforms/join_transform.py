@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Dict
 
 from feathub.feature_views.transforms.transformation import Transformation
 
@@ -33,7 +34,7 @@ class JoinTransform(Transformation):
         self.table_name = table_name
         self.feature_name = feature_name
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return {
             "type": "JoinTransform",
             "table_name": self.table_name,

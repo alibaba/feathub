@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Union
+from typing import Union, Dict, Sequence
 
 from feathub.common import types
 from feathub.feature_views.transforms.join_transform import JoinTransform
@@ -38,7 +38,7 @@ class OnDemandFeatureView(FeatureView):
     """
 
     class _OnlineRequestSource(Source):
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__(
                 name="_ONLINE_REQUEST",
                 keys=None,
@@ -46,7 +46,7 @@ class OnDemandFeatureView(FeatureView):
                 timestamp_format="epoch",
             )
 
-        def to_json(self):
+        def to_json(self) -> Dict:
             return {"type": "_OnlineRequestSource"}
 
     _ONLINE_REQUEST_SOURCE = _OnlineRequestSource()
@@ -54,7 +54,7 @@ class OnDemandFeatureView(FeatureView):
     def __init__(
         self,
         name: str,
-        features: List[Union[str, Feature]],
+        features: Sequence[Union[str, Feature]],
         keep_source_fields: bool = False,
     ):
         """
@@ -86,7 +86,7 @@ class OnDemandFeatureView(FeatureView):
             ):
                 raise RuntimeError(
                     f"Feature '{feature.name}' uses unsupported transform type "
-                    f"'{type(feature.transform)}'"
+                    f"'{type(feature.transform)}'."
                 )
 
     # TODO: cache the feature view itself in the registry. Same for other views.
@@ -107,7 +107,7 @@ class OnDemandFeatureView(FeatureView):
                 table_desc = registry.get_features(name=join_table_name)
 
                 if not isinstance(table_desc, OnlineStoreSource):
-                    raise RuntimeError(f"Unsupported {table_desc.to_json()}")
+                    raise RuntimeError(f"Unsupported {table_desc.to_json()}.")
 
                 # TODO: consider specifying dtype.
                 feature = Feature(
@@ -128,7 +128,7 @@ class OnDemandFeatureView(FeatureView):
     def is_unresolved(self) -> bool:
         return any(isinstance(f, str) for f in self.features)
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return {
             "type": "OnDemandFeatureView",
             "name": self.name,

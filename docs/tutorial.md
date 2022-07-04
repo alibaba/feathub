@@ -136,7 +136,7 @@ job = client.materialize_features(
     features=selected_features,
     sink=sink,
     start_datetime=datetime(2020, 1, 1),
-    end_datatime=datetime(2020, 5, 20),
+    end_datetime=datetime(2020, 5, 20),
     allow_overwrite=True,
 )
 job.wait(timeout_ms=10000)

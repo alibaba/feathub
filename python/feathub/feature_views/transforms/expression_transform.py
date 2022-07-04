@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Dict
 
 from feathub.feature_views.transforms.transformation import Transformation
 
@@ -21,12 +22,12 @@ class ExpressionTransform(Transformation):
     at a time. Feathub expression is a declarative lanaguage with built-in functions.
     """
 
-    def __init__(self, expr: str):
+    def __init__(self, expr: str) -> None:
         """
         :param expr: A Feathub expression composed of UDF and feature names.
         """
         super().__init__()
         self.expr = expr
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return {"type": "ExpressionTransform", "expr": self.expr}

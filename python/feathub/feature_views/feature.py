@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import List, Union, Optional
+from typing import Union, Optional, Dict, Sequence
 import json
 
 from feathub.common.types import DType
@@ -33,9 +33,9 @@ class Feature:
         self,
         name: str,
         dtype: DType,
-        transform: Union[str, Transformation] = None,
-        keys: Optional[List[str]] = None,
-        input_features: List[Feature] = (),
+        transform: Union[str, Transformation],
+        keys: Optional[Sequence[str]] = None,
+        input_features: Sequence[Feature] = (),
     ):
         """
         :param name: The name that uniquely identifies this feature in the
@@ -61,17 +61,17 @@ class Feature:
         # Otherwise, validate that feature's keys contain group-by-keys.
         if isinstance(transform, WindowAggTransform):
             if keys is None:
-                keys = transform.group_by_keys
+                keys = list(transform.group_by_keys)
             if not set(transform.group_by_keys).issubset(set(keys)):
                 raise RuntimeError(
-                    f"Feature keys {keys} should contain {transform.group_by_keys}"
+                    f"Feature keys {keys} should contain {transform.group_by_keys}."
                 )
         if keys:
-            keys.sort()
+            keys = sorted(keys)
         self.keys = keys
         self.input_features = input_features
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return {
             "name": self.name,
             "dtype": self.dtype.to_json(),
@@ -82,5 +82,8 @@ class Feature:
 
     # TODO: add from_json()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return json.dumps(self.to_json(), indent=2, sort_keys=True)
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Feature) and self.to_json() == other.to_json()

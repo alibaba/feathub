@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Union
+from typing import Union, Dict, Sequence
 
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
@@ -34,7 +34,7 @@ class JoinedFeatureView(FeatureView):
         self,
         name: str,
         source: Union[str, TableDescriptor],
-        features: List[Union[str, Feature]],
+        features: Sequence[Union[str, Feature]],
         keep_source_fields: bool = False,
     ):
         """
@@ -69,7 +69,7 @@ class JoinedFeatureView(FeatureView):
             ):
                 raise RuntimeError(
                     f"Feature '{feature.name}' uses unsupported transform type "
-                    f"'{type(feature.transform)}'"
+                    f"'{type(feature.transform)}'."
                 )
 
     def build(self, registry: Registry) -> TableDescriptor:
@@ -123,7 +123,7 @@ class JoinedFeatureView(FeatureView):
             keep_source_fields=self.keep_source_fields,
         )
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return {
             "type": "JoinedFeatureView",
             "name": self.name,

@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pandas as pd
 from abc import ABC, abstractmethod
 from datetime import timedelta
-from typing import Optional, Union
+from typing import Optional
 
-from feathub.table.table_descriptor import TableDescriptor
+import pandas as pd
+
 from feathub.processors.processor_job import ProcessorJob
+from feathub.sinks.sink import Sink
 from feathub.table.schema import Schema
 
 
@@ -28,7 +29,9 @@ class Table(ABC):
     subclass is bound to a specific processor subclass.
     """
 
-    def __init__(self, timestamp_field: Optional[str], timestamp_format: str):
+    def __init__(
+        self, timestamp_field: Optional[str], timestamp_format: Optional[str]
+    ) -> None:
         """
         :param timestamp_field: Optional. If it is not None, it is the name of the field
                                 whose values show the time when the corresponding row
@@ -55,7 +58,7 @@ class Table(ABC):
     @abstractmethod
     def execute_insert(
         self,
-        sink: Union[str, TableDescriptor],
+        sink: Sink,
         ttl: Optional[timedelta] = None,
         allow_overwrite: bool = False,
     ) -> ProcessorJob:

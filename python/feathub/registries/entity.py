@@ -14,6 +14,7 @@
 
 from abc import ABC, abstractmethod
 import json
+from typing import Dict
 
 
 class Entity(ABC):
@@ -24,15 +25,21 @@ class Entity(ABC):
     (https://github.com/datahub-project/datahub/blob/master/docs/modeling/metadata-model.md).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @abstractmethod
-    def to_json(self):
+    def to_json(self) -> Dict:
         """
         Returns a json-formatted object representing this entity.
         """
         pass
 
-    def __str__(self):
+    def __str__(self) -> str:
         return json.dumps(self.to_json(), indent=2, sort_keys=True)
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, self.__class__) and self.to_json() == other.to_json()

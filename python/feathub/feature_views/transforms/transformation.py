@@ -14,6 +14,7 @@
 
 from abc import ABC, abstractmethod
 import json
+from typing import Dict
 
 
 class Transformation(ABC):
@@ -22,15 +23,15 @@ class Transformation(ABC):
     features.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @abstractmethod
-    def to_json(self):
+    def to_json(self) -> Dict:
         """
         Returns a json-formatted object representing this sink.
         """
         pass
 
-    def __str__(self):
+    def __str__(self) -> str:
         return json.dumps(self.to_json(), indent=2, sort_keys=True)

@@ -25,7 +25,7 @@ class OnlineStore(ABC):
     provide a uniform interface to interact with kv stores such as Redis.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @abstractmethod
@@ -35,8 +35,8 @@ class OnlineStore(ABC):
         features: pd.DataFrame,
         key_fields: List[str],
         timestamp_field: Optional[str],
-        timestamp_format: str,
-    ):
+        timestamp_format: Optional[str],
+    ) -> None:
         """
         For each row in the `features`, inserts or updates an entry of the specified
         table in the kv store. The key of each entry consists of values of the
@@ -52,7 +52,7 @@ class OnlineStore(ABC):
         :param timestamp_field: Optional. If it is not None, it is the name of the field
                                 whose values show the time when the corresponding row
                                 is generated.
-        :param timestamp_format: The format of the timestamp field.
+        :param timestamp_format: Optional. The format of the timestamp field.
         """
         pass
 

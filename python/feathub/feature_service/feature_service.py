@@ -33,7 +33,7 @@ class FeatureService(ABC):
     FeatureService computes features with online latency after online request arrives.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @abstractmethod
@@ -75,5 +75,5 @@ class FeatureService(ABC):
             return LocalFeatureService(config=config, stores=stores, registry=registry)
 
         raise RuntimeError(
-            f"Failed to instantiate feature service with config={config}"
+            f"Failed to instantiate feature service with config={config}."
         )

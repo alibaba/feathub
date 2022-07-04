@@ -25,8 +25,13 @@ class Registry(ABC):
     such as feature views with feature transformation definitions.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, registry_type: str, config: Dict) -> None:
+        """
+        :param registry_type: The type of the registry
+        :param config: The registry configuration.
+        """
+        self._registry_type = registry_type
+        self._config = config
 
     @abstractmethod
     def build_features(
@@ -47,7 +52,9 @@ class Registry(ABC):
         pass
 
     @abstractmethod
-    def register_features(self, features: TableDescriptor, override=True) -> bool:
+    def register_features(
+        self, features: TableDescriptor, override: bool = True
+    ) -> bool:
         """
         Registers the given table descriptor in the registry. Each descriptor is
         uniquely identified by its name in the registry.
@@ -60,7 +67,7 @@ class Registry(ABC):
         pass
 
     @abstractmethod
-    def get_features(self, name) -> TableDescriptor:
+    def get_features(self, name: str) -> TableDescriptor:
         """
         Returns the table descriptor previously registered with the given name. Raises
         RuntimeError if there is no such table in the registry.
@@ -71,7 +78,7 @@ class Registry(ABC):
         pass
 
     @abstractmethod
-    def delete_features(self, name) -> bool:
+    def delete_features(self, name: str) -> bool:
         """
         Deletes the table descriptor with the given name from the registry.
 
@@ -91,3 +98,11 @@ class Registry(ABC):
             return LocalRegistry(config=config)
 
         raise RuntimeError(f"Failed to instantiate registry with config={config}.")
+
+    @property
+    def config(self) -> Dict:
+        return self._config
+
+    @property
+    def registry_type(self) -> str:
+        return self._registry_type

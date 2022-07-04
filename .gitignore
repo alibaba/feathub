@@ -18,3 +18,7 @@ target
 *.ipr
 *.iws
 *.pyc
+
+build
+dist
+*.egg-info

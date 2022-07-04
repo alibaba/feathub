@@ -18,6 +18,8 @@ from typing import Dict, Optional, Union, List
 from datetime import datetime, timedelta
 
 import feathub.common.utils as utils
+from feathub.common.exceptions import FeathubException
+from feathub.common.types import to_numpy_dtype
 from feathub.dsl.parser import ExprParser
 from feathub.processors.processor import Processor
 from feathub.sinks.sink import Sink
@@ -94,16 +96,18 @@ class LocalProcessor(Processor):
         unix_time_column = None
         if start_datetime is not None or end_datetime is not None:
             if features.timestamp_field is None:
-                raise RuntimeError("Features do not have timestamp column.")
+                raise FeathubException("Features do not have timestamp column.")
+            if features.timestamp_format is None:
+                raise FeathubException("Features do not have timestamp format.")
             unix_time_column = utils.append_and_sort_unix_time_column(
                 df, features.timestamp_field, features.timestamp_format
             )
         if start_datetime is not None:
-            start_datetime = utils.to_unix_timestamp(start_datetime)
-            df = df[df[unix_time_column] >= start_datetime]
+            unix_start_datetime = utils.to_unix_timestamp(start_datetime)
+            df = df[df[unix_time_column] >= unix_start_datetime]
         if end_datetime is not None:
-            end_datetime = utils.to_unix_timestamp(end_datetime)
-            df = df[df[unix_time_column] <= end_datetime]
+            unix_end_datetime = utils.to_unix_timestamp(end_datetime)
+            df = df[df[unix_time_column] < unix_end_datetime]
         if unix_time_column is not None:
             df = df.drop(columns=[unix_time_column])
 
@@ -120,19 +124,21 @@ class LocalProcessor(Processor):
         sink: Sink,
         ttl: Optional[timedelta] = None,
         start_datetime: Optional[datetime] = None,
-        end_datatime: Optional[datetime] = None,
-        allow_overwrite=False,
+        end_datetime: Optional[datetime] = None,
+        allow_overwrite: bool = False,
     ) -> LocalJob:
         # TODO: support ttl
         if ttl is not None or not allow_overwrite:
             raise RuntimeError("Unsupported operation.")
         features = self._resolve_table_descriptor(features)
+        if features.keys is None:
+            raise FeathubException(f"Features keys must not be None {features}.")
 
         features_df = self.get_table(
             features=features,
             keys=None,
             start_datetime=start_datetime,
-            end_datetime=end_datatime,
+            end_datetime=end_datetime,
         ).to_pandas()
 
         # TODO: handle allow_overwrite.
@@ -195,7 +201,7 @@ class LocalProcessor(Processor):
         sink: OnlineStoreSink,
         key_fields: List[str],
         timestamp_field: Optional[str],
-        timestamp_format: str,
+        timestamp_format: Optional[str],
     ) -> LocalJob:
         self.stores[sink.store_type].put(
             table_name=sink.table_name,
@@ -209,7 +215,16 @@ class LocalProcessor(Processor):
 
     def _get_table_from_file_source(self, source: FileSource) -> LocalTable:
         if source.file_format == "csv":
-            df = pd.read_csv(source.path)
+            df = pd.read_csv(
+                source.path,
+                names=source.schema.field_names,
+                dtype={
+                    name: to_numpy_dtype(dtype)
+                    for name, dtype in zip(
+                        source.schema.field_names, source.schema.field_types
+                    )
+                },
+            )
             return LocalTable(
                 df=df,
                 timestamp_field=source.timestamp_field,
@@ -232,7 +247,7 @@ class LocalProcessor(Processor):
         source_fields = list(source_table.get_schema().field_names)
         dependent_features = []
 
-        for feature in feature_view.features:
+        for feature in feature_view.get_resolved_features():
             for input_feature in feature.input_features:
                 if input_feature not in dependent_features:
                     dependent_features.append(input_feature)
@@ -245,6 +260,14 @@ class LocalProcessor(Processor):
                     source_df, feature.transform
                 )
             elif isinstance(feature.transform, WindowAggTransform):
+                if (
+                    feature_view.timestamp_field is None
+                    or feature_view.timestamp_format is None
+                ):
+                    raise FeathubException(
+                        "FeatureView must have timestamp field and timestamp format "
+                        "specified for WindowAggTransform."
+                    )
                 source_df[feature.name] = self._evaluate_window_transform(
                     source_df,
                     feature.transform,
@@ -275,7 +298,7 @@ class LocalProcessor(Processor):
         table_names = set(
             [
                 feature.transform.table_name
-                for feature in feature_view.features
+                for feature in feature_view.get_resolved_features()
                 if isinstance(feature.transform, JoinTransform)
             ]
         )
@@ -286,7 +309,7 @@ class LocalProcessor(Processor):
             descriptors_by_names[name] = descriptor
             table_by_names[name] = self._get_table(features=descriptor)
 
-        for feature in feature_view.features:
+        for feature in feature_view.get_resolved_features():
             if isinstance(feature.transform, JoinTransform):
                 source_df[feature.name] = self._evaluate_join_transform(
                     source_df,
@@ -328,20 +351,35 @@ class LocalProcessor(Processor):
         self,
         source_df: pd.DataFrame,
         feature: Feature,
-        source_timestamp_field: Optional[str],
+        source_timestamp_field: str,
         source_timestamp_format: str,
         table_by_names: Dict[str, LocalTable],
         descriptors_by_names: Dict[str, TableDescriptor],
     ) -> List:
+        if feature.keys is None:
+            raise FeathubException(
+                f"Feature {feature} with JoinTransform must have keys."
+            )
         join_transform = feature.transform
         if not isinstance(join_transform, JoinTransform):
             raise RuntimeError(f"Feature '{feature.name}' should use JoinTransform.")
 
         join_descriptor = descriptors_by_names[join_transform.table_name]
+        if (
+            join_descriptor.timestamp_field is None
+            or join_descriptor.timestamp_format is None
+        ):
+            raise FeathubException(
+                "Join table must have timestamp field and timestamp format specified."
+            )
         join_timestamp_field = join_descriptor.timestamp_field
         join_timestamp_format = join_descriptor.timestamp_format
         join_df = table_by_names[join_transform.table_name].df
         join_feature = join_descriptor.get_feature(join_transform.feature_name)
+        if join_feature.keys is None:
+            raise FeathubException(
+                f"The Feature {join_feature} to join must have keys."
+            )
 
         result = []
         # TODO: optimize the performance for the following code.
@@ -385,7 +423,7 @@ class LocalProcessor(Processor):
             raise RuntimeError(f"Unsupported agg function {transform.agg_func}.")
         temp_column = "_temp"
         if temp_column in df:
-            raise RuntimeError("The dataframe has column with name _temp")
+            raise RuntimeError("The dataframe has column with name _temp.")
 
         for key in transform.group_by_keys:
             if key not in df:
@@ -412,7 +450,12 @@ class LocalProcessor(Processor):
         # Computes the feature's value for each row in the group.
         for idx, row in df_copy.iterrows():
             max_timestamp = row[unix_time_column]
-            min_timestamp = max_timestamp - transform.window_size.total_seconds()
+            window_size = transform.window_size
+            min_timestamp = (
+                0
+                if window_size is None
+                else max_timestamp - window_size.total_seconds()
+            )
 
             rows_in_group = df_copy.iloc[group_by_idx[idx]]
             predicate = rows_in_group[unix_time_column].transform(

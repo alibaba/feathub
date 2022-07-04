@@ -20,10 +20,11 @@ from feathub.processors.processor import Processor
 from feathub.registries.registry import Registry
 from feathub.feature_service.feature_service import FeatureService
 from feathub.online_stores.online_store import OnlineStore
-from feathub.table.table import Table, TableDescriptor
+from feathub.table.table import Table
 from feathub.processors.processor_job import ProcessorJob
 from feathub.sinks.sink import Sink
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
+from feathub.table.table_descriptor import TableDescriptor
 
 
 class FeathubClient:
@@ -31,7 +32,7 @@ class FeathubClient:
     The Feathub client provides APIs to manage features.
     """
 
-    def __init__(self, config: Dict):
+    def __init__(self, config: Dict) -> None:
         """
         :param config: Provides the configuration to initialize the client.
         """
@@ -86,7 +87,7 @@ class FeathubClient:
                                field has the minimum possible value.
         :param end_datetime: Optional. If it is not None, the `features` table should
                              have a timestamp field. And the output table will only
-                             include features whose timestamp <= start_datetime. If any
+                             include features whose timestamp < end_datetime. If any
                              field (e.g. minute) is not specified in the end_datetime,
                              we assume this field has the maximum possible value.
         :return: A table of features.
@@ -104,8 +105,8 @@ class FeathubClient:
         sink: Sink,
         ttl: Optional[timedelta] = None,
         start_datetime: Optional[datetime] = None,
-        end_datatime: Optional[datetime] = None,
-        allow_overwrite=False,
+        end_datetime: Optional[datetime] = None,
+        allow_overwrite: bool = False,
     ) -> ProcessorJob:
         """
         Starts a job to write a table of features into the given sink according to the
@@ -132,7 +133,7 @@ class FeathubClient:
             sink=sink,
             ttl=ttl,
             start_datetime=start_datetime,
-            end_datatime=end_datatime,
+            end_datetime=end_datetime,
             allow_overwrite=allow_overwrite,
         )
 

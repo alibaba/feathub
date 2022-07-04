@@ -33,7 +33,7 @@ class Processor(ABC):
     descriptors and translate declarative transformation into execution jobs.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @abstractmethod
@@ -62,7 +62,7 @@ class Processor(ABC):
                                field has the minimum possible value.
         :param end_datetime: Optional. If it is not None, the `features` table should
                              have a timestamp field. And the output table will only
-                             include features whose timestamp <= start_datetime. If any
+                             include features whose timestamp < end_datetime. If any
                              field (e.g. minute) is not specified in the end_datetime,
                              we assume this field has the maximum possible value.
         :return: A table of features.
@@ -76,7 +76,7 @@ class Processor(ABC):
         sink: Sink,
         ttl: Optional[timedelta] = None,
         start_datetime: Optional[datetime] = None,
-        end_datatime: Optional[datetime] = None,
+        end_datetime: Optional[datetime] = None,
         allow_overwrite: bool = False,
     ) -> ProcessorJob:
         """
@@ -141,8 +141,11 @@ class Processor(ABC):
         Instantiates a processor using the given configuration and the store instances.
         """
         from feathub.processors.local.local_processor import LocalProcessor
+        from feathub.processors.flink.flink_processor import FlinkProcessor
 
         if processor_type == LocalProcessor.PROCESSOR_TYPE:
             return LocalProcessor(config=config, stores=stores, registry=registry)
+        elif processor_type == FlinkProcessor.PROCESSOR_TYPE:
+            return FlinkProcessor(config=config, stores=stores, registry=registry)
 
-        raise RuntimeError(f"Failed to instantiate processor with config={config}")
+        raise RuntimeError(f"Failed to instantiate processor with config={config}.")

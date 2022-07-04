@@ -23,11 +23,16 @@ def to_java_date_format(python_format: str) -> str:
     :param python_format: A datetime format string accepted by datetime::strptime().
     :return: A datetime format string accepted by  java.text.SimpleDateFormat.
     """
+
+    # TODO: Currently cannot handle case such as "%Y-%m-%dT%H:%M:%S", which should be
+    #  converted to "yyyy-MM-dd'T'HH:mm:ss".
     mapping = {"Y": "yyyy", "m": "MM", "d": "dd", "H": "HH", "M": "mm", "S": "ss"}
     return Template(python_format.replace("%", "$")).substitute(**mapping)
 
 
-def to_unix_timestamp(time: Union[datetime, str], format="%Y-%m-%d %H:%M:%S") -> float:
+def to_unix_timestamp(
+    time: Union[datetime, str], format: str = "%Y-%m-%d %H:%M:%S"
+) -> float:
     """
     Returns POSIX timestamp corresponding to date_string, parsed according to format.
     Uses UTC timezone if it is not explicitly sepcified in the given date.
@@ -45,7 +50,7 @@ def append_and_sort_unix_time_column(
     unix_time_column = "_unix_time"
 
     if unix_time_column in df:
-        raise RuntimeError(f"The dataframe has column with name {unix_time_column}")
+        raise RuntimeError(f"The dataframe has column with name {unix_time_column}.")
 
     df[unix_time_column] = df.apply(
         lambda row: to_unix_timestamp(row[timestamp_field], timestamp_format),

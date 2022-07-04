@@ -14,13 +14,8 @@
 
 setuptools>=18.0
 wheel
-sklearn
-ply>=3.11
-pandas>=1.1.5
 black>=22.3.0
 autopep8>=1.6.0
-pandas>=1.0,<1.2.0
 pytest==4.4.1
 flake8==4.0.1
-mypy==0.910
-numpy>=1.14.3,<1.20
+mypy==0.971

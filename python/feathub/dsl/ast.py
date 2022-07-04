@@ -14,17 +14,17 @@
 
 import json
 from abc import ABC, abstractmethod
-from typing import List, Dict
+from typing import List, Dict, Any
 
 from feathub.dsl.functions import get_predefined_function
 
 
 class ExprAST(ABC):
-    def __init__(self, node_type):
+    def __init__(self, node_type: str) -> None:
         self.node_type = node_type
 
     @abstractmethod
-    def eval(self, variables: Dict):
+    def eval(self, variables: Dict) -> Any:
         """
         :param variables: A dict that maps variable name to value.
         :return: A value representing the evaluation result.
@@ -32,24 +32,24 @@ class ExprAST(ABC):
         pass
 
     @abstractmethod
-    def to_json(self):
+    def to_json(self) -> Dict:
         """
         Returns a json-formatted object representing this node.
         """
         pass
 
-    def __str__(self):
+    def __str__(self) -> str:
         return json.dumps(self.to_json(), indent=2, sort_keys=True)
 
 
 class BinaryOp(ExprAST):
-    def __init__(self, op_type: str, left_child: ExprAST, right_child: ExprAST):
+    def __init__(self, op_type: str, left_child: ExprAST, right_child: ExprAST) -> None:
         super().__init__(node_type="BinaryOp")
         self.op_type = op_type
         self.left_child = left_child
         self.right_child = right_child
 
-    def eval(self, variables):
+    def eval(self, variables: Dict) -> Any:
         left_value = self.left_child.eval(variables)
         right_value = self.right_child.eval(variables)
 
@@ -64,7 +64,7 @@ class BinaryOp(ExprAST):
         else:
             raise RuntimeError(f"Unsupported op type: {self.op_type}.")
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return {
             "node_type": "BinaryOp",
             "op_type": self.op_type,
@@ -74,13 +74,13 @@ class BinaryOp(ExprAST):
 
 
 class CompareOp(ExprAST):
-    def __init__(self, op_type: str, left_child: ExprAST, right_child: ExprAST):
+    def __init__(self, op_type: str, left_child: ExprAST, right_child: ExprAST) -> None:
         super().__init__(node_type="CompareOp")
         self.op_type = op_type
         self.left_child = left_child
         self.right_child = right_child
 
-    def eval(self, variables):
+    def eval(self, variables: Dict) -> Any:
         left_value = self.left_child.eval(variables)
         right_value = self.right_child.eval(variables)
 
@@ -99,7 +99,7 @@ class CompareOp(ExprAST):
         else:
             raise RuntimeError(f"Unsupported op type: {self.op_type}.")
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return {
             "node_type": "CompareOp",
             "op_type": self.op_type,
@@ -109,15 +109,15 @@ class CompareOp(ExprAST):
 
 
 class UminusOp(ExprAST):
-    def __init__(self, child: ExprAST):
+    def __init__(self, child: ExprAST) -> None:
         super().__init__(node_type="UminusNode")
         self.child = child
 
-    def eval(self, variables):
+    def eval(self, variables: Dict) -> Any:
         child_value = self.child.eval(variables)
         return -child_value
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return {
             "node_type": "UminusNode",
             "child": self.child,
@@ -125,14 +125,14 @@ class UminusOp(ExprAST):
 
 
 class ValueNode(ExprAST):
-    def __init__(self, value):
+    def __init__(self, value: Any) -> None:
         super().__init__(node_type="ValueNode")
         self.value = value
 
-    def eval(self, variables):
+    def eval(self, variables: Dict) -> Any:
         return self.value
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return {
             "node_type": "ValueNode",
             "value": self.value,
@@ -140,11 +140,11 @@ class ValueNode(ExprAST):
 
 
 class VariableNode(ExprAST):
-    def __init__(self, var_name: str):
+    def __init__(self, var_name: str) -> None:
         super().__init__(node_type="VariableNode")
         self.var_name = var_name
 
-    def eval(self, variables):
+    def eval(self, variables: Dict) -> Any:
         if self.var_name not in variables:
             raise RuntimeError(
                 f"Variable '{self.var_name}' is not found in {variables}."
@@ -152,7 +152,7 @@ class VariableNode(ExprAST):
 
         return variables[self.var_name]
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return {
             "node_type": "VariableNode",
             "var_name": self.var_name,
@@ -160,14 +160,14 @@ class VariableNode(ExprAST):
 
 
 class ArgListNode(ExprAST):
-    def __init__(self, values: List[ExprAST]):
+    def __init__(self, values: List[ExprAST]) -> None:
         super().__init__(node_type="ArgList")
         self.values = values
 
-    def eval(self, variables):
+    def eval(self, variables: Dict) -> Any:
         return [value.eval(variables) for value in self.values]
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return {
             "node_type": "ArgList",
             "values": [value.to_json() for value in self.values],
@@ -175,19 +175,19 @@ class ArgListNode(ExprAST):
 
 
 class FuncCallOp(ExprAST):
-    def __init__(self, func_name: str, args: ArgListNode):
+    def __init__(self, func_name: str, args: ArgListNode) -> None:
         super().__init__(node_type="FuncCall")
         self.func_name = func_name
         self.args = args
 
-    def eval(self, variables):
+    def eval(self, variables: Dict) -> Any:
         values = self.args.eval(variables)
         func = get_predefined_function(self.func_name)
         if func is not None:
             return func(*values)
-        raise RuntimeError(f"Unsupported function: {self.func_name}")
+        raise RuntimeError(f"Unsupported function: {self.func_name}.")
 
-    def to_json(self):
+    def to_json(self) -> Dict:
 
         return {
             "node_type": "FuncCall",

@@ -11,15 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from abc import ABC
 from typing import List, Optional
 
-from feathub.table.table import TableDescriptor
 from feathub.feature_views.feature import Feature
+from feathub.table.table_descriptor import TableDescriptor
 
 
 # TODO: add SQL source which outputs the table returned by a SQL query.
-class Source(TableDescriptor):
+class Source(TableDescriptor, ABC):
     """
     Provides metadata to access and interpret a table of feature values from an
     offline or online feature store.

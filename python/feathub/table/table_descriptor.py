@@ -13,11 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from abc import abstractmethod
 
 from feathub.registries.entity import Entity
 from feathub.feature_views.feature import Feature
+
+if TYPE_CHECKING:
+    from feathub.registries.registry import Registry
 
 
 class TableDescriptor(Entity):
@@ -34,8 +37,8 @@ class TableDescriptor(Entity):
         name: str,
         keys: Optional[List[str]],
         timestamp_field: Optional[str],
-        timestamp_format: str,
-    ):
+        timestamp_format: str = "epoch",
+    ) -> None:
         """
         :param name: The unique identifier of this feature view in the registry.
         :param keys: Optional. The names of fields in this feature view that are
@@ -44,7 +47,7 @@ class TableDescriptor(Entity):
         :param timestamp_field: Optional. If it is not None, it is the name of the field
                                 whose values show the time when the corresponding row
                                 is generated.
-        :param timestamp_format: The format of the timestamp field.
+        :param timestamp_format: The format of the timestamp field. Default to "epoch".
         """
         super().__init__()
         self.name = name
@@ -52,7 +55,7 @@ class TableDescriptor(Entity):
         self.timestamp_field = timestamp_field
         self.timestamp_format = timestamp_format
 
-    def build(self, registry) -> TableDescriptor:
+    def build(self, registry: "Registry") -> TableDescriptor:
         """
         Gets a copy of self after recursively replacing the dependent table and feature
         names with the corresponding table descriptors and features.

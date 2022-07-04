@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import json
 from abc import ABC, abstractmethod
+from typing import Dict
 
 
 class Sink(ABC):
@@ -35,8 +36,17 @@ class Sink(ABC):
         self.allow_overwrite = allow_overwrite
 
     @abstractmethod
-    def to_json(self):
+    def to_json(self) -> Dict:
         """
         Returns a json-formatted object representing this sink.
         """
         pass
+
+    def __str__(self) -> str:
+        return json.dumps(self.to_json(), indent=2, sort_keys=True)
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, self.__class__) and self.to_json() == other.to_json()

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from typing import List, Dict
 
 from feathub.sources.source import Source
 
@@ -44,7 +44,7 @@ class OnlineStoreSource(Source):
         self.store_type = store_type
         self.table_name = table_name
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return {
             "type": "OnlineStoreSource",
             "name": self.name,

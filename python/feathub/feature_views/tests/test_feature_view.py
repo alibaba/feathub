@@ -19,6 +19,7 @@ from feathub.feature_views.feature import Feature
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.registries.local_registry import LocalRegistry
 from feathub.common import types
+from feathub.table.schema import Schema
 
 
 class FeatureViewTest(unittest.TestCase):
@@ -30,6 +31,7 @@ class FeatureViewTest(unittest.TestCase):
             name="source_1",
             path="dummy_source_file",
             file_format="csv",
+            schema=Schema([], []),
             timestamp_field="lpep_dropoff_datetime",
             timestamp_format="%Y-%m-%d %H:%M:%S",
         )

@@ -25,14 +25,13 @@ class LocalRegistry(Registry):
 
     REGISTRY_TYPE = "local"
 
-    def __init__(self, config: Dict):
+    def __init__(self, config: Dict) -> None:
         """
         :param config: The registry configuration.
         """
-        super().__init__()
-        self.config = config
+        super().__init__(LocalRegistry.REGISTRY_TYPE, config)
         self.namespace = config.get("namespace", "default")
-        self.tables = {}
+        self.tables: Dict[str, TableDescriptor] = {}
 
     # TODO: persist metadata on disks if cache_only == True.
     # TODO: maintain the version and version_timestamp so that we can recover the
@@ -47,15 +46,21 @@ class LocalRegistry(Registry):
 
         return result
 
-    # TODO: implement this method.
-    def register_features(self, features: TableDescriptor, override=True) -> bool:
-        raise RuntimeError("operation not supported")
+    def register_features(
+        self, features: TableDescriptor, override: bool = True
+    ) -> bool:
+        if features.name in self.tables and not override:
+            return False
+        self.tables[features.name] = features
+        return True
 
-    def get_features(self, name) -> TableDescriptor:
+    def get_features(self, name: str) -> TableDescriptor:
         if name not in self.tables:
             raise RuntimeError(f"Table '{name}' is not found in the cache or registry.")
-        return self.tables.get(name)
+        return self.tables[name]
 
-    # TODO: implement this method.
-    def delete_features(self, name) -> bool:
-        raise RuntimeError("operation not supported")
+    def delete_features(self, name: str) -> bool:
+        if name not in self.tables:
+            return False
+        self.tables.pop(name)
+        return True

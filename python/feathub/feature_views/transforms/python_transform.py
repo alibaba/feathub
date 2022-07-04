@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Any
+from typing import Callable, Any, Dict
 import pandas as pd
 
 from feathub.feature_views.transforms.transformation import Transformation
@@ -25,9 +25,9 @@ class PythonUdfTransform(Transformation):
     time.
     """
 
-    def __init__(self, callable: Callable[[pd.DataFrame], Any]):
+    def __init__(self, callable: Callable[[pd.DataFrame], Any]) -> None:
         super().__init__()
         self.callable = callable
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return {"type": "PythonTransform"}

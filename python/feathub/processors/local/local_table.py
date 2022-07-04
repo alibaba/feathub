@@ -12,15 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pandas as pd
 from datetime import timedelta
-from typing import Optional, Union
+from typing import Optional
 
-from feathub.table.table_descriptor import TableDescriptor
-from feathub.table.table import Table
-from feathub.processors.processor_job import ProcessorJob
-from feathub.table.schema import Schema
+import pandas as pd
+
 from feathub.common import types
+from feathub.processors.processor_job import ProcessorJob
+from feathub.sinks.sink import Sink
+from feathub.table.schema import Schema
+from feathub.table.table import Table
 
 
 class LocalTable(Table):
@@ -61,7 +62,7 @@ class LocalTable(Table):
 
     def execute_insert(
         self,
-        sink: Union[str, TableDescriptor],
+        sink: Sink,
         ttl: Optional[timedelta] = None,
         allow_overwrite: bool = False,
     ) -> ProcessorJob:

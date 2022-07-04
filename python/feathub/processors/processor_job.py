@@ -21,11 +21,11 @@ class ProcessorJob(ABC):
     Provides APIs to get or wait for a job's execution result.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @abstractmethod
-    def wait(self, timeout_ms: Optional[int] = None):
+    def wait(self, timeout_ms: Optional[int] = None) -> None:
         """
         Waits for at most the given time (milliseconds) for the job termination.
 

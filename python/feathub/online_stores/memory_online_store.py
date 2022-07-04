@@ -15,6 +15,7 @@ from collections import OrderedDict
 import pandas as pd
 
 import feathub.common.utils as utils
+from feathub.common.exceptions import FeathubException
 from feathub.online_stores.online_store import OnlineStore
 
 
@@ -39,7 +40,7 @@ class MemoryOnlineStore(OnlineStore):
 
     STORE_TYPE = "memory"
 
-    def __init__(self, config: Dict):
+    def __init__(self, config: Dict) -> None:
         """
         :param config: The store configuration.
         """
@@ -52,8 +53,8 @@ class MemoryOnlineStore(OnlineStore):
         features: pd.DataFrame,
         key_fields: List[str],
         timestamp_field: Optional[str],
-        timestamp_format: str,
-    ):
+        timestamp_format: Optional[str],
+    ) -> None:
         if table_name not in self.table_infos:
             self.table_infos[table_name] = _TableInfo(
                 table={},
@@ -77,6 +78,16 @@ class MemoryOnlineStore(OnlineStore):
         table = table_info.table
         for index, row in features.iterrows():
             key = tuple(row.loc[key_fields].to_dict(OrderedDict).items())
+
+            # overwrite if timestamp_field is None
+            if timestamp_field is None:
+                table[key] = row
+                continue
+
+            if timestamp_format is None:
+                raise FeathubException(
+                    "timestamp_format must not be None if timestamp_field is given."
+                )
             time = utils.to_unix_timestamp(row[timestamp_field], timestamp_format)
             existing_row = table.get(key, None)
             if existing_row is not None:

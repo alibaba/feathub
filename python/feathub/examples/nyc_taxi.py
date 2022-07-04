@@ -20,6 +20,9 @@ from pathlib import Path
 from os import path
 from math import sqrt
 
+from feathub.feature_views.feature_view import FeatureView
+from feathub.table.schema import Schema
+
 sys.path.append(str(Path(__file__).parent.parent.parent.resolve()))
 
 from sklearn.metrics import mean_squared_error
@@ -37,7 +40,7 @@ from feathub.feature_views.transforms.window_agg_transform import WindowAggTrans
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 
 
-def main():
+def main() -> None:
     client = FeathubClient(
         config={
             "processor": {
@@ -67,7 +70,7 @@ def main():
     train_df = client.get_features(features).to_pandas()
 
     # Train a model using the dataset and evaluate the model accuracy.
-    train_and_evalute_accuracy(train_df)
+    train_and_evaluate_accuracy(train_df)
 
     # Materialize features into online feature store.
     sink = OnlineStoreSink(
@@ -85,7 +88,7 @@ def main():
         features=selected_features,
         sink=sink,
         start_datetime=datetime(2020, 1, 1),
-        end_datatime=datetime(2020, 5, 20),
+        end_datetime=datetime(2020, 5, 20),
         allow_overwrite=True,
     )
     job.wait(timeout_ms=10000)
@@ -120,15 +123,65 @@ def main():
     print(online_features)
 
 
-def build_features(client: FeathubClient):
+def build_features(client: FeathubClient) -> FeatureView:
     # source_file_path = "https://azurefeathrstorage.blob.core.windows.net/public" \
     #                    "/sample_data/green_tripdata_2020-04_with_index.csv"
     source_file_path = path.join(Path(__file__).parent.resolve(), "sample_data.csv")
+
+    schema = Schema(
+        field_names=[
+            "trip_id",
+            "VendorID",
+            "lpep_pickup_datetime",
+            "lpep_dropoff_datetime",
+            "store_and_fwd_flag",
+            "RatecodeID",
+            "PULocationID",
+            "DOLocationID",
+            "passenger_count",
+            "trip_distance",
+            "fare_amount",
+            "extra",
+            "mta_tax",
+            "tip_amount",
+            "tolls_amount",
+            "ehail_fee",
+            "improvement_surcharge",
+            "total_amount",
+            "payment_type",
+            "trip_type",
+            "congestion_surcharge",
+        ],
+        field_types=[
+            types.Int64,
+            types.Float64,
+            types.String,
+            types.String,
+            types.String,
+            types.Float64,
+            types.Int64,
+            types.Int64,
+            types.Float64,
+            types.Float64,
+            types.Float64,
+            types.Float64,
+            types.Float64,
+            types.Float64,
+            types.Float64,
+            types.Float64,
+            types.Float64,
+            types.Float64,
+            types.Float64,
+            types.Float64,
+            types.Float64,
+        ],
+    )
 
     source = FileSource(
         name="source_1",
         path=source_file_path,
         file_format="csv",
+        schema=schema,
         timestamp_field="lpep_dropoff_datetime",
         timestamp_format="%Y-%m-%d %H:%M:%S",
     )
@@ -231,7 +284,7 @@ def build_features(client: FeathubClient):
     return feature_view_2
 
 
-def train_and_evalute_accuracy(train_dataset):
+def train_and_evaluate_accuracy(train_dataset: pd.DataFrame) -> None:
     final_df = train_dataset
 
     final_df.drop(

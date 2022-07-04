@@ -40,14 +40,16 @@ Prerequisites for building python packages:
 - Unix-like operating system (e.g. Linux, Mac OS X)
 - Python 3.7
 
-### Install Feathub Python Dependencies
+### Install Feathub
 
-Run the following command to install dependent pip packages.
+Run the following command to install Feathub from source.
 ```bash
-$ python3 -m pip install -r python/dev-requirements.txt
+$ python3 -m pip install ./python
 ```
 
 ### Quickstart
+
+#### Quickstart with local processor
 
 Execute the following command to run the
 [nyc_tax.py](python/feathub/examples/nyc_taxi.py) demo which demonstrates the
@@ -56,14 +58,27 @@ capabilities described above.
 $ python3 python/feathub/examples/nyc_taxi.py
 ```
 
+#### Quickstart with Flink processor
+
+If you are interested in computing the Feathub features with a local Flink cluster. You
+can follow the [Flink Processor Quickstart.](./docs/quickstart_flink_processor.md)
+
 ## Additional Resources
 
 - This [tutorial](docs/tutorial.md) provides more details on how to define,
   extract and serve features using Feathub.
 - This [document](docs/feathub_expression.md) explains the Feathub expression
   language.
+- This [document](docs/flink_processor.md) introduces the Flink processor that computes
+  the features with Flink.
 
 ## Developer Guidelines
+
+### Install development dependencies
+
+```bash
+$ python3 -m pip install -r python/dev-requirements.txt
+```
 
 ### Running All Tests
 
@@ -74,16 +89,20 @@ $ pytest -W ignore::DeprecationWarning
 ### Code Formatting
 
 Feathub uses [Black](https://black.readthedocs.io/en/stable/index.html) to format
-Python code and [flake8](https://flake8.pycqa.org/en/latest/) to check
-Python code style.
+Python code, [flake8](https://flake8.pycqa.org/en/latest/) to check
+Python code style, and [mypy](https://mypy.readthedocs.io/en/stable/) to check type 
+annotation.
 
-Run the following command to format codes and check code style before
-uploading PRs for review.
+Run the following command to format codes, check code style, and check type annotation 
+before uploading PRs for review.
 
 ```bash
 # Format python code
-$ python3 -m black ./python
+$ python3 -m black python
 
 # Check python code style
-$ python3 -m flake8 --config=python/setup.cfg ./python
+$ python3 -m flake8 --config=python/setup.cfg python
+
+# Check python type annotation
+$ python3 -m mypy --config-file python/setup.cfg python
 ```

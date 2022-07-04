@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from feathub.sources.source import Source
+from feathub.table.schema import Schema
 
 
 class FileSource(Source):
@@ -25,6 +26,7 @@ class FileSource(Source):
         name: str,
         path: str,
         file_format: str,
+        schema: Schema,
         keys: Optional[List[str]] = None,
         timestamp_field: Optional[str] = None,
         timestamp_format: str = "epoch",
@@ -33,13 +35,13 @@ class FileSource(Source):
         :param name: The name that uniquely identifies this source in a registry.
         :param path: The path to files.
         :param file_format: The format that should be used to read files.
+        :param schema: The schema of the data.
         :param keys: Optional. The names of fields in this feature view that are
                      necessary to interpret a row of this table. If it is not None, it
                      must be a superset of keys of any feature in this table.
         :param timestamp_field: Optional. If it is not None, it is the name of the field
                                 whose values show the time when the corresponding row
                                 is generated.
-        :timestamp_format: The format of the timestamp field.
         """
         super().__init__(
             name=name,
@@ -49,8 +51,9 @@ class FileSource(Source):
         )
         self.path = path
         self.file_format = file_format
+        self.schema = schema
 
-    def to_json(self):
+    def to_json(self) -> Dict:
         return {
             "type": "FileSource",
             "name": self.name,
@@ -59,4 +62,5 @@ class FileSource(Source):
             "keys": self.keys,
             "timestamp_field": self.timestamp_field,
             "timestamp_format": self.timestamp_format,
+            "schema": None if self.schema is None else self.schema.to_json(),
         }

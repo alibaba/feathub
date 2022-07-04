@@ -15,6 +15,7 @@
 import pandas as pd
 from datetime import datetime
 
+from feathub.common.exceptions import FeathubException
 from feathub.common.test_utils import LocalProcessorTestCase
 from feathub.sinks.online_store_sink import OnlineStoreSink
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
@@ -114,7 +115,6 @@ class ProcessorTest(LocalProcessorTestCase):
             [
                 ["Alex", 100, 100, "2022-01-01 08:01:00"],
                 ["Emma", 400, 250, "2022-01-01 08:02:00"],
-                ["Alex", 300, 200, "2022-01-02 08:03:00"],
             ],
             columns=["name", "cost", "distance", "time"],
         )
@@ -131,7 +131,7 @@ class ProcessorTest(LocalProcessorTestCase):
                 features=source, end_datetime=end_datetime
             ).to_pandas()
             self.fail("RuntimeError should be raised.")
-        except RuntimeError as err:
+        except FeathubException as err:
             self.assertEqual(str(err), "Features do not have timestamp column.")
 
     def test_materialize_features_with_inconsistent_dtypes(self):

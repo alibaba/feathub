@@ -1,14 +1,14 @@
 # Feathub Architecture
 
-<img src="docs/figures/architecture_1.png" width="60%" height="auto">
+<img src="./figures/architecture_1.png" width="60%" height="auto">
 
-<img src="docs/figures/architecture_2.png" width="60%" height="auto">
+<img src="./figures/architecture_2.png" width="60%" height="auto">
 
 The above figures show the Feathub architecture. In the following, we describe
 the key components in the architecture and explain how these components are
-used to faciliate feature engineering for machine learning application.
+used to facilitate feature engineering for machine learning application.
 
-## TableDescriptor - Declarative Definiton of Features
+## TableDescriptor - Declarative Definition of Features
 
 A `TableDescriptor` provides metadata to acces, derive and interpret a
 table of feature values. Each column of the table corresponds to a feature.
@@ -23,9 +23,9 @@ table join.
 
 ### Source
 
-A `Source` proivdes metadata to access and interpret a table of feature
+A `Source` provides metadata to access and interpret a table of feature
 values from an offline or online feature store. For example, `FileSource`
-can specify the path of a file containing feauture values in csv format.
+can specify the path of a file containing feature values in csv format.
 
 ### Sink
 

@@ -15,6 +15,7 @@
 import pandas as pd
 from typing import Optional, List, Dict, Union
 
+from feathub.common.exceptions import FeathubException
 from feathub.feature_service.feature_service import FeatureService
 from feathub.registries.registry import Registry
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
@@ -62,19 +63,21 @@ class LocalFeatureService(FeatureService):
         :return: A DataFrame obtained according to the specified criteria.
         """
         if isinstance(feature_view, str):
-            feature_view = self.registry.get_features(name=feature_view)
+            feature_view = self._get_on_demand_feature_view_from_registry(feature_view)
         elif feature_view.is_unresolved():
-            feature_view = self.registry.get_features(name=feature_view.name)
+            feature_view = self._get_on_demand_feature_view_from_registry(
+                feature_view.name
+            )
 
         input_fields = request_df.columns.tolist()
-        for feature in feature_view.features:
+        for feature in feature_view.get_resolved_features():
             if isinstance(feature.transform, JoinTransform):
                 request_df = self._evaluate_join_transform(request_df, feature)
             elif isinstance(feature.transform, ExpressionTransform):
                 request_df = self._evaluate_expression_transform(request_df, feature)
             else:
                 raise RuntimeError(
-                    f"Unsupported transformation type for feature {feature.to_json()}"
+                    f"Unsupported transformation type for feature {feature.to_json()}."
                 )
 
         if feature_fields is not None:
@@ -84,10 +87,24 @@ class LocalFeatureService(FeatureService):
 
         return request_df[output_fields]
 
+    def _get_on_demand_feature_view_from_registry(
+        self, feature_view_name: str
+    ) -> OnDemandFeatureView:
+        feature_view = self.registry.get_features(name=feature_view_name)
+        if not isinstance(feature_view, OnDemandFeatureView):
+            raise FeathubException(
+                f"Expect {feature_view_name} referring to an OnDemandFeatureView "
+                f"but got {type(feature_view_name)}."
+            )
+        return feature_view
+
     def _evaluate_expression_transform(
         self, df: pd.DataFrame, feature: Feature
     ) -> pd.DataFrame:
-        expr_node = self.parser.parse(feature.transform.expr)
+        expression_transform = feature.transform
+        if not isinstance(expression_transform, ExpressionTransform):
+            raise FeathubException(f"Feature {feature} should use ExpressionTransform.")
+        expr_node = self.parser.parse(expression_transform.expr)
         df[feature.name] = df.apply(lambda row: expr_node.eval(row), axis=1).tolist()
         return df
 
@@ -100,7 +117,7 @@ class LocalFeatureService(FeatureService):
 
         source = self.registry.get_features(join_transform.table_name)
         if not isinstance(source, OnlineStoreSource):
-            raise RuntimeError(f"Unsupported source {source.to_json()}")
+            raise RuntimeError(f"Unsupported source {source.to_json()}.")
 
         return self.stores[source.store_type].get(
             table_name=source.table_name, input_data=input_df
