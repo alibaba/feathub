@@ -12,19 +12,22 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from datetime import datetime, timedelta
-from typing import Union, Optional, List, Any, Dict, Sequence
+from typing import Union, Optional, List, Any, Dict, Sequence, Callable, Set, Tuple
 
 import pandas as pd
-from feathub.common import types
 from pyflink.table import (
     StreamTableEnvironment,
     Table as NativeFlinkTable,
     expressions as native_flink_expr,
     TableDescriptor as NativeFlinkTableDescriptor,
     Schema as NativeFlinkSchema,
+    AggregateFunction,
 )
+from pyflink.table.types import DataType
+from pyflink.table.udf import ACC, T, udaf
 from pyflink.table.window import Over, OverWindowPartitionedOrderedPreceding
 
+from feathub.common import types
 from feathub.common.exceptions import FeathubException, FeathubTransformationException
 from feathub.common.types import DType
 from feathub.common.utils import to_java_date_format
@@ -33,11 +36,53 @@ from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.joined_feature_view import JoinedFeatureView
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
 from feathub.feature_views.transforms.join_transform import JoinTransform
-from feathub.feature_views.transforms.window_agg_transform import WindowAggTransform
+from feathub.feature_views.transforms.window_agg_transform import (
+    WindowAggTransform,
+    AggFunc,
+)
 from feathub.processors.flink.flink_types_utils import to_flink_schema, to_flink_type
 from feathub.registries.registry import Registry
 from feathub.sources.file_source import FileSource
 from feathub.table.table_descriptor import TableDescriptor
+
+
+def _avg(s: pd.Series) -> Any:
+    return s.mean()
+
+
+def _min(s: pd.Series) -> Any:
+    return s.min()
+
+
+def _max(s: pd.Series) -> Any:
+    return s.max()
+
+
+def _sum(s: pd.Series) -> Any:
+    return s.sum()
+
+
+def _first_value(s: pd.Series) -> Any:
+    return s.iloc[0]
+
+
+def _last_value(s: pd.Series) -> Any:
+    return s.iloc[-1]
+
+
+def _row_num(s: pd.Series) -> Any:
+    return s.size
+
+
+_AGG_FUNCTIONS: Dict[AggFunc, Callable[[pd.Series], Any]] = {
+    AggFunc.AVG: _avg,
+    AggFunc.SUM: _sum,
+    AggFunc.MAX: _max,
+    AggFunc.MIN: _min,
+    AggFunc.FIRST_VALUE: _first_value,
+    AggFunc.LAST_VALUE: _last_value,
+    AggFunc.ROW_NUMBER: _row_num,
+}
 
 
 class FlinkTableBuilder:
@@ -64,6 +109,11 @@ class FlinkTableBuilder:
         self.max_out_of_orderness_interval = processor_config.get(
             "max_out_of_orderness_interval", "INTERVAL '60' SECOND"
         )
+
+        # Mapping from the name of TableDescriptor to the TableDescriptor and the built
+        # NativeFlinkTable. This is used as a cache to avoid re-computing the native
+        # flink table from the same TableDescriptor.
+        self._built_tables: Dict[str, Tuple[TableDescriptor, NativeFlinkTable]] = {}
 
     def build(
         self,
@@ -143,7 +193,7 @@ class FlinkTableBuilder:
         table: NativeFlinkTable,
         start_datetime: Optional[datetime],
         end_datetime: Optional[datetime],
-    ):
+    ) -> NativeFlinkTable:
         if start_datetime is not None:
             table = table.filter(
                 native_flink_expr.col(self._EVENT_TIME_ATTRIBUTE_NAME).__ge__(
@@ -167,16 +217,36 @@ class FlinkTableBuilder:
     ) -> NativeFlinkTable:
         if isinstance(features, pd.DataFrame):
             return self.t_env.from_pandas(features)
-        elif isinstance(features, FileSource):
-            return self._get_table_from_file_source(features)
-        elif isinstance(features, DerivedFeatureView):
-            return self._get_table_from_derived_feature_view(features)
-        elif isinstance(features, JoinedFeatureView):
-            return self._get_table_from_joined_feature_view(features)
 
-        raise FeathubException(
-            f"Unsupported type '{type(features).__name__}' for '{features}'."
-        )
+        if features.name in self._built_tables:
+            if features != self._built_tables[features.name][0]:
+                raise FeathubException(
+                    f"Encounter different TableDescriptor with same name. {features} "
+                    f"and {self._built_tables[features.name][0]}."
+                )
+            return self._built_tables[features.name][1]
+
+        if isinstance(features, FileSource):
+            self._built_tables[features.name] = (
+                features,
+                self._get_table_from_file_source(features),
+            )
+        elif isinstance(features, DerivedFeatureView):
+            self._built_tables[features.name] = (
+                features,
+                self._get_table_from_derived_feature_view(features),
+            )
+        elif isinstance(features, JoinedFeatureView):
+            self._built_tables[features.name] = (
+                features,
+                self._get_table_from_joined_feature_view(features),
+            )
+        else:
+            raise FeathubException(
+                f"Unsupported type '{type(features).__name__}' for '{features}'."
+            )
+
+        return self._built_tables[features.name][1]
 
     def _get_table_from_file_source(self, source: FileSource) -> NativeFlinkTable:
         schema = source.schema
@@ -223,7 +293,7 @@ class FlinkTableBuilder:
         if timestamp_format == "epoch":
             if (
                 timestamp_field_dtype != types.Int32
-                or timestamp_field_dtype != types.Int64
+                and timestamp_field_dtype != types.Int64
             ):
                 raise FeathubException(
                     "Timestamp field with epoch format only supports data type of "
@@ -271,6 +341,9 @@ class FlinkTableBuilder:
                 dependent_features.append(feature)
 
         tmp_table = source_table
+
+        window_agg_map: Dict[_OverWindowDescriptor, List[_AggregationDescriptor]] = {}
+
         for feature in dependent_features:
             if feature.name in tmp_table.get_schema().get_field_names():
                 continue
@@ -282,22 +355,34 @@ class FlinkTableBuilder:
                     feature.dtype,
                 )
             elif isinstance(feature.transform, WindowAggTransform):
-                # We can optimize by merging feature with the same window size
                 if feature_view.timestamp_field is None:
                     raise FeathubException(
                         "FeatureView must have timestamp field for WindowAggTransform."
                     )
-                tmp_table = self._evaluate_window_transform(
-                    tmp_table,
-                    feature.transform,
-                    feature.name,
-                    feature.dtype,
+                transform = feature.transform
+                window_aggs = window_agg_map.setdefault(
+                    _OverWindowDescriptor.from_window_agg_transform(transform),
+                    [],
+                )
+                window_aggs.append(
+                    _AggregationDescriptor(
+                        feature.name,
+                        to_flink_type(feature.dtype),
+                        transform.expr,
+                        transform.agg_func,
+                    )
                 )
             else:
                 raise FeathubTransformationException(
                     f"Unsupported transformation type "
                     f"{type(feature.transform).__name__} for feature {feature.name}."
                 )
+
+        for over_window_descriptor, agg_descriptor in window_agg_map.items():
+            tmp_table = self._evaluate_window_transform(
+                tmp_table, feature_view.keys, over_window_descriptor, agg_descriptor
+            )
+
         output_fields = self._get_output_fields(feature_view, source_fields)
         return tmp_table.select(
             *[native_flink_expr.col(field) for field in output_fields]
@@ -330,6 +415,10 @@ class FlinkTableBuilder:
             descriptors_by_names[name] = descriptor
             table_by_names[name] = self._get_table(features=descriptor)
 
+        # The right_tables map keeps track of the information of the right table to join
+        # with the source table. The key is a tuple of right_table_name and join_keys
+        # and the value is the names of the field of the right table to join.
+        right_tables: Dict[Tuple[str, Sequence[str]], Set[str]] = {}
         tmp_table = source_table
         for feature in feature_view.get_resolved_features():
             if feature.name in tmp_table.get_schema().get_field_names():
@@ -340,6 +429,15 @@ class FlinkTableBuilder:
                     raise FeathubException(
                         f"FlinkProcessor cannot join feature {feature} without key."
                     )
+                if not all(
+                    key in source_table.get_schema().get_field_names()
+                    for key in feature.keys
+                ):
+                    raise FeathubException(
+                        f"Source table {source_table.get_schema().get_field_names()} "
+                        f"doesn't have the keys of the Feature to join {feature.keys}."
+                    )
+
                 join_transform = feature.transform
                 right_table_descriptor = descriptors_by_names[join_transform.table_name]
                 right_timestamp_field = right_table_descriptor.timestamp_field
@@ -348,21 +446,13 @@ class FlinkTableBuilder:
                         f"FlinkProcessor cannot join with {right_table_descriptor} "
                         f"without timestamp field."
                     )
-                right_table_fields = [
-                    native_flink_expr.col(key) for key in feature.keys
-                ] + [
-                    native_flink_expr.col(feature.name),
-                    native_flink_expr.col(right_timestamp_field),
-                    native_flink_expr.col(self._EVENT_TIME_ATTRIBUTE_NAME),
-                ]
-                right_table = table_by_names[join_transform.table_name].select(
-                    *right_table_fields
+                right_table_fields = right_tables.setdefault(
+                    (join_transform.table_name, tuple(feature.keys)), set()
                 )
-                tmp_table = self._temporal_join(
-                    tmp_table,
-                    right_table,
-                    feature.keys,
-                )
+                right_table_fields.update(feature.keys)
+                right_table_fields.add(feature.name)
+                right_table_fields.add(right_timestamp_field)
+                right_table_fields.add(self._EVENT_TIME_ATTRIBUTE_NAME)
             elif isinstance(feature.transform, ExpressionTransform):
                 tmp_table = self._evaluate_expression_transform(
                     tmp_table, feature.transform, feature.name, feature.dtype
@@ -372,6 +462,19 @@ class FlinkTableBuilder:
                     f"Unsupported transformation type "
                     f"{type(feature.transform).__name__} for feature {feature.name}."
                 )
+
+        for (right_table_name, keys), right_table_fields in right_tables.items():
+            right_table = table_by_names[right_table_name].select(
+                *[
+                    native_flink_expr.col(right_table_field)
+                    for right_table_field in right_table_fields
+                ]
+            )
+            tmp_table = self._temporal_join(
+                tmp_table,
+                right_table,
+                keys,
+            )
 
         output_fields = self._get_output_fields(feature_view, source_fields)
         return tmp_table.select(
@@ -474,74 +577,227 @@ class FlinkTableBuilder:
     def _evaluate_window_transform(
         self,
         flink_table: NativeFlinkTable,
-        transform: WindowAggTransform,
-        result_field_name: str,
-        result_type: DType,
+        keys: List[str],
+        window_descriptor: "_OverWindowDescriptor",
+        agg_descriptors: List["_AggregationDescriptor"],
     ) -> NativeFlinkTable:
-        window = self._get_flink_window(transform)
+        window = self._get_flink_over_window(window_descriptor)
+        if window_descriptor.filter_expr is not None:
+            agg_table = (
+                flink_table.filter(
+                    native_flink_expr.call_sql(window_descriptor.filter_expr)
+                )
+                .over_window(window.alias("w"))
+                .select(
+                    *[native_flink_expr.col(key) for key in keys],
+                    *self._get_agg_column_list(
+                        window_descriptor,
+                        agg_descriptors,
+                    ),
+                    native_flink_expr.col(self._EVENT_TIME_ATTRIBUTE_NAME),
+                )
+            )
+            return self._temporal_join(flink_table, agg_table, keys)
 
-        result_type = to_flink_type(result_type)
-        result_table = flink_table.over_window(window.alias("w")).select(
-            *[
-                native_flink_expr.col(field_name)
-                for field_name in flink_table.get_schema().get_field_names()
-            ],
-            self._get_agg_select_expr(
-                native_flink_expr.call_sql(transform.expr).cast(result_type),
-                transform,
-                "w",
-            ).alias(result_field_name),
+        return flink_table.over_window(window.alias("w")).select(
+            native_flink_expr.col("*"),
+            *self._get_agg_column_list(window_descriptor, agg_descriptors),
         )
 
-        return result_table
+    def _get_agg_column_list(
+        self,
+        window_descriptor: "_OverWindowDescriptor",
+        agg_descriptors: List["_AggregationDescriptor"],
+    ) -> List[native_flink_expr.Expression]:
+        return [
+            self._get_agg_select_expr(
+                native_flink_expr.call_sql(descriptor.expr).cast(
+                    descriptor.result_type
+                ),
+                descriptor.result_type,
+                window_descriptor,
+                descriptor.agg_func,
+                "w",
+            ).alias(descriptor.result_field_name)
+            for descriptor in agg_descriptors
+        ]
 
     def _get_agg_select_expr(
         self,
-        col: native_flink_expr.Expression,
-        transformation: WindowAggTransform,
+        expr: native_flink_expr.Expression,
+        result_type: DataType,
+        over_window_descriptor: "_OverWindowDescriptor",
+        agg_func: AggFunc,
         window_alias: str,
     ) -> native_flink_expr.Expression:
-        agg_func = transformation.agg_func
-        if agg_func == "AVG":
-            result = col.avg
-        elif agg_func == "MIN":
-            result = col.min
-        elif agg_func == "MAX":
-            result = col.max
-        elif agg_func == "SUM":
-            result = col.sum
-        else:
-            raise FeathubTransformationException(
-                f"Unsupported aggregation for FlinkProcessor {agg_func}."
+
+        if (
+            over_window_descriptor.limit is not None
+            and over_window_descriptor.window_size is not None
+        ):
+            # We use PyFlink UDAF to support over window ranged by both time interval
+            # and row count.
+            if agg_func not in _AGG_FUNCTIONS:
+                raise FeathubTransformationException(
+                    f"Unsupported aggregation for FlinkProcessor {agg_func}."
+                )
+            time_windowed_agg_func = _TimeWindowedAggFunction(
+                over_window_descriptor.window_size,
+                _AGG_FUNCTIONS[agg_func],
             )
+            result = native_flink_expr.call(
+                udaf(
+                    time_windowed_agg_func, result_type=result_type, func_type="pandas"
+                ),
+                expr,
+                native_flink_expr.col(self._EVENT_TIME_ATTRIBUTE_NAME),
+            )
+        else:
+            if agg_func == AggFunc.AVG:
+                result = expr.avg
+            elif agg_func == AggFunc.MIN:
+                result = expr.min
+            elif agg_func == AggFunc.MAX:
+                result = expr.max
+            elif agg_func == AggFunc.SUM:
+                result = expr.sum
+            # TODO: FIRST_VALUE AND LAST_VALUE is supported after PyFlink 1.16 without
+            # PyFlink UDAF.
+            else:
+                raise FeathubTransformationException(
+                    f"Unsupported aggregation for FlinkProcessor {agg_func}."
+                )
         return result.over(native_flink_expr.col(window_alias))
 
-    def _get_flink_window(
-        self, transform: WindowAggTransform
+    def _get_flink_over_window(
+        self, over_window_descriptor: "_OverWindowDescriptor"
     ) -> OverWindowPartitionedOrderedPreceding:
-        if transform.window_size is None:
-            raise FeathubTransformationException(
-                "Window Aggregation without window size is not supported "
-                "in FlinkProcessor."
-            )
-        if transform.limit is not None:
-            raise FeathubTransformationException(
-                "Window Aggregation with limit is not supported in FlinkProcessor."
-            )
 
         # Group by key
-        if len(transform.group_by_keys) == 0:
+        if len(over_window_descriptor.group_by_keys) == 0:
             window = Over.order_by(
                 native_flink_expr.col(self._EVENT_TIME_ATTRIBUTE_NAME)
             )
         else:
-            keys = [native_flink_expr.col(key) for key in transform.group_by_keys]
+            keys = [
+                native_flink_expr.col(key)
+                for key in over_window_descriptor.group_by_keys
+            ]
             window = Over.partition_by(*keys).order_by(
                 native_flink_expr.col(self._EVENT_TIME_ATTRIBUTE_NAME)
             )
 
-        return window.preceding(
-            native_flink_expr.lit(
-                transform.window_size / timedelta(milliseconds=1)
-            ).milli
+        if over_window_descriptor.limit is not None:
+            # Flink over window only support ranging by either row-count or time. For
+            # feature that need to range by both row-count and time, it is handled in
+            # _get_agg_select_expr with the _TimeWindowedAggFunction UDTAF.
+            return window.preceding(
+                native_flink_expr.row_interval(over_window_descriptor.limit - 1)
+            )
+
+        if over_window_descriptor.window_size is not None:
+            return window.preceding(
+                native_flink_expr.lit(
+                    over_window_descriptor.window_size / timedelta(milliseconds=1)
+                ).milli
+            )
+
+        return window.preceding(native_flink_expr.UNBOUNDED_RANGE)
+
+
+# TODO: We can implement the TimeWindowedAggFunction in Java to get better performance.
+class _TimeWindowedAggFunction(AggregateFunction):
+    """
+    An aggregate function for Flink table aggregation.
+
+    The aggregate function only aggregate rows with row time in the range of
+    [current_row_time - time_interval, current_row_time]. Currently, Flink SQL/Table
+    only support over window with either time range or row count-based range. This can
+    be used with a row count-based over window to achieve over window with both time
+    range and row count-based range.
+    """
+
+    def __init__(self, time_interval: timedelta, agg_func: Callable[[pd.Series], Any]):
+        """
+        Instantiate a _TimeWindowedAggFunction.
+
+        :param time_interval: Only rows with row time in the range of [current_row_time
+                              - time_interval, current_row_time] is included in the
+                              aggregation function.
+        :param agg_func: The name of an aggregation function such as MAX, AVG.
+        """
+        self.time_interval = time_interval
+        self.agg_op = agg_func
+
+    def get_value(self, accumulator: ACC) -> T:
+        return accumulator[0]
+
+    def create_accumulator(self) -> ACC:
+        return []
+
+    def accumulate(self, accumulator: ACC, *args: pd.Series) -> None:
+        df = pd.DataFrame({"val": args[0], "time": args[1]})
+        latest_time = df["time"].iloc[-1]
+        df = df[df.time >= latest_time - self.time_interval]
+        accumulator.append(self.agg_op(df["val"]))
+
+
+class _OverWindowDescriptor:
+    """
+    Descriptor of an over window.
+    """
+
+    def __init__(
+        self,
+        window_size: timedelta,
+        limit: int,
+        group_by_keys: Sequence[str],
+        filter_expr: Optional[str],
+    ) -> None:
+        self.window_size = window_size
+        self.limit = limit
+        self.group_by_keys = group_by_keys
+        self.filter_expr = filter_expr
+
+    @staticmethod
+    def from_window_agg_transform(
+        window_agg_transform: WindowAggTransform,
+    ) -> "_OverWindowDescriptor":
+        return _OverWindowDescriptor(
+            window_agg_transform.window_size,
+            window_agg_transform.limit,
+            window_agg_transform.group_by_keys,
+            window_agg_transform.filter_expr,
         )
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, self.__class__)
+            and self.window_size == other.window_size
+            and self.limit == other.limit
+            and self.group_by_keys == other.group_by_keys
+            and self.filter_expr == other.filter_expr
+        )
+
+    def __hash__(self) -> int:
+        return hash(
+            (self.window_size, self.limit, tuple(self.group_by_keys), self.filter_expr)
+        )
+
+
+class _AggregationDescriptor:
+    """
+    Descriptor of an aggregation operation.
+    """
+
+    def __init__(
+        self,
+        result_field_name: str,
+        result_type: DataType,
+        expr: str,
+        agg_func: AggFunc,
+    ) -> None:
+        self.result_field_name = result_field_name
+        self.result_type = result_type
+        self.expr = expr
+        self.agg_func = agg_func

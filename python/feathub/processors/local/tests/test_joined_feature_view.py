@@ -113,7 +113,7 @@ class JoinedFeatureViewTest(LocalProcessorTestCase):
             keep_source_fields=False,
         )
 
-        [feature_view_2, feature_view_3] = self.registry.build_features(
+        [built_feature_view_2, built_feature_view_3] = self.registry.build_features(
             [feature_view_2, feature_view_3]
         )
 
@@ -124,9 +124,9 @@ class JoinedFeatureViewTest(LocalProcessorTestCase):
         expected_result_df["derived_cost"] = pd.Series(
             [None, None, 20000.0, 100000.0, None, 160000.0]
         )
-        result_df = self.processor.get_table(features=feature_view_3).to_pandas()
+        result_df = self.processor.get_table(features=built_feature_view_3).to_pandas()
 
         self.assertIsNone(feature_view_1.keys)
-        self.assertListEqual(["name"], feature_view_2.keys)
-        self.assertListEqual(["name"], feature_view_3.keys)
+        self.assertListEqual(["name"], built_feature_view_2.keys)
+        self.assertListEqual(["name"], built_feature_view_3.keys)
         self.assertTrue(expected_result_df.equals(result_df))

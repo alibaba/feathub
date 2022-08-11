@@ -73,8 +73,8 @@ class FeatureViewTest(unittest.TestCase):
             ],
             keep_source_fields=True,
         )
-        feature_view_2 = self.registry.build_features([feature_view_2])[0]
+        built_feature_view = self.registry.build_features([feature_view_2])[0]
 
-        self.assertEqual(feature_1, feature_view_2.get_feature("feature_1"))
-        self.assertEqual(feature_2, feature_view_2.get_feature("feature_2"))
-        self.assertEqual(feature_3, feature_view_2.get_feature("feature_3"))
+        self.assertEqual(feature_1, built_feature_view.get_feature("feature_1"))
+        self.assertEqual(feature_2, built_feature_view.get_feature("feature_2"))
+        self.assertEqual(feature_3, built_feature_view.get_feature("feature_3"))

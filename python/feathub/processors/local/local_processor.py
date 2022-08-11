@@ -32,7 +32,10 @@ from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.joined_feature_view import JoinedFeatureView
 from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
-from feathub.feature_views.transforms.window_agg_transform import WindowAggTransform
+from feathub.feature_views.transforms.window_agg_transform import (
+    WindowAggTransform,
+    AggFunc,
+)
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.table.table_descriptor import TableDescriptor
 from feathub.sources.file_source import FileSource
@@ -47,11 +50,12 @@ class LocalProcessor(Processor):
 
     PROCESSOR_TYPE = "local"
 
+    # TODO: Support agg function LAST_VALUE, FIRST_VALUE, ROW_NUMBER
     _AGG_FUNCTIONS = {
-        "AVG": np.mean,
-        "SUM": np.sum,
-        "MAX": np.max,
-        "MIN": np.min,
+        AggFunc.AVG: np.mean,
+        AggFunc.SUM: np.sum,
+        AggFunc.MAX: np.max,
+        AggFunc.MIN: np.min,
     }
 
     def __init__(
@@ -431,6 +435,7 @@ class LocalProcessor(Processor):
                     f"Group-by key '{key}' is not found in {df.columns}."
                 )
 
+        # TODO: Support WindowAggTransform with filter.
         expr_node = self.parser.parse(transform.expr)
         df_copy = df.copy()
         df_copy[temp_column] = df_copy.apply(lambda row: expr_node.eval(row), axis=1)
@@ -461,6 +466,7 @@ class LocalProcessor(Processor):
             predicate = rows_in_group[unix_time_column].transform(
                 lambda timestamp: min_timestamp <= timestamp <= max_timestamp
             )
+            # TODO: Support WindowAggTransform with limit.
             rows_in_group_and_window = rows_in_group[predicate]
             result.append(agg_func(rows_in_group_and_window[temp_column].tolist()))
 

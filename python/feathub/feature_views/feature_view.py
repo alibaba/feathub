@@ -68,8 +68,10 @@ class FeatureView(TableDescriptor, ABC):
         )
 
     def is_unresolved(self) -> bool:
-        return isinstance(self.source, str) or any(
-            isinstance(f, str) for f in self.features
+        return (
+            isinstance(self.source, str)
+            or (isinstance(self.source, FeatureView) and self.source.is_unresolved())
+            or any(isinstance(f, str) for f in self.features)
         )
 
     def get_output_fields(self, source_fields: List[str]) -> List[str]:

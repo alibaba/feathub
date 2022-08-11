@@ -11,11 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from typing import Optional, Dict, Sequence
+from enum import Enum
+from typing import Optional, Dict, Sequence, Union
 from datetime import timedelta
 
 from feathub.feature_views.transforms.transformation import Transformation
+
+
+# TODO: Add docs about the supported AggFunc to README.
+class AggFunc(Enum):
+    """Supported aggregation function for WindowAggTransform"""
+
+    AVG = "AVG"
+    SUM = "SUM"
+    MAX = "MAX"
+    MIN = "MIN"
+    FIRST_VALUE = "FIRST_VALUE"
+    LAST_VALUE = "LAST_VALUE"
+    ROW_NUMBER = "ROW_NUMBER"
 
 
 class WindowAggTransform(Transformation):
@@ -27,7 +40,7 @@ class WindowAggTransform(Transformation):
     def __init__(
         self,
         expr: str,
-        agg_func: str,
+        agg_func: Union[str, AggFunc],
         group_by_keys: Sequence[str] = (),
         window_size: Optional[timedelta] = None,
         filter_expr: Optional[str] = None,
@@ -35,7 +48,8 @@ class WindowAggTransform(Transformation):
     ):
         """
         :param expr: A Feathub expression composed of UDF and feature names.
-        :param agg_func: The name of an aggregation function such as MAX, AVG.
+        :param agg_func: The aggregation function or the name of the aggregation
+                         function as string such as "MAX", "AVG".
         :param group_by_keys: The names of fields to be used as the grouping key.
         :param window_size: Optional. If it is not None, for any row in the table with
                             timestamp = t0, only rows whose timestamp fall in range
@@ -49,7 +63,7 @@ class WindowAggTransform(Transformation):
         """
         super().__init__()
         self.expr = expr
-        self.agg_func = agg_func
+        self.agg_func = agg_func if isinstance(agg_func, AggFunc) else AggFunc(agg_func)
         self.group_by_keys = group_by_keys
         self.window_size = window_size
         self.filter_expr = filter_expr

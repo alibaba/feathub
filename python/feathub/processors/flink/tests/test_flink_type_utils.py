@@ -12,6 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import unittest
+from typing import Dict
 
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import (
@@ -31,6 +32,7 @@ from feathub.common.types import (
     Bool,
     Int32Vector,
     Unknown,
+    DType,
 )
 from feathub.processors.flink.flink_types_utils import (
     to_flink_schema,
@@ -91,6 +93,9 @@ class FlinkTypeUtilsTest(unittest.TestCase):
         with self.assertRaises(FeathubTypeException):
             to_flink_type(Unknown)
 
-        invalid_type = ""
+        class InvalidType(DType):
+            def to_json(self) -> Dict:
+                return {}
+
         with self.assertRaises(FeathubTypeException):
-            to_flink_type(invalid_type)
+            to_flink_type(InvalidType())
