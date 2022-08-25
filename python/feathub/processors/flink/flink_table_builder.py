@@ -380,7 +380,7 @@ class FlinkTableBuilder:
 
         for over_window_descriptor, agg_descriptor in window_agg_map.items():
             tmp_table = self._evaluate_window_transform(
-                tmp_table, feature_view.keys, over_window_descriptor, agg_descriptor
+                tmp_table, over_window_descriptor, agg_descriptor
             )
 
         output_fields = self._get_output_fields(feature_view, source_fields)
@@ -577,7 +577,6 @@ class FlinkTableBuilder:
     def _evaluate_window_transform(
         self,
         flink_table: NativeFlinkTable,
-        keys: List[str],
         window_descriptor: "_OverWindowDescriptor",
         agg_descriptors: List["_AggregationDescriptor"],
     ) -> NativeFlinkTable:
@@ -589,15 +588,30 @@ class FlinkTableBuilder:
                 )
                 .over_window(window.alias("w"))
                 .select(
-                    *[native_flink_expr.col(key) for key in keys],
-                    *self._get_agg_column_list(
-                        window_descriptor,
-                        agg_descriptors,
-                    ),
-                    native_flink_expr.col(self._EVENT_TIME_ATTRIBUTE_NAME),
+                    native_flink_expr.col("*"),
+                    *self._get_agg_column_list(window_descriptor, agg_descriptors),
                 )
             )
-            return self._temporal_join(flink_table, agg_table, keys)
+
+            # For rows that do not satisfy the filter predicate, set the feature col
+            # to NULL.
+            null_feature_table = flink_table.filter(
+                native_flink_expr.not_(
+                    native_flink_expr.call_sql(window_descriptor.filter_expr)
+                )
+            ).add_columns(
+                *[
+                    native_flink_expr.null_of(descriptor.result_type).alias(
+                        descriptor.result_field_name
+                    )
+                    for descriptor in agg_descriptors
+                ]
+            )
+
+            # After union, order of the row with same grouping key is not preserved. We
+            # can only preserve the order of the row with the same grouping keys and
+            # filter condition.
+            return agg_table.union_all(null_feature_table)
 
         return flink_table.over_window(window.alias("w")).select(
             native_flink_expr.col("*"),

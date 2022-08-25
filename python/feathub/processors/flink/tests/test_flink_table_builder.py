@@ -749,7 +749,7 @@ class FlinkTableBuilderTest(unittest.TestCase):
 
         expected_df = df.copy()
         expected_df["last_2_pay_last_2_minute_total_cost"] = pd.Series(
-            [100.0, 300.0, 300.0, 400.0, 400.0, 300.0, 700.0, None, 450.0]
+            [100.0, None, 300.0, None, 400.0, None, 700.0, None, 450.0]
         )
         expected_df.drop(["cost", "action"], axis=1, inplace=True)
         expected_df = expected_df.sort_values(by=["name", "time"]).reset_index(
