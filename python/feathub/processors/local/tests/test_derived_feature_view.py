@@ -18,7 +18,7 @@ from datetime import timedelta
 from feathub.common.test_utils import LocalProcessorTestCase
 from feathub.common import types
 from feathub.feature_views.feature import Feature
-from feathub.feature_views.transforms.window_agg_transform import WindowAggTransform
+from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 
 
@@ -79,7 +79,7 @@ class DerivedFeatureViewTest(LocalProcessorTestCase):
         f_total_cost = Feature(
             name="total_cost",
             dtype=types.Float32,
-            transform=WindowAggTransform(
+            transform=OverWindowTransform(
                 expr="cost",
                 agg_func="SUM",
                 group_by_keys=["name"],
@@ -89,7 +89,7 @@ class DerivedFeatureViewTest(LocalProcessorTestCase):
         f_avg_cost = Feature(
             name="avg_cost",
             dtype=types.Float32,
-            transform=WindowAggTransform(
+            transform=OverWindowTransform(
                 expr="cost",
                 agg_func="AVG",
                 group_by_keys=["name"],
@@ -99,7 +99,7 @@ class DerivedFeatureViewTest(LocalProcessorTestCase):
         f_max_cost = Feature(
             name="max_cost",
             dtype=types.Float32,
-            transform=WindowAggTransform(
+            transform=OverWindowTransform(
                 expr="cost",
                 agg_func="MAX",
                 group_by_keys=["name"],
@@ -109,7 +109,7 @@ class DerivedFeatureViewTest(LocalProcessorTestCase):
         f_min_cost = Feature(
             name="min_cost",
             dtype=types.Float32,
-            transform=WindowAggTransform(
+            transform=OverWindowTransform(
                 expr="cost",
                 agg_func="MIN",
                 group_by_keys=["name"],
@@ -169,7 +169,7 @@ class DerivedFeatureViewTest(LocalProcessorTestCase):
                 Feature(
                     name="cost_sum",
                     dtype=types.Int64,
-                    transform=WindowAggTransform(
+                    transform=OverWindowTransform(
                         expr="cost",
                         agg_func="SUM",
                         group_by_keys=["name"],

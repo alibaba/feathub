@@ -22,7 +22,7 @@ from pyflink.table import (
 )
 
 from feathub.common.exceptions import FeathubException
-from feathub.processors.flink.flink_table_builder import (
+from feathub.processors.flink.table_builder.flink_table_builder import (
     FlinkTableBuilder,
 )
 from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
@@ -63,7 +63,6 @@ def run_job(feathub_job_descriptor_path: str) -> None:
     flink_table_builder = FlinkTableBuilder(
         t_env=t_env,
         registry=registry,
-        processor_config=feathub_job_descriptor.processor_config,
     )
 
     if isinstance(feathub_job_descriptor.sink, FileSink):

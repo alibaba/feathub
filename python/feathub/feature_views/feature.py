@@ -17,8 +17,11 @@ from typing import Union, Optional, Dict, Sequence
 import json
 
 from feathub.common.types import DType
+from feathub.feature_views.transforms.sliding_window_transform import (
+    SlidingWindowTransform,
+)
 from feathub.feature_views.transforms.transformation import Transformation
-from feathub.feature_views.transforms.window_agg_transform import WindowAggTransform
+from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
 
 
@@ -59,7 +62,9 @@ class Feature:
 
         # If feature's keys are not specified, use group-by keys as the feature's keys.
         # Otherwise, validate that feature's keys contain group-by-keys.
-        if isinstance(transform, WindowAggTransform):
+        if isinstance(transform, OverWindowTransform) or isinstance(
+            transform, SlidingWindowTransform
+        ):
             if keys is None:
                 keys = list(transform.group_by_keys)
             if not set(transform.group_by_keys).issubset(set(keys)):

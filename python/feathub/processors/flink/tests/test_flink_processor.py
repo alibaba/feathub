@@ -31,7 +31,7 @@ from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.online_stores.online_store import OnlineStore
 from feathub.processors.flink.flink_processor import FlinkProcessor
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
-from feathub.processors.flink.flink_table_builder import FlinkTableBuilder
+from feathub.processors.flink.table_builder.flink_table_builder import FlinkTableBuilder
 from feathub.processors.flink.job_submitter.flink_job_submitter import (
     FlinkJobSubmitter,
 )

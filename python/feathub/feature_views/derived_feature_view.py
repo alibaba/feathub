@@ -25,7 +25,7 @@ class DerivedFeatureView(FeatureView):
     """
     Derives features by applying the given transformations on an existing table.
 
-    Supports per-row transformation and window aggregation transformation. Does not
+    Supports per-row transformation and over window aggregation transformation. Does not
     support table join.
     """
 

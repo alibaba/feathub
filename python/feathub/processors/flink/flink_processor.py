@@ -30,7 +30,7 @@ from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.online_stores.online_store import OnlineStore
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
 from feathub.processors.flink.flink_table import FlinkTable
-from feathub.processors.flink.flink_table_builder import (
+from feathub.processors.flink.table_builder.flink_table_builder import (
     FlinkTableBuilder,
 )
 from feathub.processors.flink.job_submitter.flink_job_submitter import FlinkJobSubmitter
@@ -57,9 +57,6 @@ class FlinkProcessor(Processor):
     Basic Configurations:
         deployment_mode: The flink job deployment mode, it could be session or
                          kubernetes-application. Default to "session".
-        max_out_of_orderness_interval: The maximum amount of time a record is allowed to
-                                       be late. It is used to generate the watermark.
-                                       Default to "INTERVAL '60' SECOND".
 
     Session Mode Configuration:
         rest.address: The ip or hostname where the JobManager runs. Required.
@@ -116,14 +113,13 @@ class FlinkProcessor(Processor):
             self.flink_table_builder = FlinkTableBuilder(
                 self._get_table_env(jobmanager_rpc_address, jobmanager_rpc_port),
                 self.registry,
-                self.config,
             )
             self.flink_job_submitter: FlinkJobSubmitter = (
                 FlinkSessionClusterJobSubmitter(self, self.stores)
             )
         elif self.deployment_mode == DeploymentMode.KUBERNETES_APPLICATION:
             self.flink_table_builder = FlinkTableBuilder(
-                self._get_table_env(), self.registry, self.config
+                self._get_table_env(), self.registry
             )
             self.flink_job_submitter = FlinkKubernetesApplicationClusterJobSubmitter(
                 processor_config=config,

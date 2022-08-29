@@ -38,15 +38,19 @@ A `FeatureView` provides metadata to derive a table of feature values from
 other tables. Feathub currently supports the following types of FeatureViews.
 
 - `DerivedFeatureView` derives features by applying the given transformations on
-  an existing table. It supports per-row transformation and window aggregation
-  transformation. It does not support table join.
+  an existing table. It supports per-row transformation and over window aggregation
+  transformation. It does not support table join or sliding window transformation.
 - `JoinedFeatureView` derives features by joining an existing table with
   features from other tables. It supports per-row transformation and table
-  join. It does not support window aggregation transformation.
+  join. It does not support over window transformation or sliding window 
+  transformation.
 - `OnDemandFeatureView` derives features by joining online request with features
   from tables in online feature stores. It supports per-row transformation and
-  join with tables in online stores. It does not support window aggregation
-  transformation.
+  join with tables in online stores. It does not support over window transformation or 
+  sliding window transformation.
+- `SlidingFeatureView` derives features by applying the given transformations on an 
+  existing table. It supports per-row transformation and sliding window transformation. 
+  It does not table join or over window transformation.
 
 `FeatureView` provides APIs to specify and access `Feature`s. Each `Feature` is
 defined by the following metadata:
@@ -67,8 +71,10 @@ Feathub currently supports the following types of Transformations.
   one row of the parent table at a time. Feathub expression language is a
   declarative language with build-in functions. See [Feathub
   expression](feathub_expression.md) for more information.
-- `WindowAggTransform` derives feature values by applying Feathub expression and
+- `OverWindowTransform` derives feature values by applying Feathub expression and
   aggregation function on multiple rows of a table at a time.
+- `SlidingWindowTransform` derives feature values by applying Feathub expression and 
+  aggregation function on multiple rows in a sliding window.
 - `JoinTransform` derives feature values by joining parent table with a feature
   from another table.
 - `PythonUdfTransform` derives feature values by applying a Python UDF on one

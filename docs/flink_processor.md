@@ -67,7 +67,6 @@ These are the configurations for the FlinkProcessor regardless of the deployment
 | key                           | Required | default              | type   | Description                                                                                      |
 |-------------------------------|----------|----------------------|--------|--------------------------------------------------------------------------------------------------|
 | deployment_mode               | optional | session              | String | The flink job deployment mode, it could be "session" or "kubernetes-application".                |
-| max_out_of_orderness_interval | optional | INTERVAL '60' SECOND | String | The maximum amount of time a record is allowed to be late. It is used to generate the watermark. |
 
 ### Session Mode Configuration
 These are the configurations for FlinkProcessor running in session mode.

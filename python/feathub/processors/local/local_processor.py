@@ -32,10 +32,10 @@ from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.joined_feature_view import JoinedFeatureView
 from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
-from feathub.feature_views.transforms.window_agg_transform import (
-    WindowAggTransform,
-    AggFunc,
+from feathub.feature_views.transforms.over_window_transform import (
+    OverWindowTransform,
 )
+from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.table.table_descriptor import TableDescriptor
 from feathub.sources.file_source import FileSource
@@ -188,6 +188,7 @@ class LocalProcessor(Processor):
                 timestamp_format="unknown",
             )
 
+        # TODO: Support SlidingFeatureView.
         if isinstance(features, FileSource):
             return self._get_table_from_file_source(features)
         elif isinstance(features, DerivedFeatureView):
@@ -263,14 +264,14 @@ class LocalProcessor(Processor):
                 source_df[feature.name] = self._evaluate_expression_transform(
                     source_df, feature.transform
                 )
-            elif isinstance(feature.transform, WindowAggTransform):
+            elif isinstance(feature.transform, OverWindowTransform):
                 if (
                     feature_view.timestamp_field is None
                     or feature_view.timestamp_format is None
                 ):
                     raise FeathubException(
                         "FeatureView must have timestamp field and timestamp format "
-                        "specified for WindowAggTransform."
+                        "specified for OverWindowTransform."
                     )
                 source_df[feature.name] = self._evaluate_window_transform(
                     source_df,
@@ -418,7 +419,7 @@ class LocalProcessor(Processor):
     def _evaluate_window_transform(
         self,
         df: pd.DataFrame,
-        transform: WindowAggTransform,
+        transform: OverWindowTransform,
         timestamp_field: str,
         timestamp_format: str,
     ) -> List:
@@ -435,7 +436,7 @@ class LocalProcessor(Processor):
                     f"Group-by key '{key}' is not found in {df.columns}."
                 )
 
-        # TODO: Support WindowAggTransform with filter.
+        # TODO: Support OverWindowTransform with filter.
         expr_node = self.parser.parse(transform.expr)
         df_copy = df.copy()
         df_copy[temp_column] = df_copy.apply(lambda row: expr_node.eval(row), axis=1)
@@ -466,7 +467,7 @@ class LocalProcessor(Processor):
             predicate = rows_in_group[unix_time_column].transform(
                 lambda timestamp: min_timestamp <= timestamp <= max_timestamp
             )
-            # TODO: Support WindowAggTransform with limit.
+            # TODO: Support OverWindowTransform with limit.
             rows_in_group_and_window = rows_in_group[predicate]
             result.append(agg_func(rows_in_group_and_window[temp_column].tolist()))
 

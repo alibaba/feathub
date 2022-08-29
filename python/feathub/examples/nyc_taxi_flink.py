@@ -36,7 +36,7 @@ from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
 from feathub.common import types
 from feathub.sources.online_store_source import OnlineStoreSource
 from feathub.feathub_client import FeathubClient
-from feathub.feature_views.transforms.window_agg_transform import WindowAggTransform
+from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 
 
@@ -218,7 +218,7 @@ def build_features(client: FeathubClient) -> FeatureView:
     f_location_avg_fare = Feature(
         name="f_location_avg_fare",
         dtype=types.Float32,
-        transform=WindowAggTransform(
+        transform=OverWindowTransform(
             expr="cast(fare_amount AS float)",
             agg_func="AVG",
             group_by_keys=["DOLocationID"],
@@ -229,7 +229,7 @@ def build_features(client: FeathubClient) -> FeatureView:
     f_location_max_fare = Feature(
         name="f_location_max_fare",
         dtype=types.Float32,
-        transform=WindowAggTransform(
+        transform=OverWindowTransform(
             expr="cast(fare_amount AS float)",
             agg_func="MAX",
             group_by_keys=["DOLocationID"],
@@ -240,7 +240,7 @@ def build_features(client: FeathubClient) -> FeatureView:
     f_location_total_fare_cents = Feature(
         name="f_location_total_fare_cents",
         dtype=types.Float32,
-        transform=WindowAggTransform(
+        transform=OverWindowTransform(
             expr="cast(fare_amount * 100 as float)",
             agg_func="SUM",
             group_by_keys=["DOLocationID"],

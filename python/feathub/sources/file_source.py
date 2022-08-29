@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from datetime import timedelta
 from typing import List, Optional, Dict
 
 from feathub.sources.source import Source
@@ -30,6 +30,7 @@ class FileSource(Source):
         keys: Optional[List[str]] = None,
         timestamp_field: Optional[str] = None,
         timestamp_format: str = "epoch",
+        max_out_of_orderness: timedelta = timedelta(0),
     ):
         """
         :param name: The name that uniquely identifies this source in a registry.
@@ -42,6 +43,9 @@ class FileSource(Source):
         :param timestamp_field: Optional. If it is not None, it is the name of the field
                                 whose values show the time when the corresponding row
                                 is generated.
+        :param max_out_of_orderness: The maximum amount of time a record is allowed to
+                                     be late. Default is 0 second, meaning the records
+                                     should be ordered by `timestamp_field`.
         """
         super().__init__(
             name=name,
@@ -52,6 +56,7 @@ class FileSource(Source):
         self.path = path
         self.file_format = file_format
         self.schema = schema
+        self.max_out_of_orderness = max_out_of_orderness
 
     def to_json(self) -> Dict:
         return {
@@ -63,4 +68,6 @@ class FileSource(Source):
             "timestamp_field": self.timestamp_field,
             "timestamp_format": self.timestamp_format,
             "schema": None if self.schema is None else self.schema.to_json(),
+            "max_out_of_orderness_ms": self.max_out_of_orderness
+            / timedelta(milliseconds=1),
         }
