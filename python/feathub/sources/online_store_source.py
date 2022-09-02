@@ -19,7 +19,7 @@ from feathub.sources.source import Source
 
 class OnlineStoreSource(Source):
     """
-    A sink corresponding to a table in an online feature store.
+    A source corresponding to a table in an online feature store.
     """
 
     def __init__(

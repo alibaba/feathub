@@ -14,8 +14,10 @@
 from abc import ABC
 from typing import List, Optional
 
+from feathub.common.exceptions import FeathubException
 from feathub.feature_views.feature import Feature
 from feathub.table.table_descriptor import TableDescriptor
+from feathub.table.schema import Schema
 
 
 # TODO: add SQL source which outputs the table returned by a SQL query.
@@ -31,6 +33,7 @@ class Source(TableDescriptor, ABC):
         keys: Optional[List[str]],
         timestamp_field: Optional[str],
         timestamp_format: str,
+        schema: Optional[Schema] = None,
     ):
         """
         :param name: The name that uniquely identifies this source in a registry.
@@ -40,7 +43,10 @@ class Source(TableDescriptor, ABC):
         :param timestamp_field: Optional. If it is not None, it is the name of the field
                                 whose values show the time when the corresponding row
                                 is generated.
-        :timestamp_format: The format of the timestamp field.
+        :param timestamp_format: The format of the timestamp field.
+        :param schema: Optional. If schema is not None. The source can automatically
+                       derive feature for each field in the schema.
+
         """
         super().__init__(
             name=name,
@@ -48,8 +54,24 @@ class Source(TableDescriptor, ABC):
             timestamp_field=timestamp_field,
             timestamp_format=timestamp_format,
         )
+        self.schema = schema
 
     def get_feature(self, feature_name: str) -> Feature:
-        raise RuntimeError(
-            f"Failed to find the feature '{feature_name}' in {self.to_json()}."
+        if self.schema is None:
+            raise FeathubException(
+                "The source does not have schema. Feature can not be derived. You "
+                "should create a FeatureView with this source and define the features"
+                "explicitly in the FeatureView."
+            )
+
+        if feature_name not in self.schema.field_names:
+            raise FeathubException(
+                f"Failed to find the feature '{feature_name}' in {self.to_json()}."
+            )
+
+        return Feature(
+            name=feature_name,
+            dtype=self.schema.get_field_type(feature_name),
+            transform=feature_name,
+            keys=self.keys,
         )

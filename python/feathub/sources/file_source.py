@@ -50,6 +50,7 @@ class FileSource(Source):
         super().__init__(
             name=name,
             keys=keys,
+            schema=schema,
             timestamp_field=timestamp_field,
             timestamp_format=timestamp_format,
         )

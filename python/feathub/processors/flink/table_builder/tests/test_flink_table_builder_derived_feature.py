@@ -153,28 +153,10 @@ class FlinkTableBuilderDerivedFeatureViewTest(FlinkTableBuilderTestBase):
             df_2,
             schema=Schema(["name", "avg_cost", "time"], [String, Float64, String]),
             timestamp_format="%Y-%m-%d,%H:%M:%S",
+            keys=["name"],
         )
         feature_view_2 = DerivedFeatureView(
             name="feature_view_2",
-            source=source_2,
-            features=[
-                Feature(
-                    name="name",
-                    dtype=String,
-                    transform="name",
-                ),
-                Feature(
-                    name="avg_cost",
-                    dtype=Float64,
-                    transform="avg_cost",
-                    keys=["name"],
-                ),
-            ],
-            keep_source_fields=False,
-        )
-
-        feature_view_3 = DerivedFeatureView(
-            name="feature_view_3",
             source=feature_view_1,
             features=[
                 Feature(
@@ -183,14 +165,14 @@ class FlinkTableBuilderDerivedFeatureViewTest(FlinkTableBuilderTestBase):
                     transform="cost",
                 ),
                 "distance",
-                "feature_view_2.avg_cost",
+                f"{source_2.name}.avg_cost",
             ],
             keep_source_fields=False,
         )
 
-        feature_view_4 = DerivedFeatureView(
-            name="feature_view_4",
-            source=feature_view_3,
+        feature_view_3 = DerivedFeatureView(
+            name="feature_view_3",
+            source=feature_view_2,
             features=[
                 Feature(
                     name="derived_cost",
@@ -201,8 +183,8 @@ class FlinkTableBuilderDerivedFeatureViewTest(FlinkTableBuilderTestBase):
             keep_source_fields=True,
         )
 
-        [built_feature_view_2, built_feature_view_4] = self.registry.build_features(
-            [feature_view_2, feature_view_4]
+        [_, built_feature_view_2, built_feature_view_3] = self.registry.build_features(
+            [source_2, feature_view_2, feature_view_3]
         )
 
         expected_result_df = df_1
@@ -217,7 +199,7 @@ class FlinkTableBuilderDerivedFeatureViewTest(FlinkTableBuilderTestBase):
         ).reset_index(drop=True)
 
         result_df = (
-            self.flink_table_builder.build(features=built_feature_view_4)
+            self.flink_table_builder.build(features=built_feature_view_3)
             .to_pandas()
             .sort_values(by=["name", "time"])
             .reset_index(drop=True)
@@ -225,5 +207,5 @@ class FlinkTableBuilderDerivedFeatureViewTest(FlinkTableBuilderTestBase):
 
         self.assertIsNone(feature_view_1.keys)
         self.assertListEqual(["name"], built_feature_view_2.keys)
-        self.assertListEqual(["name"], built_feature_view_4.keys)
+        self.assertListEqual(["name"], built_feature_view_3.keys)
         self.assertTrue(expected_result_df.equals(result_df))
