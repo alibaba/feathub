@@ -28,16 +28,14 @@ from datetime import datetime, timedelta
 import pandas as pd
 
 from feathub.common.exceptions import FeathubException
-from feathub.common.types import String, Int64, Float64
+from feathub.common.types import Int64, Float64
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
-from feathub.feature_views.joined_feature_view import JoinedFeatureView
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
 from feathub.processors.flink.table_builder.tests.table_builder_test_base import (
     FlinkTableBuilderTestBase,
 )
 from feathub.sources.online_store_source import OnlineStoreSource
-from feathub.table.schema import Schema
 
 
 def _to_timestamp(datetime_str):
@@ -240,117 +238,6 @@ class FlinkTableBuilderTest(FlinkTableBuilderTestBase):
         expected_result_df["cost_per_mile_2"] = expected_result_df.apply(
             lambda row: row["cost"] / row["distance"] + 5, axis=1
         )
-        self.assertTrue(expected_result_df.equals(result_df))
-
-    def test_joined_feature_view(self):
-        df_1 = self.input_data.copy()
-        source = self._create_file_source(df_1)
-        feature_view_1 = DerivedFeatureView(
-            name="feature_view_1",
-            source=source,
-            features=[
-                Feature(
-                    name="cost",
-                    dtype=Int64,
-                    transform="cost",
-                ),
-                Feature(
-                    name="distance",
-                    dtype=Int64,
-                    transform="distance",
-                ),
-            ],
-            keep_source_fields=True,
-        )
-
-        df_2 = pd.DataFrame(
-            [
-                ["Alex", 100.0, "2022-01-01,09:01:00"],
-                ["Emma", 400.0, "2022-01-01,09:02:00"],
-                ["Alex", 200.0, "2022-01-02,09:03:00"],
-                ["Emma", 300.0, "2022-01-02,09:04:00"],
-                ["Jack", 500.0, "2022-01-03,09:05:00"],
-                ["Alex", 450.0, "2022-01-03,09:06:00"],
-            ],
-            columns=["name", "avg_cost", "time"],
-        )
-        source_2 = self._create_file_source(
-            df_2,
-            schema=Schema(["name", "avg_cost", "time"], [String, Float64, String]),
-            timestamp_format="%Y-%m-%d,%H:%M:%S",
-        )
-        feature_view_2 = DerivedFeatureView(
-            name="feature_view_2",
-            source=source_2,
-            features=[
-                Feature(
-                    name="name",
-                    dtype=String,
-                    transform="name",
-                ),
-                Feature(
-                    name="avg_cost",
-                    dtype=Float64,
-                    transform="avg_cost",
-                    keys=["name"],
-                ),
-            ],
-            keep_source_fields=False,
-        )
-
-        feature_view_3 = JoinedFeatureView(
-            name="feature_view_3",
-            source=feature_view_1,
-            features=[
-                Feature(
-                    name="cost",
-                    dtype=Int64,
-                    transform="cost",
-                ),
-                "distance",
-                "feature_view_2.avg_cost",
-            ],
-            keep_source_fields=False,
-        )
-
-        feature_view_4 = DerivedFeatureView(
-            name="feature_view_4",
-            source=feature_view_3,
-            features=[
-                Feature(
-                    name="derived_cost",
-                    dtype=Float64,
-                    transform="avg_cost * distance",
-                ),
-            ],
-            keep_source_fields=True,
-        )
-
-        [built_feature_view_2, built_feature_view_4] = self.registry.build_features(
-            [feature_view_2, feature_view_4]
-        )
-
-        expected_result_df = df_1
-        expected_result_df["avg_cost"] = pd.Series(
-            [None, None, 100.0, 400.0, None, 200.0]
-        )
-        expected_result_df["derived_cost"] = pd.Series(
-            [None, None, 20000.0, 100000.0, None, 160000.0]
-        )
-        expected_result_df = expected_result_df.sort_values(
-            by=["name", "time"]
-        ).reset_index(drop=True)
-
-        result_df = (
-            self.flink_table_builder.build(features=built_feature_view_4)
-            .to_pandas()
-            .sort_values(by=["name", "time"])
-            .reset_index(drop=True)
-        )
-
-        self.assertIsNone(feature_view_1.keys)
-        self.assertListEqual(["name"], built_feature_view_2.keys)
-        self.assertListEqual(["name"], built_feature_view_4.keys)
         self.assertTrue(expected_result_df.equals(result_df))
 
     def test_with_multiple_feature_views(self):

@@ -17,8 +17,8 @@ from datetime import timedelta
 import pandas as pd
 
 from feathub.common.types import Int64, String, Float64
+from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
-from feathub.feature_views.joined_feature_view import JoinedFeatureView
 from feathub.feature_views.sliding_feature_view import SlidingFeatureView
 from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
@@ -462,7 +462,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
             ],
         )
 
-        joined_feature = JoinedFeatureView(
+        joined_feature = DerivedFeatureView(
             name="joined_feature",
             source=source2,
             features=["features.last_2_minute_total_cost", "features.cnt"],

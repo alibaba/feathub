@@ -26,7 +26,6 @@ from feathub.common.exceptions import (
 from feathub.common.types import Int32
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
-from feathub.feature_views.joined_feature_view import JoinedFeatureView
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.online_stores.online_store import OnlineStore
 from feathub.processors.flink.flink_processor import FlinkProcessor
@@ -234,16 +233,16 @@ class FlinkProcessorTest(unittest.TestCase):
         )
 
         source = FileSource("source", "/path", "csv", Schema([], []))
-        joined_feature_view = JoinedFeatureView(
+        joined_feature_view = DerivedFeatureView(
             "joined_feature_view", source, features=["dim_feature_view.a"]
         )
 
         source_2 = FileSource("source2", "/path", "csv", Schema([], []))
-        joined_feature_view_2 = JoinedFeatureView(
+        joined_feature_view_2 = DerivedFeatureView(
             "joined_feature_view_2", source_2, features=["dim_feature_view_2.b"]
         )
 
-        feature_view = JoinedFeatureView(
+        feature_view = DerivedFeatureView(
             "feature_view",
             source=joined_feature_view,
             features=["joined_feature_view_2.b"],

@@ -25,7 +25,6 @@ import pandas as pd
 from feathub.common.types import Int32, String
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
-from feathub.feature_views.joined_feature_view import JoinedFeatureView
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.processors.flink.job_submitter import get_application_job_entry_point
 from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
@@ -106,7 +105,7 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
             source=dim_source,
             features=[Feature("value", dtype=Int32, keys=["id"], transform="value")],
         )
-        feature_view = JoinedFeatureView(
+        feature_view = DerivedFeatureView(
             name="feature_view",
             source=file_source,
             features=[

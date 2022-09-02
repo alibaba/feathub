@@ -29,7 +29,6 @@ from feathub.online_stores.online_store import OnlineStore
 from feathub.sinks.online_store_sink import OnlineStoreSink
 from feathub.processors.local.local_table import LocalTable
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
-from feathub.feature_views.joined_feature_view import JoinedFeatureView
 from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
 from feathub.feature_views.transforms.over_window_transform import (
@@ -193,8 +192,6 @@ class LocalProcessor(Processor):
             return self._get_table_from_file_source(features)
         elif isinstance(features, DerivedFeatureView):
             return self._get_table_from_derived_feature_view(features)
-        elif isinstance(features, JoinedFeatureView):
-            return self._get_table_from_joined_feature_view(features)
 
         raise RuntimeError(
             f"Unsupported type '{type(features).__name__}' for '{features}'."
@@ -259,6 +256,20 @@ class LocalProcessor(Processor):
             if feature not in dependent_features:
                 dependent_features.append(feature)
 
+        table_names = set(
+            [
+                feature.transform.table_name
+                for feature in feature_view.get_resolved_features()
+                if isinstance(feature.transform, JoinTransform)
+            ]
+        )
+        table_by_names = {}
+        descriptors_by_names = {}
+        for name in table_names:
+            descriptor = self.registry.get_features(name=name)
+            descriptors_by_names[name] = descriptor
+            table_by_names[name] = self._get_table(features=descriptor)
+
         for feature in dependent_features:
             if isinstance(feature.transform, ExpressionTransform):
                 source_df[feature.name] = self._evaluate_expression_transform(
@@ -279,43 +290,7 @@ class LocalProcessor(Processor):
                     feature_view.timestamp_field,
                     feature_view.timestamp_format,
                 )
-            else:
-                raise RuntimeError(
-                    f"Unsupported transformation type "
-                    f"{type(feature.transform).__name__} for feature {feature.name}."
-                )
-
-        output_fields = feature_view.get_output_fields(source_fields)
-
-        return LocalTable(
-            df=source_df[output_fields],
-            timestamp_field=feature_view.timestamp_field,
-            timestamp_format=feature_view.timestamp_format,
-        )
-
-    def _get_table_from_joined_feature_view(
-        self, feature_view: JoinedFeatureView
-    ) -> LocalTable:
-        source_table = self._get_table(feature_view.source)
-        source_df = source_table.df
-        source_fields = list(source_table.get_schema().field_names)
-
-        table_names = set(
-            [
-                feature.transform.table_name
-                for feature in feature_view.get_resolved_features()
-                if isinstance(feature.transform, JoinTransform)
-            ]
-        )
-        table_by_names = {}
-        descriptors_by_names = {}
-        for name in table_names:
-            descriptor = self.registry.get_features(name=name)
-            descriptors_by_names[name] = descriptor
-            table_by_names[name] = self._get_table(features=descriptor)
-
-        for feature in feature_view.get_resolved_features():
-            if isinstance(feature.transform, JoinTransform):
+            elif isinstance(feature.transform, JoinTransform):
                 source_df[feature.name] = self._evaluate_join_transform(
                     source_df,
                     feature,
@@ -323,10 +298,6 @@ class LocalProcessor(Processor):
                     feature_view.timestamp_format,
                     table_by_names,
                     descriptors_by_names,
-                )
-            elif isinstance(feature.transform, ExpressionTransform):
-                source_df[feature.name] = self._evaluate_expression_transform(
-                    source_df, feature.transform
                 )
             else:
                 raise RuntimeError(

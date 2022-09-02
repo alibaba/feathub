@@ -28,7 +28,6 @@ from feathub.common.utils import to_java_date_format
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.feature_view import FeatureView
-from feathub.feature_views.joined_feature_view import JoinedFeatureView
 from feathub.feature_views.sliding_feature_view import SlidingFeatureView
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
 from feathub.feature_views.transforms.join_transform import JoinTransform
@@ -188,11 +187,6 @@ class FlinkTableBuilder:
                 features,
                 self._get_table_from_derived_feature_view(features),
             )
-        elif isinstance(features, JoinedFeatureView):
-            self._built_tables[features.name] = (
-                features,
-                self._get_table_from_joined_feature_view(features),
-            )
         elif isinstance(features, SlidingFeatureView):
             self._built_tables[features.name] = (
                 features,
@@ -211,64 +205,11 @@ class FlinkTableBuilder:
         source_table = self._get_table(feature_view.source)
         source_fields = list(source_table.get_schema().get_field_names())
         dependent_features = self._get_dependent_features(feature_view)
-
         tmp_table = source_table
 
         window_agg_map: Dict[
             OverWindowDescriptor, List[AggregationFieldDescriptor]
         ] = {}
-
-        for feature in dependent_features:
-            if feature.name in tmp_table.get_schema().get_field_names():
-                continue
-            if isinstance(feature.transform, ExpressionTransform):
-                tmp_table = self._evaluate_expression_transform(
-                    tmp_table,
-                    feature.transform,
-                    feature.name,
-                    feature.dtype,
-                )
-            elif isinstance(feature.transform, OverWindowTransform):
-                if feature_view.timestamp_field is None:
-                    raise FeathubException(
-                        "FeatureView must have timestamp field for OverWindowTransform."
-                    )
-                transform = feature.transform
-                window_aggs = window_agg_map.setdefault(
-                    OverWindowDescriptor.from_over_window_transform(transform),
-                    [],
-                )
-                window_aggs.append(AggregationFieldDescriptor.from_feature(feature))
-            else:
-                raise FeathubTransformationException(
-                    f"Unsupported transformation type "
-                    f"{type(feature.transform).__name__} for feature {feature.name}."
-                )
-
-        for over_window_descriptor, agg_descriptor in window_agg_map.items():
-            tmp_table = evaluate_over_window_transform(
-                tmp_table,
-                over_window_descriptor,
-                agg_descriptor,
-                self._EVENT_TIME_ATTRIBUTE_NAME,
-            )
-
-        output_fields = self._get_output_fields(feature_view, source_fields)
-        return tmp_table.select(
-            *[native_flink_expr.col(field) for field in output_fields]
-        )
-
-    def _get_table_from_joined_feature_view(
-        self,
-        feature_view: JoinedFeatureView,
-    ) -> NativeFlinkTable:
-        if feature_view.timestamp_field is None:
-            raise FeathubException(
-                f"FlinkProcessor cannot process JoinedFeatureView {feature_view} "
-                f"without timestamp field."
-            )
-        source_table = self._get_table(feature_view.source)
-        source_fields = source_table.get_schema().get_field_names()
 
         table_names = set(
             [
@@ -292,12 +233,29 @@ class FlinkTableBuilder:
         right_tables: Dict[
             Tuple[str, Sequence[str]], Dict[str, JoinFieldDescriptor]
         ] = {}
-        tmp_table = source_table
-        for feature in feature_view.get_resolved_features():
+
+        for feature in dependent_features:
             if feature.name in tmp_table.get_schema().get_field_names():
                 continue
-
-            if isinstance(feature.transform, JoinTransform):
+            if isinstance(feature.transform, ExpressionTransform):
+                tmp_table = self._evaluate_expression_transform(
+                    tmp_table,
+                    feature.transform,
+                    feature.name,
+                    feature.dtype,
+                )
+            elif isinstance(feature.transform, OverWindowTransform):
+                if feature_view.timestamp_field is None:
+                    raise FeathubException(
+                        "FeatureView must have timestamp field for OverWindowTransform."
+                    )
+                transform = feature.transform
+                window_aggs = window_agg_map.setdefault(
+                    OverWindowDescriptor.from_over_window_transform(transform),
+                    [],
+                )
+                window_aggs.append(AggregationFieldDescriptor.from_feature(feature))
+            elif isinstance(feature.transform, JoinTransform):
                 if feature.keys is None:
                     raise FeathubException(
                         f"FlinkProcessor cannot join feature {feature} without key."
@@ -341,16 +299,19 @@ class FlinkTableBuilder:
                 ] = JoinFieldDescriptor.from_table_descriptor_and_field_name(
                     right_table_descriptor, join_transform.feature_name
                 )
-
-            elif isinstance(feature.transform, ExpressionTransform):
-                tmp_table = self._evaluate_expression_transform(
-                    tmp_table, feature.transform, feature.name, feature.dtype
-                )
             else:
-                raise RuntimeError(
+                raise FeathubTransformationException(
                     f"Unsupported transformation type "
                     f"{type(feature.transform).__name__} for feature {feature.name}."
                 )
+
+        for over_window_descriptor, agg_descriptor in window_agg_map.items():
+            tmp_table = evaluate_over_window_transform(
+                tmp_table,
+                over_window_descriptor,
+                agg_descriptor,
+                self._EVENT_TIME_ATTRIBUTE_NAME,
+            )
 
         for (
             right_table_name,

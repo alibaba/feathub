@@ -38,12 +38,8 @@ A `FeatureView` provides metadata to derive a table of feature values from
 other tables. Feathub currently supports the following types of FeatureViews.
 
 - `DerivedFeatureView` derives features by applying the given transformations on
-  an existing table. It supports per-row transformation and over window aggregation
-  transformation. It does not support table join or sliding window transformation.
-- `JoinedFeatureView` derives features by joining an existing table with
-  features from other tables. It supports per-row transformation and table
-  join. It does not support over window transformation or sliding window 
-  transformation.
+  an existing table. It supports per-row transformation, over window transformation 
+  and table join. It does not support sliding window transformation.
 - `OnDemandFeatureView` derives features by joining online request with features
   from tables in online feature stores. It supports per-row transformation and
   join with tables in online stores. It does not support over window transformation or 
