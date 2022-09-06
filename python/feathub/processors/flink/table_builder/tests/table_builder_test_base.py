@@ -20,14 +20,13 @@ from datetime import timedelta
 from typing import Optional, List
 
 import pandas as pd
-from pyflink import java_gateway
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import StreamTableEnvironment
 
 from feathub.common.types import String, Int64
+from feathub.feature_tables.sources.file_source import FileSource
 from feathub.processors.flink.table_builder.flink_table_builder import FlinkTableBuilder
 from feathub.registries.local_registry import LocalRegistry
-from feathub.feature_tables.sources.file_source import FileSource
 from feathub.table.schema import Schema
 
 
@@ -62,11 +61,6 @@ class FlinkTableBuilderTestBase(unittest.TestCase):
     def tearDownClass(cls) -> None:
         if "PYFLINK_GATEWAY_DISABLED" in os.environ:
             os.environ.pop("PYFLINK_GATEWAY_DISABLED")
-        # clean up the java_gateway so that it won't affect other tests.
-        with java_gateway._lock:
-            if java_gateway._gateway is not None:
-                java_gateway._gateway.shutdown()
-                java_gateway._gateway = None
 
     def _create_file_source(
         self,

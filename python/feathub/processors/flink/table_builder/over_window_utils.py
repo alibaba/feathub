@@ -18,10 +18,9 @@ import pandas as pd
 from pyflink.table import (
     Table as NativeFlinkTable,
     expressions as native_flink_expr,
-    AggregateFunction,
 )
-from pyflink.table.types import DataType
-from pyflink.table.udf import udaf, ACC, T
+from pyflink.table.types import DataType, DataTypes
+from pyflink.table.udf import udaf, udf
 from pyflink.table.window import OverWindowPartitionedOrderedPreceding, Over
 
 from feathub.common.exceptions import FeathubTransformationException
@@ -30,6 +29,10 @@ from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
 from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
+)
+from feathub.processors.flink.table_builder.udf import (
+    TimeWindowedAggFunction,
+    JsonStringToMap,
 )
 
 
@@ -61,6 +64,10 @@ def _row_num(s: pd.Series) -> Any:
     return s.size
 
 
+def _value_counts_json(s: pd.Series) -> Any:
+    return s.value_counts().to_json()
+
+
 _AGG_FUNCTIONS: Dict[AggFunc, Callable[[pd.Series], Any]] = {
     AggFunc.AVG: _avg,
     AggFunc.SUM: _sum,
@@ -69,6 +76,7 @@ _AGG_FUNCTIONS: Dict[AggFunc, Callable[[pd.Series], Any]] = {
     AggFunc.FIRST_VALUE: _first_value,
     AggFunc.LAST_VALUE: _last_value,
     AggFunc.ROW_NUMBER: _row_num,
+    AggFunc.VALUE_COUNTS: _value_counts_json,
 }
 
 
@@ -194,7 +202,7 @@ def _get_flink_over_window(
     if over_window_descriptor.limit is not None:
         # Flink over window only support ranging by either row-count or time. For
         # feature that need to range by both row-count and time, it is handled in
-        # _get_over_window_agg_select_expr with the _TimeWindowedAggFunction UDTAF.
+        # _get_over_window_agg_select_expr with the TimeWindowedAggFunction UDTAF.
         return window.preceding(
             native_flink_expr.row_interval(over_window_descriptor.limit - 1)
         )
@@ -216,15 +224,15 @@ def _get_over_window_agg_column_list(
 ) -> List[native_flink_expr.Expression]:
     return [
         _get_over_window_agg_select_expr(
-            native_flink_expr.call_sql(descriptor.expr).cast(
-                descriptor.field_data_type
-            ),
+            native_flink_expr.call_sql(descriptor.expr),
             descriptor.field_data_type,
             window_descriptor,
             descriptor.agg_func,
             "w",
             time_attribute,
-        ).alias(descriptor.field_name)
+        )
+        .cast(descriptor.field_data_type)
+        .alias(descriptor.field_name)
         for descriptor in agg_descriptors
     ]
 
@@ -248,12 +256,16 @@ def _get_over_window_agg_select_expr(
             raise FeathubTransformationException(
                 f"Unsupported aggregation for FlinkProcessor {agg_func}."
             )
-        time_windowed_agg_func = _TimeWindowedAggFunction(
+        time_windowed_agg_func = TimeWindowedAggFunction(
             over_window_descriptor.window_size,
             _AGG_FUNCTIONS[agg_func],
         )
+
+        _result_type = (
+            DataTypes.STRING() if agg_func == AggFunc.VALUE_COUNTS else result_type
+        )
         result = native_flink_expr.call(
-            udaf(time_windowed_agg_func, result_type=result_type, func_type="pandas"),
+            udaf(time_windowed_agg_func, result_type=_result_type, func_type="pandas"),
             expr,
             native_flink_expr.col(time_attribute),
         )
@@ -272,41 +284,9 @@ def _get_over_window_agg_select_expr(
             raise FeathubTransformationException(
                 f"Unsupported aggregation for FlinkProcessor {agg_func}."
             )
-    return result.over(native_flink_expr.col(window_alias))
-
-
-# TODO: We can implement the TimeWindowedAggFunction in Java to get better performance.
-class _TimeWindowedAggFunction(AggregateFunction):
-    """
-    An aggregate function for Flink table aggregation.
-
-    The aggregate function only aggregate rows with row time in the range of
-    [current_row_time - time_interval, current_row_time]. Currently, Flink SQL/Table
-    only support over window with either time range or row count-based range. This can
-    be used with a row count-based over window to achieve over window with both time
-    range and row count-based range.
-    """
-
-    def __init__(self, time_interval: timedelta, agg_func: Callable[[pd.Series], Any]):
-        """
-        Instantiate a _TimeWindowedAggFunction.
-
-        :param time_interval: Only rows with row time in the range of [current_row_time
-                              - time_interval, current_row_time] is included in the
-                              aggregation function.
-        :param agg_func: The name of an aggregation function such as MAX, AVG.
-        """
-        self.time_interval = time_interval
-        self.agg_op = agg_func
-
-    def get_value(self, accumulator: ACC) -> T:
-        return accumulator[0]
-
-    def create_accumulator(self) -> ACC:
-        return []
-
-    def accumulate(self, accumulator: ACC, *args: pd.Series) -> None:
-        df = pd.DataFrame({"val": args[0], "time": args[1]})
-        latest_time = df["time"].iloc[-1]
-        df = df[df.time >= latest_time - self.time_interval]
-        accumulator.append(self.agg_op(df["val"]))
+    result = result.over(native_flink_expr.col(window_alias))
+    if agg_func == AggFunc.VALUE_COUNTS:
+        result = native_flink_expr.call(
+            udf(JsonStringToMap(), result_type=result_type), result
+        )
+    return result

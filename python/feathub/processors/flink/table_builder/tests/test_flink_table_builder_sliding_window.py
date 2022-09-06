@@ -11,18 +11,18 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
 from datetime import timedelta
 
 import pandas as pd
 
-from feathub.common.types import Int64, String, Float64
+from feathub.common.types import Int64, String, Float64, MapType
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.sliding_feature_view import SlidingFeatureView
 from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
+from feathub.processors.flink.flink_table import flink_table_to_pandas
 from feathub.processors.flink.table_builder.tests.table_builder_test_base import (
     FlinkTableBuilderTestBase,
 )
@@ -488,6 +488,72 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
         result_df = (
             self.flink_table_builder.build(features=built_joined_feature)
             .to_pandas()
+            .sort_values(by=["name", "time"])
+            .reset_index(drop=True)
+        )
+
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_sliding_window_transform_value_counts(self):
+        df = pd.DataFrame(
+            [
+                ["Alex", 100.0, "2022-01-01 09:01:00"],
+                ["Alex", 100.0, "2022-01-01 09:01:20"],
+                ["Alex", 200.0, "2022-01-01 09:02:00"],
+                ["Alex", 200.0, "2022-01-01 09:02:30"],
+            ],
+            columns=["name", "cost", "time"],
+        )
+
+        schema = Schema(["name", "cost", "time"], [String, Float64, String])
+        source = self._create_file_source(df, schema=schema, keys=["name"])
+
+        features = SlidingFeatureView(
+            name="features",
+            source=source,
+            features=[
+                Feature(
+                    name="last_2_minute_cost_value_counts",
+                    dtype=MapType(String, Int64),
+                    transform=SlidingWindowTransform(
+                        expr="cost",
+                        agg_func="VALUE_COUNTS",
+                        group_by_keys=["name"],
+                        window_size=timedelta(minutes=2),
+                        step_size=timedelta(minutes=1),
+                        limit=3,
+                    ),
+                ),
+                Feature(
+                    name="cnt",
+                    dtype=Int64,
+                    transform=SlidingWindowTransform(
+                        expr="1",
+                        agg_func="COUNT",
+                        group_by_keys=["name"],
+                        window_size=timedelta(minutes=2),
+                        step_size=timedelta(minutes=1),
+                        limit=3,
+                    ),
+                ),
+            ],
+        )
+
+        expected_result_df = pd.DataFrame(
+            [
+                ["Alex", "2022-01-01 09:01:59", {"100.0": 2}, 2],
+                ["Alex", "2022-01-01 09:02:59", {"200.0": 2, "100.0": 1}, 3],
+                ["Alex", "2022-01-01 09:03:59", {"200.0": 2}, 2],
+            ],
+            columns=["name", "time", "last_2_minute_cost_value_counts", "cnt"],
+        )
+        expected_result_df = expected_result_df.sort_values(
+            by=["name", "time"]
+        ).reset_index(drop=True)
+
+        table = self.flink_table_builder.build(features)
+        result_df = (
+            flink_table_to_pandas(table)
             .sort_values(by=["name", "time"])
             .reset_index(drop=True)
         )

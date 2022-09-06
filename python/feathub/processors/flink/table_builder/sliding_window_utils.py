@@ -18,7 +18,10 @@ from pyflink.table import (
     StreamTableEnvironment,
     Table as NativeFlinkTable,
     expressions as native_flink_expr,
+    DataTypes,
 )
+from pyflink.table.udf import udaf, udf
+from pyflink.table.window import Slide
 
 from feathub.common.exceptions import FeathubTransformationException
 from feathub.feature_views.transforms.agg_func import AggFunc
@@ -32,6 +35,10 @@ from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
 )
 from feathub.processors.flink.table_builder.join_utils import join_table_on_key
+from feathub.processors.flink.table_builder.udf import (
+    ValueCountsJsonWithRowLimit,
+    JsonStringToMap,
+)
 
 
 class SlidingWindowDescriptor:
@@ -42,13 +49,13 @@ class SlidingWindowDescriptor:
     def __init__(
         self,
         window_size: timedelta,
-        step: timedelta,
+        step_size: timedelta,
         limit: Optional[int],
         group_by_keys: Sequence[str],
         filter_expr: Optional[str],
     ) -> None:
         self.window_size = window_size
-        self.step = step
+        self.step_size = step_size
         self.limit = limit
         self.group_by_keys = group_by_keys
         self.filter_expr = filter_expr
@@ -69,7 +76,7 @@ class SlidingWindowDescriptor:
         return (
             isinstance(other, self.__class__)
             and self.window_size == other.window_size
-            and self.step == other.step
+            and self.step_size == other.step_size
             and self.limit == other.limit
             and self.group_by_keys == other.group_by_keys
             and self.filter_expr == other.filter_expr
@@ -79,7 +86,7 @@ class SlidingWindowDescriptor:
         return hash(
             (
                 self.window_size,
-                self.step,
+                self.step_size,
                 self.limit,
                 tuple(self.group_by_keys),
                 self.filter_expr,
@@ -107,7 +114,7 @@ def evaluate_sliding_window_transform(
     :return: The result table.
     """
 
-    step_interval = timedelta_to_flink_sql_interval(window_descriptor.step)
+    step_interval = timedelta_to_flink_sql_interval(window_descriptor.step_size)
     window_size_interval = timedelta_to_flink_sql_interval(
         window_descriptor.window_size
     )
@@ -116,7 +123,6 @@ def evaluate_sliding_window_transform(
         flink_table = flink_table.filter(
             native_flink_expr.call_sql(window_descriptor.filter_expr)
         )
-
     t_env.create_temporary_view("src_table", flink_table)
     table = t_env.sql_query(
         f"""
@@ -142,17 +148,29 @@ def evaluate_sliding_window_transform(
 
     first_value_agg_descriptors = []
     last_value_agg_descriptors = []
+    value_counts_descriptors = []
     for agg_descriptor in agg_descriptors:
         if agg_descriptor.agg_func == AggFunc.FIRST_VALUE:
             first_value_agg_descriptors.append(agg_descriptor)
         elif agg_descriptor.agg_func == AggFunc.LAST_VALUE:
             last_value_agg_descriptors.append(agg_descriptor)
+        elif agg_descriptor.agg_func == AggFunc.VALUE_COUNTS:
+            value_counts_descriptors.append(agg_descriptor)
     filtered_agg_descriptors = filter(
         lambda x: x not in first_value_agg_descriptors
-        and x not in last_value_agg_descriptors,
+        and x not in last_value_agg_descriptors
+        and x not in value_counts_descriptors,
         agg_descriptors,
     )
 
+    # Currently, PyFlink only supports UDTAF with Group-Window Aggregation but not
+    # Window TVF Aggregation. We have to compute value counts specially with
+    # Group-Window Aggregation at the moment.
+    value_counts_table = None
+    if len(value_counts_descriptors) != 0:
+        value_counts_table = _evaluate_value_counts_json(
+            flink_table, value_counts_descriptors, window_descriptor, time_attribute
+        )
     first_last_value_table = _get_first_last_value_table(
         t_env,
         table,
@@ -184,6 +202,16 @@ def evaluate_sliding_window_transform(
         result = join_table_on_key(
             result,
             first_last_value_table,
+            [
+                *window_descriptor.group_by_keys,
+                time_attribute,
+            ],
+        )
+
+    if value_counts_table is not None:
+        result = join_table_on_key(
+            result,
+            value_counts_table,
             [
                 *window_descriptor.group_by_keys,
                 time_attribute,
@@ -295,5 +323,66 @@ def _window_top_n_by_time(
             WHERE rownum <= {n}
             """
     )
+    table = table.drop_columns("rownum")
     t_env.drop_temporary_view("windowed_table")
     return table
+
+
+# TODO: Replace with Window TVF after ValueCountJson is implemented in Java or PyFlink
+# support UDTAF with Window TVF.
+def _evaluate_value_counts_json(
+    flink_table: NativeFlinkTable,
+    value_counts_descriptors: List[AggregationFieldDescriptor],
+    window_descriptor: SlidingWindowDescriptor,
+    time_attribute: str,
+) -> NativeFlinkTable:
+    value_count_to_json = udaf(
+        ValueCountsJsonWithRowLimit(window_descriptor.limit),
+        result_type=DataTypes.STRING(),
+        func_type="pandas",
+    )
+    value_counts_table = (
+        flink_table.window(
+            Slide.over(
+                native_flink_expr.lit(
+                    window_descriptor.window_size.total_seconds()
+                ).seconds
+            )
+            .every(
+                native_flink_expr.lit(
+                    window_descriptor.step_size.total_seconds()
+                ).seconds
+            )
+            .on(native_flink_expr.col(time_attribute))
+            .alias("w")
+        )
+        .group_by(
+            *[native_flink_expr.col(key) for key in window_descriptor.group_by_keys],
+            native_flink_expr.col("w"),
+        )
+        .select(
+            *[native_flink_expr.col(key) for key in window_descriptor.group_by_keys],
+            native_flink_expr.col("w")
+            .rowtime.alias("window_time")
+            .alias(time_attribute),
+            *[
+                # Currently python vectorized udtaf does not support returning Map type
+                # and general python udtaf has bug, see
+                # https://issues.apache.org/jira/browse/FLINK-29231. Therefore, we need
+                # to add a scalar function to convert the json string to Map Type.
+                # TODO: Remove the scalar function after the bug is fixed.
+                native_flink_expr.call(
+                    udf(JsonStringToMap(), result_type=descriptor.field_data_type),
+                    native_flink_expr.call(
+                        value_count_to_json,
+                        native_flink_expr.call_sql(descriptor.expr),
+                        native_flink_expr.col(time_attribute),
+                    ),
+                )
+                .alias("value_counts_json")
+                .alias(descriptor.field_name)
+                for descriptor in value_counts_descriptors
+            ],
+        )
+    )
+    return value_counts_table

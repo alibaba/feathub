@@ -27,3 +27,4 @@ class AggFunc(Enum):
     LAST_VALUE = "LAST_VALUE"
     ROW_NUMBER = "ROW_NUMBER"
     COUNT = "COUNT"
+    VALUE_COUNTS = "VALUE_COUNTS"

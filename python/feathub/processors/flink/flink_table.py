@@ -12,15 +12,19 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import typing
+from collections import defaultdict
 from datetime import timedelta, datetime
-from typing import Optional, Union, Any
+from typing import Optional, Union, Any, Dict, List
 
+import numpy as np
 import pandas as pd
 from pyflink.table import (
     Table as NativeFlinkTable,
+    DataTypes,
 )
 
 from feathub.common.exceptions import FeathubException
+from feathub.common.types import MapType
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
 from feathub.processors.flink.flink_types_utils import to_feathub_schema
@@ -31,6 +35,42 @@ from feathub.table.table_descriptor import TableDescriptor
 
 if typing.TYPE_CHECKING:
     from feathub.processors.flink.flink_processor import FlinkProcessor
+
+# A type mapping from Flink DataType to numpy type that cannot be derived unambiguously
+# by pandas. E.g. Flink DataType of TINYINT is represented in python as type int, which
+# can map to int16, int32 and int64 in numpy.
+FLINK_DATA_TYPE_TO_NUMPY_TYPE: Dict = {
+    type(DataTypes.TINYINT()): np.int8,
+    type(DataTypes.SMALLINT()): np.int16,
+    type(DataTypes.INT()): np.int32,
+    type(DataTypes.BIGINT()): np.int64,
+    type(DataTypes.FLOAT()): np.float32,
+    type(DataTypes.DOUBLE()): np.float64,
+}
+
+
+def flink_table_to_pandas(table: NativeFlinkTable) -> pd.DataFrame:
+    """
+    Converting the given flink table to pandas dataframe.
+    """
+    schema = table.get_schema()
+    field_names = schema.get_field_names()
+    field_types = {
+        name: FLINK_DATA_TYPE_TO_NUMPY_TYPE.get(schema.get_field_data_type(name), None)
+        for name in field_names
+    }
+    with table.execute().collect() as results:
+        data: Dict[str, List[Any]] = defaultdict(list)
+        for row in results:
+            for name, value in zip(field_names, row):
+                data[name].append(value)
+
+        return pd.DataFrame(
+            {
+                name: pd.Series(values, dtype=field_types[name])
+                for name, values in data.items()
+            }
+        )
 
 
 class FlinkTable(Table):
@@ -87,7 +127,8 @@ class FlinkTable(Table):
     def to_pandas(self) -> pd.DataFrame:
         if self.flink_processor.deployment_mode != DeploymentMode.SESSION:
             raise FeathubException("Table.to_pandas is only supported in session mode.")
-        return self._flink_table.to_pandas()
+
+        return flink_table_to_pandas(self._flink_table)
 
     def execute_insert(
         self,
@@ -125,3 +166,9 @@ class FlinkTable(Table):
             and self.end_datetime == other.end_datetime
             and self.flink_processor == other.flink_processor
         )
+
+    def _has_map_type(self) -> bool:
+        for dtype in self.get_schema().field_types:
+            if isinstance(dtype, MapType):
+                return True
+        return False

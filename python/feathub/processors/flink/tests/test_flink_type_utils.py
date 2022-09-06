@@ -33,6 +33,7 @@ from feathub.common.types import (
     Int32Vector,
     Unknown,
     DType,
+    MapType,
 )
 from feathub.processors.flink.flink_types_utils import (
     to_flink_schema,
@@ -56,6 +57,7 @@ class FlinkTypeUtilsTest(unittest.TestCase):
             "float64",
             "bool",
             "int32vector",
+            "map",
         ]
         field_types = [
             Bytes,
@@ -66,6 +68,7 @@ class FlinkTypeUtilsTest(unittest.TestCase):
             Float64,
             Bool,
             Int32Vector,
+            MapType(String, Int64),
         ]
         schema = Schema(field_names, field_types)
 
@@ -81,7 +84,7 @@ class FlinkTypeUtilsTest(unittest.TestCase):
         with self.assertRaises(FeathubTypeException):
             to_feathub_type(tiny_int_type)
 
-        map_type = DataTypes.MAP(DataTypes.INT(), DataTypes.INT())
+        map_type = DataTypes.ROW()
         with self.assertRaises(FeathubTypeException):
             to_feathub_type(map_type)
 

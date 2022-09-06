@@ -14,7 +14,7 @@
 
 import unittest
 from typing import Dict
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
 
 import pandas as pd
 from pyflink import java_gateway
@@ -28,6 +28,7 @@ from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.online_stores.online_store import OnlineStore
+from feathub.processors.flink import flink_table
 from feathub.processors.flink.flink_processor import FlinkProcessor
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
 from feathub.processors.flink.table_builder.flink_table_builder import FlinkTableBuilder
@@ -294,10 +295,6 @@ class FlinkProcessorTest(unittest.TestCase):
             columns=["key", "val", "time"],
         )
         mock_table: Table = Mock(spec=Table)
-        mock_table.to_pandas.return_value = expected_df
-        mock_schema = Mock(spec=TableSchema)
-        mock_schema.get_field_names.return_value = []
-        mock_table.get_schema.return_value = mock_schema
         mock_table_builder = Mock(spec=FlinkTableBuilder)
         mock_table_builder.build.return_value = mock_table
         processor.flink_table_builder = mock_table_builder
@@ -312,12 +309,14 @@ class FlinkProcessorTest(unittest.TestCase):
         )
         sink = OnlineStoreSink(MemoryOnlineStore.STORE_TYPE, "test_table")
 
-        processor.materialize_features(source, sink, allow_overwrite=True)
+        with patch.object(flink_table, "flink_table_to_pandas") as to_pandas_method:
+            to_pandas_method.return_value = expected_df
+            processor.materialize_features(source, sink, allow_overwrite=True)
 
-        self.assertTrue(
-            pd.Series([7]).equals(
-                self.stores[MemoryOnlineStore.STORE_TYPE].get(
-                    "test_table", pd.DataFrame([[1]], columns=["key"])
-                )["val"]
+            self.assertTrue(
+                pd.Series([7]).equals(
+                    self.stores[MemoryOnlineStore.STORE_TYPE].get(
+                        "test_table", pd.DataFrame([[1]], columns=["key"])
+                    )["val"]
+                )
             )
-        )

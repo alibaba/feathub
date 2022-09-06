@@ -18,10 +18,11 @@ from pyflink.table.types import (
     DataType,
     AtomicType,
     ArrayType,
+    MapType as NativeFlinkMapType,
 )
 
 from feathub.common.exceptions import FeathubTypeException
-from feathub.common.types import DType, PrimitiveType, VectorType, BasicDType
+from feathub.common.types import DType, PrimitiveType, VectorType, BasicDType, MapType
 from feathub.table.schema import Schema
 
 type_mapping: Dict[BasicDType, AtomicType] = {
@@ -76,10 +77,14 @@ def to_flink_type(feathub_type: DType) -> DataType:
     :param feathub_type: The Feathub Dtype.
     :return: The Flink DataType.
     """
-    if isinstance(feathub_type, PrimitiveType):
+    if isinstance(feathub_type, BasicDType):
+        return _basic_type_to_flink_type(feathub_type)
+    elif isinstance(feathub_type, PrimitiveType):
         return _primitive_type_to_flink_type(feathub_type)
     elif isinstance(feathub_type, VectorType):
         return _vector_type_to_flink_type(feathub_type)
+    elif isinstance(feathub_type, MapType):
+        return _map_type_to_flink_type(feathub_type)
 
     raise FeathubTypeException(
         f"Type {feathub_type} is not supported by FlinkProcessor."
@@ -97,6 +102,8 @@ def to_feathub_type(flink_type: DataType) -> DType:
         return _atomic_type_to_feathub_type(flink_type)
     elif isinstance(flink_type, ArrayType):
         return _array_type_to_feathub_type(flink_type)
+    elif isinstance(flink_type, NativeFlinkMapType):
+        return _map_type_to_feathub_type(flink_type)
 
     raise FeathubTypeException(f"Flink type {flink_type} is not supported by Feathub.")
 
@@ -106,7 +113,14 @@ def _primitive_type_to_flink_type(feathub_type: PrimitiveType) -> DataType:
 
 
 def _vector_type_to_flink_type(feathub_type: VectorType) -> DataType:
-    return DataTypes.ARRAY(_basic_type_to_flink_type(feathub_type.basic_dtype))
+    return DataTypes.ARRAY(to_flink_type(feathub_type.dtype))
+
+
+def _map_type_to_flink_type(feathub_type: MapType) -> NativeFlinkMapType:
+    return DataTypes.MAP(
+        to_flink_type(feathub_type.key_dtype),
+        to_flink_type(feathub_type.value_dtype),
+    )
 
 
 def _basic_type_to_flink_type(basic_type: BasicDType) -> AtomicType:
@@ -125,7 +139,7 @@ def _array_type_to_feathub_type(flink_type: ArrayType) -> DType:
     element_type = flink_type.element_type
     if not isinstance(element_type, AtomicType):
         raise FeathubTypeException(f"Unexpected element type {element_type}.")
-    return VectorType(_atomic_type_to_basic_type(element_type))
+    return VectorType(to_feathub_type(element_type))
 
 
 def _atomic_type_to_basic_type(flink_type: AtomicType) -> BasicDType:
@@ -134,3 +148,9 @@ def _atomic_type_to_basic_type(flink_type: AtomicType) -> BasicDType:
             f"Flink type {flink_type} is not supported by Feathub."
         )
     return inverse_type_mapping[type(flink_type)]
+
+
+def _map_type_to_feathub_type(flink_type: NativeFlinkMapType) -> DType:
+    return MapType(
+        to_feathub_type(flink_type.key_type), to_feathub_type(flink_type.value_type)
+    )

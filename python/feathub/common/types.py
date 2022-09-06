@@ -63,15 +63,36 @@ class PrimitiveType(DType):
 
 
 class VectorType(DType):
-    def __init__(self, basic_dtype: BasicDType) -> None:
+    def __init__(self, dtype: DType) -> None:
         super().__init__()
-        self.basic_dtype = basic_dtype
+        self.dtype = dtype
 
     def to_json(self) -> Dict:
-        return {"type": "VectorType", "basic_dtype": f"{self.basic_dtype.name}"}
+        return {"type": "VectorType", "dtype": self.dtype.to_json()}
 
     def __eq__(self, other: object) -> bool:
-        return isinstance(other, VectorType) and self.basic_dtype == other.basic_dtype
+        return isinstance(other, VectorType) and self.dtype == other.dtype
+
+
+class MapType(DType):
+    def __init__(self, key_dtype: DType, value_dtype: DType) -> None:
+        super().__init__()
+        self.key_dtype = key_dtype
+        self.value_dtype = value_dtype
+
+    def to_json(self) -> Dict:
+        return {
+            "type": "MapType",
+            "key_dtype": self.key_dtype.to_json(),
+            "value_dtype": self.value_dtype.to_json(),
+        }
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, MapType)
+            and self.key_dtype == other.key_dtype
+            and self.value_dtype == other.value_dtype
+        )
 
 
 def from_numpy_dtype(dtype: Type) -> DType:
@@ -106,6 +127,8 @@ def to_numpy_dtype(dtype: DType) -> Type:
         return np.float
     elif dtype == Float64:
         return np.double
+    elif isinstance(dtype, MapType):
+        return np.object
     elif dtype == Unknown:
         return np.object
 
@@ -122,7 +145,7 @@ Float32 = PrimitiveType(BasicDType.FLOAT32)
 Float64 = PrimitiveType(BasicDType.FLOAT64)
 Timestamp = PrimitiveType(BasicDType.TIMESTAMP)
 
-Int32Vector = VectorType(BasicDType.INT32)
-Int64Vector = VectorType(BasicDType.INT64)
-Float32Vector = VectorType(BasicDType.FLOAT32)
-Float64Vector = VectorType(BasicDType.FLOAT64)
+Int32Vector = VectorType(Int32)
+Int64Vector = VectorType(Int64)
+Float32Vector = VectorType(Float32)
+Float64Vector = VectorType(Float64)

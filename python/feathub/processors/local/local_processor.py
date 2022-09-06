@@ -49,7 +49,7 @@ class LocalProcessor(Processor):
 
     PROCESSOR_TYPE = "local"
 
-    # TODO: Support agg function LAST_VALUE, FIRST_VALUE, ROW_NUMBER
+    # TODO: Support agg function LAST_VALUE, FIRST_VALUE, ROW_NUMBER, VALUE_COUNTS
     _AGG_FUNCTIONS = {
         AggFunc.AVG: np.mean,
         AggFunc.SUM: np.sum,
