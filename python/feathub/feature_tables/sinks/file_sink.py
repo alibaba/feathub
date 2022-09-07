@@ -13,18 +13,25 @@
 #  limitations under the License.
 from typing import Dict
 
-from feathub.sinks.sink import Sink
+from feathub.feature_tables.feature_table import FeatureTable
 
 
-class FileSink(Sink):
-    def __init__(self, path: str, file_format: str, allow_overwrite: bool) -> None:
-        super().__init__("filesystem", allow_overwrite)
+class FileSink(FeatureTable):
+    """A Sink which writes data to files."""
+
+    def __init__(self, path: str, data_format: str) -> None:
+        """
+        :param path: The path to files.
+        :param data_format: The format of the data that are written to the file.
+        """
+        super().__init__(
+            "", "filesystem", properties={"path": path}, data_format=data_format
+        )
         self.path = path
-        self.file_format = file_format
 
     def to_json(self) -> Dict:
         return {
+            "type": "FileSink",
             "path": self.path,
-            "file_format": self.file_format,
-            "allow_overwrite": self.allow_overwrite,
+            "data_format": self.data_format,
         }

@@ -35,7 +35,7 @@ from feathub.feature_views.transforms.over_window_transform import OverWindowTra
 from feathub.processors.flink.table_builder.tests.table_builder_test_base import (
     FlinkTableBuilderTestBase,
 )
-from feathub.sources.online_store_source import OnlineStoreSource
+from feathub.feature_tables.sources.online_store_source import OnlineStoreSource
 
 
 def _to_timestamp(datetime_str):

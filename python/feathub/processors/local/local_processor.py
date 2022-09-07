@@ -21,12 +21,12 @@ import feathub.common.utils as utils
 from feathub.common.exceptions import FeathubException
 from feathub.common.types import to_numpy_dtype
 from feathub.dsl.parser import ExprParser
+from feathub.feature_tables.feature_table import FeatureTable
 from feathub.processors.processor import Processor
-from feathub.sinks.sink import Sink
 from feathub.registries.registry import Registry
 from feathub.processors.local.local_job import LocalJob
 from feathub.online_stores.online_store import OnlineStore
-from feathub.sinks.online_store_sink import OnlineStoreSink
+from feathub.feature_tables.sinks.online_store_sink import OnlineStoreSink
 from feathub.processors.local.local_table import LocalTable
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature_view import FeatureView
@@ -37,7 +37,7 @@ from feathub.feature_views.transforms.over_window_transform import (
 from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.table.table_descriptor import TableDescriptor
-from feathub.sources.file_source import FileSource
+from feathub.feature_tables.sources.file_source import FileSource
 from feathub.feature_views.feature import Feature
 
 
@@ -124,7 +124,7 @@ class LocalProcessor(Processor):
     def materialize_features(
         self,
         features: Union[str, TableDescriptor],
-        sink: Sink,
+        sink: FeatureTable,
         ttl: Optional[timedelta] = None,
         start_datetime: Optional[datetime] = None,
         end_datetime: Optional[datetime] = None,
@@ -216,7 +216,7 @@ class LocalProcessor(Processor):
         return LocalJob()
 
     def _get_table_from_file_source(self, source: FileSource) -> LocalTable:
-        if source.file_format == "csv":
+        if source.data_format == "csv":
             df = pd.read_csv(
                 source.path,
                 names=source.schema.field_names,
@@ -233,7 +233,7 @@ class LocalProcessor(Processor):
                 timestamp_format=source.timestamp_format,
             )
 
-        raise RuntimeError(f"Unsupported file format: {source.file_format}.")
+        raise RuntimeError(f"Unsupported file format: {source.data_format}.")
 
     def _evaluate_expression_transform(
         self, df: pd.DataFrame, transform: ExpressionTransform

@@ -15,14 +15,14 @@
 from typing import Union, Dict, Sequence
 
 from feathub.common import types
+from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
 from feathub.table.table_descriptor import TableDescriptor
 from feathub.feature_views.feature_view import FeatureView
-from feathub.sources.online_store_source import OnlineStoreSource
+from feathub.feature_tables.sources.online_store_source import OnlineStoreSource
 from feathub.registries.registry import Registry
 from feathub.feature_views.feature import Feature
-from feathub.sources.source import Source
 
 
 class OnDemandFeatureView(FeatureView):
@@ -37,10 +37,12 @@ class OnDemandFeatureView(FeatureView):
     users request features from this feature view.
     """
 
-    class _OnlineRequestSource(Source):
+    class _OnlineRequestSource(FeatureTable):
         def __init__(self) -> None:
             super().__init__(
                 name="_ONLINE_REQUEST",
+                system_name="online_request",
+                properties={},
                 keys=None,
                 timestamp_field=None,
                 timestamp_format="epoch",

@@ -19,8 +19,8 @@ from feathub.common import types
 from feathub.feature_views.feature import Feature
 from feathub.common.test_utils import LocalProcessorTestCase
 from feathub.feature_service.local_feature_service import LocalFeatureService
-from feathub.sinks.online_store_sink import OnlineStoreSink
-from feathub.sources.online_store_source import OnlineStoreSource
+from feathub.feature_tables.sinks.online_store_sink import OnlineStoreSink
+from feathub.feature_tables.sources.online_store_source import OnlineStoreSource
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
 

@@ -27,7 +27,7 @@ from pyflink.table import StreamTableEnvironment
 from feathub.common.types import String, Int64
 from feathub.processors.flink.table_builder.flink_table_builder import FlinkTableBuilder
 from feathub.registries.local_registry import LocalRegistry
-from feathub.sources.file_source import FileSource
+from feathub.feature_tables.sources.file_source import FileSource
 from feathub.table.schema import Schema
 
 

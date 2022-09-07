@@ -14,18 +14,18 @@
 from datetime import timedelta
 from typing import List, Optional, Dict
 
-from feathub.sources.source import Source
+from feathub.feature_tables.feature_table import FeatureTable
 from feathub.table.schema import Schema
 
 
-class FileSource(Source):
+class FileSource(FeatureTable):
     """A source which reads data from files."""
 
     def __init__(
         self,
         name: str,
         path: str,
-        file_format: str,
+        data_format: str,
         schema: Schema,
         keys: Optional[List[str]] = None,
         timestamp_field: Optional[str] = None,
@@ -35,7 +35,7 @@ class FileSource(Source):
         """
         :param name: The name that uniquely identifies this source in a registry.
         :param path: The path to files.
-        :param file_format: The format that should be used to read files.
+        :param data_format: The format that should be used to read files.
         :param schema: The schema of the data.
         :param keys: Optional. The names of fields in this feature view that are
                      necessary to interpret a row of this table. If it is not None, it
@@ -43,19 +43,24 @@ class FileSource(Source):
         :param timestamp_field: Optional. If it is not None, it is the name of the field
                                 whose values show the time when the corresponding row
                                 is generated.
+        :param timestamp_format: The format of the timestamp field.
         :param max_out_of_orderness: The maximum amount of time a record is allowed to
                                      be late. Default is 0 second, meaning the records
                                      should be ordered by `timestamp_field`.
         """
         super().__init__(
             name=name,
+            system_name="filesystem",
+            properties={
+                "path": path,
+            },
+            data_format=data_format,
             keys=keys,
             schema=schema,
             timestamp_field=timestamp_field,
             timestamp_format=timestamp_format,
         )
         self.path = path
-        self.file_format = file_format
         self.schema = schema
         self.max_out_of_orderness = max_out_of_orderness
 
@@ -64,11 +69,11 @@ class FileSource(Source):
             "type": "FileSource",
             "name": self.name,
             "path": self.path,
-            "file_format": self.file_format,
+            "data_format": self.data_format,
+            "schema": None if self.schema is None else self.schema.to_json(),
             "keys": self.keys,
             "timestamp_field": self.timestamp_field,
             "timestamp_format": self.timestamp_format,
-            "schema": None if self.schema is None else self.schema.to_json(),
             "max_out_of_orderness_ms": self.max_out_of_orderness
             / timedelta(milliseconds=1),
         }

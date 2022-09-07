@@ -27,7 +27,7 @@ from feathub.processors.flink.flink_types_utils import to_flink_schema
 from feathub.processors.flink.table_builder.time_utils import (
     timedelta_to_flink_sql_interval,
 )
-from feathub.sources.file_source import FileSource
+from feathub.feature_tables.sources.file_source import FileSource
 
 
 def get_table_from_file_source(
@@ -65,12 +65,12 @@ def get_table_from_file_source(
 
     descriptor_builder = (
         NativeFlinkTableDescriptor.for_connector("filesystem")
-        .format(file_source.file_format)
+        .format(file_source.data_format)
         .option("path", file_source.path)
         .schema(flink_schema)
     )
 
-    if file_source.file_format == "csv":
+    if file_source.data_format == "csv":
         # Set ignore-parse-errors to set null in case of csv parse error
         descriptor_builder.option("csv.ignore-parse-errors", "true")
 

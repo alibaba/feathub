@@ -14,10 +14,10 @@
 
 from typing import List, Dict
 
-from feathub.sources.source import Source
+from feathub.feature_tables.feature_table import FeatureTable
 
 
-class OnlineStoreSource(Source):
+class OnlineStoreSource(FeatureTable):
     """
     A source corresponding to a table in an online feature store.
     """
@@ -37,6 +37,8 @@ class OnlineStoreSource(Source):
         """
         super().__init__(
             name=name,
+            system_name=store_type,
+            properties={"table_name": table_name},
             keys=keys,
             timestamp_field=None,
             timestamp_format="epoch",

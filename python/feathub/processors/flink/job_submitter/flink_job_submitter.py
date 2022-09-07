@@ -17,8 +17,8 @@ from typing import Optional, Dict, Union
 
 import pandas as pd
 
+from feathub.feature_tables.feature_table import FeatureTable
 from feathub.processors.processor_job import ProcessorJob
-from feathub.sinks.sink import Sink
 from feathub.table.table_descriptor import TableDescriptor
 
 
@@ -32,7 +32,7 @@ class FlinkJobSubmitter(ABC):
         keys: Union[pd.DataFrame, TableDescriptor, None],
         start_datetime: Optional[datetime],
         end_datetime: Optional[datetime],
-        sink: Sink,
+        sink: FeatureTable,
         local_registry_tables: Dict[str, TableDescriptor],
         allow_overwrite: bool,
     ) -> ProcessorJob:

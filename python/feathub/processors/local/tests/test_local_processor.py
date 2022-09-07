@@ -17,7 +17,7 @@ from datetime import datetime
 
 from feathub.common.exceptions import FeathubException
 from feathub.common.test_utils import LocalProcessorTestCase
-from feathub.sinks.online_store_sink import OnlineStoreSink
+from feathub.feature_tables.sinks.online_store_sink import OnlineStoreSink
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
 
 

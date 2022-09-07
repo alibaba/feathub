@@ -21,8 +21,8 @@ from typing import Optional, List
 from feathub.common.types import from_numpy_dtype
 from feathub.processors.local.local_processor import LocalProcessor
 from feathub.registries.local_registry import LocalRegistry
-from feathub.sources.file_source import FileSource
-from feathub.sinks.online_store_sink import OnlineStoreSink
+from feathub.feature_tables.sources.file_source import FileSource
+from feathub.feature_tables.sinks.online_store_sink import OnlineStoreSink
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.online_stores.online_store import OnlineStore
 from feathub.table.schema import Schema
@@ -60,7 +60,7 @@ class LocalProcessorTestCase(unittest.TestCase):
         return FileSource(
             name="source",
             path=path,
-            file_format="csv",
+            data_format="csv",
             schema=schema,
             keys=keys,
             timestamp_field=timestamp_field,

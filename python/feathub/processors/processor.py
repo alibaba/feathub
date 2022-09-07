@@ -18,8 +18,8 @@ from datetime import datetime, timedelta
 from abc import ABC, abstractmethod
 import pandas as pd
 
+from feathub.feature_tables.feature_table import FeatureTable
 from feathub.table.table import Table
-from feathub.sinks.sink import Sink
 from feathub.table.table_descriptor import TableDescriptor
 from feathub.processors.processor_job import ProcessorJob
 from feathub.registries.registry import Registry
@@ -73,7 +73,7 @@ class Processor(ABC):
     def materialize_features(
         self,
         features: Union[str, TableDescriptor],
-        sink: Sink,
+        sink: FeatureTable,
         ttl: Optional[timedelta] = None,
         start_datetime: Optional[datetime] = None,
         end_datetime: Optional[datetime] = None,

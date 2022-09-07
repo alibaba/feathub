@@ -23,7 +23,7 @@ from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
 from feathub.registries.local_registry import LocalRegistry
-from feathub.sources.file_source import FileSource
+from feathub.feature_tables.sources.file_source import FileSource
 from feathub.table.schema import Schema
 
 
@@ -33,7 +33,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
         self.source = FileSource(
             name="source_1",
             path="dummy_source_file",
-            file_format="csv",
+            data_format="csv",
             schema=Schema(["id", "fare_amount"], [types.Int32, types.Int32]),
             timestamp_field="lpep_dropoff_datetime",
             timestamp_format="%Y-%m-%d %H:%M:%S",

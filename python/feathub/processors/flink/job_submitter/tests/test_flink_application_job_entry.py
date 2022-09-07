@@ -23,6 +23,7 @@ import pandas
 import pandas as pd
 
 from feathub.common.types import Int32, String
+from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.transforms.join_transform import JoinTransform
@@ -33,9 +34,8 @@ from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
 from feathub.processors.flink.job_submitter.flink_application_cluster_job_entry import (
     run_job,
 )
-from feathub.sinks.file_sink import FileSink
-from feathub.sinks.sink import Sink
-from feathub.sources.file_source import FileSource
+from feathub.feature_tables.sinks.file_sink import FileSink
+from feathub.feature_tables.sources.file_source import FileSource
 from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
 
@@ -59,7 +59,7 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
         file_source = self._create_file_source(input_df, Schema(["id"], [Int32]))
 
         sink_path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
-        sink = FileSink(sink_path, "csv", True)
+        sink = FileSink(sink_path, "csv")
         feathub_config_path = self._prepare_feathub_job_config(
             file_source, None, None, None, sink, {}
         )
@@ -119,7 +119,7 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
         )
 
         sink_path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
-        sink = FileSink(sink_path, "csv", True)
+        sink = FileSink(sink_path, "csv")
 
         job_config = self._prepare_feathub_job_config(
             feature_view,
@@ -148,7 +148,7 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
         keys: Union[pd.DataFrame, TableDescriptor, None],
         start_datetime: Optional[datetime],
         end_datetime: Optional[datetime],
-        sink: Sink,
+        sink: FeatureTable,
         join_table: Dict[str, TableDescriptor],
     ) -> str:
         path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name

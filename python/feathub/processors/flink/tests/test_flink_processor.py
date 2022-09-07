@@ -38,9 +38,9 @@ from feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster
     FlinkKubernetesApplicationClusterJobSubmitter,
 )
 from feathub.registries.local_registry import LocalRegistry
-from feathub.sinks.file_sink import FileSink
-from feathub.sinks.online_store_sink import OnlineStoreSink
-from feathub.sources.file_source import FileSource
+from feathub.feature_tables.sinks.file_sink import FileSink
+from feathub.feature_tables.sinks.online_store_sink import OnlineStoreSink
+from feathub.feature_tables.sources.file_source import FileSource
 from feathub.table.schema import Schema
 
 
@@ -137,7 +137,7 @@ class FlinkProcessorTest(unittest.TestCase):
         mock_table_builder.build.return_value = mock_table
         processor.flink_table_builder = mock_table_builder
         source = FileSource("source", "/path", "csv", Schema([], []))
-        sink = FileSink("/path", "csv", True)
+        sink = FileSink("/path", "csv")
 
         processor.materialize_features(source, sink, allow_overwrite=True)
         mock_table_builder.build.assert_called_once()
@@ -200,7 +200,7 @@ class FlinkProcessorTest(unittest.TestCase):
         )
         self.registry.build_features([feature_view])
 
-        sink = FileSink("/path", "csv", True)
+        sink = FileSink("/path", "csv")
         mock_submitter = MagicMock(spec=FlinkJobSubmitter)
         processor.flink_job_submitter = mock_submitter
         processor.materialize_features(feature_view, sink, allow_overwrite=True)
@@ -258,7 +258,7 @@ class FlinkProcessorTest(unittest.TestCase):
             ]
         )
 
-        sink = FileSink("/path", "csv", True)
+        sink = FileSink("/path", "csv")
         mock_submitter = MagicMock(spec=FlinkJobSubmitter)
         processor.flink_job_submitter = mock_submitter
         processor.materialize_features(feature_view, sink, allow_overwrite=True)

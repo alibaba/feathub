@@ -47,6 +47,7 @@ from kubernetes.config import load_kube_config
 from pyflink.find_flink_home import _find_flink_home  # noqa
 
 from feathub.common.exceptions import FeathubException
+from feathub.feature_tables.feature_table import FeatureTable
 from feathub.processors.flink.flink_job import FlinkApplicationClusterJob
 from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
     FeathubJobDescriptor,
@@ -54,7 +55,6 @@ from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
 from feathub.processors.flink.job_submitter.flink_job_submitter import (
     FlinkJobSubmitter,
 )
-from feathub.sinks.sink import Sink
 from feathub.table.table_descriptor import TableDescriptor
 
 FLINK_CONFIG_PREFIX = "flink"
@@ -104,7 +104,7 @@ class FlinkKubernetesApplicationClusterJobSubmitter(FlinkJobSubmitter):
         keys: Union[pd.DataFrame, TableDescriptor, None],
         start_datetime: Optional[datetime],
         end_datetime: Optional[datetime],
-        sink: Sink,
+        sink: FeatureTable,
         local_registry_tables: Dict[str, TableDescriptor],
         allow_overwrite: bool,
     ) -> FlinkApplicationClusterJob:

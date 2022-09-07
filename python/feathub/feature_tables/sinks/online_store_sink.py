@@ -13,27 +13,25 @@
 # limitations under the License.
 from typing import Dict
 
-from feathub.sinks.sink import Sink
+from feathub.feature_tables.feature_table import FeatureTable
 
 
-class OnlineStoreSink(Sink):
+class OnlineStoreSink(FeatureTable):
     """
     A sink corresponding to a table in an online feature store.
     """
 
-    def __init__(
-        self,
-        store_type: str,
-        table_name: str,
-    ):
+    def __init__(self, store_type: str, table_name: str):
         """
         :param store_type: A string that uniquely identifies a store class.
         :param table_name: The name of a table in the feature store.
         """
         super().__init__(
-            store_type=store_type,
-            allow_overwrite=True,
+            name="",
+            system_name=store_type,
+            properties={"table_name": table_name},
         )
+        self.store_type = store_type
         self.table_name = table_name
 
     def to_json(self) -> Dict:

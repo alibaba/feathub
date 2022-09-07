@@ -14,7 +14,7 @@
 
 import unittest
 
-from feathub.sources.file_source import FileSource
+from feathub.feature_tables.sources.file_source import FileSource
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.registries.local_registry import LocalRegistry
@@ -30,7 +30,7 @@ class FeatureViewTest(unittest.TestCase):
         source = FileSource(
             name="source_1",
             path="dummy_source_file",
-            file_format="csv",
+            data_format="csv",
             schema=Schema([], []),
             timestamp_field="lpep_dropoff_datetime",
             timestamp_format="%Y-%m-%d %H:%M:%S",

@@ -21,7 +21,7 @@ from feathub.common import types
 from feathub.common.types import from_numpy_dtype
 from feathub.processors.local.local_processor import LocalProcessor
 from feathub.registries.local_registry import LocalRegistry
-from feathub.sources.file_source import FileSource
+from feathub.feature_tables.sources.file_source import FileSource
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.table.schema import Schema
@@ -58,7 +58,7 @@ class LocalRegistryTest(unittest.TestCase):
         return FileSource(
             name="source",
             path=path,
-            file_format="csv",
+            data_format="csv",
             schema=schema,
             timestamp_field="time",
             timestamp_format="%Y-%m-%d %H:%M:%S",

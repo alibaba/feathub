@@ -16,13 +16,13 @@ from typing import Union, Optional, Dict, List
 import pandas as pd
 from datetime import datetime, timedelta
 
+from feathub.feature_tables.feature_table import FeatureTable
 from feathub.processors.processor import Processor
 from feathub.registries.registry import Registry
 from feathub.feature_service.feature_service import FeatureService
 from feathub.online_stores.online_store import OnlineStore
 from feathub.table.table import Table
 from feathub.processors.processor_job import ProcessorJob
-from feathub.sinks.sink import Sink
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
 from feathub.table.table_descriptor import TableDescriptor
 
@@ -102,7 +102,7 @@ class FeathubClient:
     def materialize_features(
         self,
         features: Union[str, TableDescriptor],
-        sink: Sink,
+        sink: FeatureTable,
         ttl: Optional[timedelta] = None,
         start_datetime: Optional[datetime] = None,
         end_datetime: Optional[datetime] = None,

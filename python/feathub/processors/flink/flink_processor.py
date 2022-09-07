@@ -25,6 +25,7 @@ from pyflink.table import (
 from feathub.common.exceptions import (
     FeathubException,
 )
+from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.online_stores.online_store import OnlineStore
@@ -44,7 +45,6 @@ from feathub.processors.processor import Processor
 from feathub.processors.processor_job import ProcessorJob
 from feathub.registries.local_registry import LocalRegistry
 from feathub.registries.registry import Registry
-from feathub.sinks.sink import Sink
 from feathub.table.table_descriptor import TableDescriptor
 
 logger = logging.getLogger(__file__)
@@ -151,7 +151,7 @@ class FlinkProcessor(Processor):
     def materialize_features(
         self,
         features: Union[str, TableDescriptor],
-        sink: Sink,
+        sink: FeatureTable,
         ttl: Optional[timedelta] = None,
         start_datetime: Optional[datetime] = None,
         end_datetime: Optional[datetime] = None,

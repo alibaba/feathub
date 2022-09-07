@@ -21,10 +21,10 @@ from pyflink.table import (
 )
 
 from feathub.common.exceptions import FeathubException
+from feathub.feature_tables.feature_table import FeatureTable
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
 from feathub.processors.flink.flink_types_utils import to_feathub_schema
 from feathub.processors.processor_job import ProcessorJob
-from feathub.sinks.sink import Sink
 from feathub.table.schema import Schema
 from feathub.table.table import Table
 from feathub.table.table_descriptor import TableDescriptor
@@ -91,7 +91,7 @@ class FlinkTable(Table):
 
     def execute_insert(
         self,
-        sink: Sink,
+        sink: FeatureTable,
         ttl: Optional[timedelta] = None,
         allow_overwrite: bool = False,
     ) -> ProcessorJob:

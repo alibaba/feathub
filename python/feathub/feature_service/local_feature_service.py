@@ -22,7 +22,7 @@ from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
 from feathub.online_stores.online_store import OnlineStore
-from feathub.sources.online_store_source import OnlineStoreSource
+from feathub.feature_tables.sources.online_store_source import OnlineStoreSource
 from feathub.feature_views.feature import Feature
 from feathub.dsl.parser import ExprParser
 

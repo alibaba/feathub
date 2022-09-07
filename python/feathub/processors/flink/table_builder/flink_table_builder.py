@@ -60,7 +60,7 @@ from feathub.processors.flink.table_builder.source_utils import (
     get_table_from_file_source,
 )
 from feathub.registries.registry import Registry
-from feathub.sources.file_source import FileSource
+from feathub.feature_tables.sources.file_source import FileSource
 from feathub.table.table_descriptor import TableDescriptor
 
 

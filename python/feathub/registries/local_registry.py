@@ -14,6 +14,7 @@
 
 from typing import List, Dict
 
+from feathub.common.exceptions import FeathubException
 from feathub.table.table_descriptor import TableDescriptor
 from feathub.registries.registry import Registry
 
@@ -41,6 +42,10 @@ class LocalRegistry(Registry):
     ) -> List[TableDescriptor]:
         result = []
         for table in features_list:
+            if table.name == "":
+                raise FeathubException(
+                    "Cannot build a TableDescriptor with empty name."
+                )
             self.tables[table.name] = table.build(self)
             result.append(self.tables[table.name])
 
@@ -49,6 +54,8 @@ class LocalRegistry(Registry):
     def register_features(
         self, features: TableDescriptor, override: bool = True
     ) -> bool:
+        if features.name == "":
+            raise FeathubException("Cannot register a TableDescriptor with empty name.")
         if features.name in self.tables and not override:
             return False
         self.tables[features.name] = features

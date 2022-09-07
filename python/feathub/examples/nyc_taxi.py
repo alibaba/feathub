@@ -29,12 +29,12 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import GradientBoostingRegressor
 
-from feathub.sources.file_source import FileSource
-from feathub.sinks.online_store_sink import OnlineStoreSink
+from feathub.feature_tables.sources.file_source import FileSource
+from feathub.feature_tables.sinks.online_store_sink import OnlineStoreSink
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
 from feathub.common import types
-from feathub.sources.online_store_source import OnlineStoreSource
+from feathub.feature_tables.sources.online_store_source import OnlineStoreSource
 from feathub.feathub_client import FeathubClient
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
@@ -180,7 +180,7 @@ def build_features(client: FeathubClient) -> FeatureView:
     source = FileSource(
         name="source_1",
         path=source_file_path,
-        file_format="csv",
+        data_format="csv",
         schema=schema,
         timestamp_field="lpep_dropoff_datetime",
         timestamp_format="%Y-%m-%d %H:%M:%S",

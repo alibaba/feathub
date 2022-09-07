@@ -29,7 +29,7 @@ from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
     FeathubJobDescriptor,
 )
 from feathub.registries.registry import Registry
-from feathub.sinks.file_sink import FileSink
+from feathub.feature_tables.sinks.file_sink import FileSink
 
 logger = logging.getLogger(__file__)
 
@@ -75,7 +75,7 @@ def run_job(feathub_job_descriptor_path: str) -> None:
         )
         table_result = native_flink_table.execute_insert(
             NativeFlinkTableDescriptor.for_connector("filesystem")
-            .format(feathub_job_descriptor.sink.file_format)
+            .format(feathub_job_descriptor.sink.data_format)
             .option("path", path)
             .build()
         )

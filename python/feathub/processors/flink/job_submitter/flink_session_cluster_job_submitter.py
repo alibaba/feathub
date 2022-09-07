@@ -19,14 +19,14 @@ import pandas as pd
 from pyflink.table import TableDescriptor as NativeFlinkTableDescriptor
 
 from feathub.common.exceptions import FeathubException
+from feathub.feature_tables.feature_table import FeatureTable
 from feathub.online_stores.online_store import OnlineStore
 from feathub.processors.flink.flink_job import FlinkSessionClusterJob
 from feathub.processors.flink.flink_table import FlinkTable
 from feathub.processors.flink.job_submitter.flink_job_submitter import FlinkJobSubmitter
 from feathub.processors.processor_job import ProcessorJob
-from feathub.sinks.file_sink import FileSink
-from feathub.sinks.online_store_sink import OnlineStoreSink
-from feathub.sinks.sink import Sink
+from feathub.feature_tables.sinks.file_sink import FileSink
+from feathub.feature_tables.sinks.online_store_sink import OnlineStoreSink
 from feathub.table.table_descriptor import TableDescriptor
 
 if typing.TYPE_CHECKING:
@@ -55,7 +55,7 @@ class FlinkSessionClusterJobSubmitter(FlinkJobSubmitter):
         keys: Union[pd.DataFrame, TableDescriptor, None],
         start_datetime: Optional[datetime],
         end_datetime: Optional[datetime],
-        sink: Sink,
+        sink: FeatureTable,
         local_registry_tables: Dict[str, TableDescriptor],
         allow_overwrite: bool,
     ) -> ProcessorJob:
@@ -89,7 +89,7 @@ class FlinkSessionClusterJobSubmitter(FlinkJobSubmitter):
 
             table_result = native_flink_table.execute_insert(
                 NativeFlinkTableDescriptor.for_connector("filesystem")
-                .format(sink.file_format)
+                .format(sink.data_format)
                 .option("path", path)
                 .build()
             )
