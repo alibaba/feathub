@@ -24,7 +24,7 @@ from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import StreamTableEnvironment
 
 from feathub.common.types import String, Int64
-from feathub.feature_tables.sources.file_source import FileSource
+from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.processors.flink.table_builder.flink_table_builder import FlinkTableBuilder
 from feathub.registries.local_registry import LocalRegistry
 from feathub.table.schema import Schema
@@ -69,10 +69,10 @@ class FlinkTableBuilderTestBase(unittest.TestCase):
         timestamp_field: Optional[str] = "time",
         timestamp_format: str = "%Y-%m-%d %H:%M:%S",
         schema: Optional[Schema] = None,
-    ) -> FileSource:
+    ) -> FileSystemSource:
         path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
         df.to_csv(path, index=False, header=False)
-        return FileSource(
+        return FileSystemSource(
             f"source_{uuid.uuid4()}",
             path,
             "csv",

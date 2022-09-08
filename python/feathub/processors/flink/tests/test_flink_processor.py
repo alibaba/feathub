@@ -39,9 +39,9 @@ from feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster
     FlinkKubernetesApplicationClusterJobSubmitter,
 )
 from feathub.registries.local_registry import LocalRegistry
-from feathub.feature_tables.sinks.file_sink import FileSink
+from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.feature_tables.sinks.online_store_sink import OnlineStoreSink
-from feathub.feature_tables.sources.file_source import FileSource
+from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.table.schema import Schema
 
 
@@ -101,7 +101,7 @@ class FlinkProcessorTest(unittest.TestCase):
 
         mock_table_builder = Mock(spec=FlinkTableBuilder)
         processor.flink_table_builder = mock_table_builder
-        source = FileSource("source", "/path", "csv", Schema([], []))
+        source = FileSystemSource("source", "/path", "csv", Schema([], []))
         table = processor.get_table(source)
         self.assertEqual(source, table.feature)
 
@@ -136,9 +136,10 @@ class FlinkProcessorTest(unittest.TestCase):
 
         mock_table_builder = Mock(spec=FlinkTableBuilder)
         mock_table_builder.build.return_value = mock_table
+        mock_table_builder.t_env = Mock()
         processor.flink_table_builder = mock_table_builder
-        source = FileSource("source", "/path", "csv", Schema([], []))
-        sink = FileSink("/path", "csv")
+        source = FileSystemSource("source", "/path", "csv", Schema([], []))
+        sink = FileSystemSink("/path", "csv")
 
         processor.materialize_features(source, sink, allow_overwrite=True)
         mock_table_builder.build.assert_called_once()
@@ -160,7 +161,9 @@ class FlinkProcessorTest(unittest.TestCase):
                 FlinkKubernetesApplicationClusterJobSubmitter,
             )
         )
-        table = processor.get_table(FileSource("source", "path", "csv", Schema([], [])))
+        table = processor.get_table(
+            FileSystemSource("source", "path", "csv", Schema([], []))
+        )
         with self.assertRaises(FeathubException):
             table.to_pandas()
 
@@ -180,7 +183,7 @@ class FlinkProcessorTest(unittest.TestCase):
             )
         )
         schema = Schema(["id"], [Int32])
-        table = processor.get_table(FileSource("source", "path", "csv", schema))
+        table = processor.get_table(FileSystemSource("source", "path", "csv", schema))
         self.assertEqual(schema, table.get_schema())
 
     def test_table_execute_insert_with_kubernetes_application_mode(self):
@@ -193,7 +196,7 @@ class FlinkProcessorTest(unittest.TestCase):
             registry=self.registry,
         )
         schema = Schema(["id"], [Int32])
-        source = FileSource("source", "path", "csv", schema)
+        source = FileSystemSource("source", "path", "csv", schema)
         feature_view = DerivedFeatureView(
             "feature_view",
             source=source,
@@ -201,7 +204,7 @@ class FlinkProcessorTest(unittest.TestCase):
         )
         self.registry.build_features([feature_view])
 
-        sink = FileSink("/path", "csv")
+        sink = FileSystemSink("/path", "csv")
         mock_submitter = MagicMock(spec=FlinkJobSubmitter)
         processor.flink_job_submitter = mock_submitter
         processor.materialize_features(feature_view, sink, allow_overwrite=True)
@@ -219,26 +222,26 @@ class FlinkProcessorTest(unittest.TestCase):
             registry=self.registry,
         )
 
-        dim_source = FileSource("dim_source", "/path", "csv", Schema([], []))
+        dim_source = FileSystemSource("dim_source", "/path", "csv", Schema([], []))
         dim_feature_view = DerivedFeatureView(
             "dim_feature_view",
             source=dim_source,
             features=[Feature(name="a", dtype=Int32, transform="a", keys=["id"])],
         )
 
-        dim_source2 = FileSource("dim_source2", "/path", "csv", Schema([], []))
+        dim_source2 = FileSystemSource("dim_source2", "/path", "csv", Schema([], []))
         dim_feature_view_2 = DerivedFeatureView(
             "dim_feature_view_2",
             source=dim_source2,
             features=[Feature(name="b", dtype=Int32, transform="b", keys=["id"])],
         )
 
-        source = FileSource("source", "/path", "csv", Schema([], []))
+        source = FileSystemSource("source", "/path", "csv", Schema([], []))
         joined_feature_view = DerivedFeatureView(
             "joined_feature_view", source, features=["dim_feature_view.a"]
         )
 
-        source_2 = FileSource("source2", "/path", "csv", Schema([], []))
+        source_2 = FileSystemSource("source2", "/path", "csv", Schema([], []))
         joined_feature_view_2 = DerivedFeatureView(
             "joined_feature_view_2", source_2, features=["dim_feature_view_2.b"]
         )
@@ -259,7 +262,7 @@ class FlinkProcessorTest(unittest.TestCase):
             ]
         )
 
-        sink = FileSink("/path", "csv")
+        sink = FileSystemSink("/path", "csv")
         mock_submitter = MagicMock(spec=FlinkJobSubmitter)
         processor.flink_job_submitter = mock_submitter
         processor.materialize_features(feature_view, sink, allow_overwrite=True)
@@ -298,7 +301,7 @@ class FlinkProcessorTest(unittest.TestCase):
         mock_table_builder = Mock(spec=FlinkTableBuilder)
         mock_table_builder.build.return_value = mock_table
         processor.flink_table_builder = mock_table_builder
-        source = FileSource(
+        source = FileSystemSource(
             "source",
             "/path",
             "csv",

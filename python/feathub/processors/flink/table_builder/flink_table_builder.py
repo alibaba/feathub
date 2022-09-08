@@ -25,6 +25,7 @@ from pyflink.table.types import DataType
 from feathub.common.exceptions import FeathubException, FeathubTransformationException
 from feathub.common.types import DType
 from feathub.common.utils import to_java_date_format
+from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.feature_view import FeatureView
@@ -56,11 +57,10 @@ from feathub.processors.flink.table_builder.sliding_window_utils import (
     evaluate_sliding_window_transform,
     SlidingWindowDescriptor,
 )
-from feathub.processors.flink.table_builder.source_utils import (
-    get_table_from_file_source,
+from feathub.processors.flink.table_builder.source_sink_utils import (
+    get_table_from_source,
 )
 from feathub.registries.registry import Registry
-from feathub.feature_tables.sources.file_source import FileSource
 from feathub.table.table_descriptor import TableDescriptor
 
 
@@ -173,10 +173,10 @@ class FlinkTableBuilder:
                 )
             return self._built_tables[features.name][1]
 
-        if isinstance(features, FileSource):
+        if isinstance(features, FeatureTable):
             self._built_tables[features.name] = (
                 features,
-                get_table_from_file_source(
+                get_table_from_source(
                     self.t_env,
                     features,
                     self._EVENT_TIME_ATTRIBUTE_NAME,

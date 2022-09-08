@@ -11,74 +11,74 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from typing import Sequence
 
 from pyflink.table import (
     StreamTableEnvironment,
     Table as NativeFlinkTable,
-    TableDescriptor as NativeFlinkTableDescriptor,
     Schema as NativeFlinkSchema,
+    TableResult,
 )
 
 from feathub.common import types
 from feathub.common.exceptions import FeathubException
 from feathub.common.types import DType
 from feathub.common.utils import to_java_date_format
-from feathub.processors.flink.flink_types_utils import to_flink_schema
-from feathub.processors.flink.table_builder.time_utils import (
-    timedelta_to_flink_sql_interval,
+from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
+from feathub.feature_tables.sinks.kafka_sink import KafkaSink
+from feathub.feature_tables.sources.kafka_source import KafkaSource
+from feathub.processors.flink.table_builder.file_system_utils import (
+    get_table_from_file_source,
+    insert_into_file_sink,
 )
-from feathub.feature_tables.sources.file_source import FileSource
+from feathub.processors.flink.table_builder.kafka_utils import (
+    get_table_from_kafka_source,
+    insert_into_kafka_sink,
+)
+from feathub.feature_tables.sources.file_system_source import FileSystemSource
 
 
-def get_table_from_file_source(
+def get_table_from_source(
     t_env: StreamTableEnvironment,
-    file_source: FileSource,
+    source: FeatureTable,
     time_attribute: str,
 ) -> NativeFlinkTable:
     """
-    Get the Flink Table from the given file source.
+    Get the Flink Table from the given source.
 
     :param t_env: The StreamTableEnvironment under which the source table will be
                   created.
-    :param file_source: The FileSource.
+    :param source: The source.
     :param time_attribute: The field name of the time attribute.
-    :return:
+    :return: The flink table.
     """
-    schema = file_source.schema
-    if schema is None:
-        raise FeathubException("Flink processor requires schema for the FileSource.")
-
-    flink_schema = to_flink_schema(schema)
-
-    # Define watermark if the file_source has timestamp field
-    if file_source.timestamp_field is not None:
-        flink_schema = _define_watermark(
-            flink_schema,
-            timedelta_to_flink_sql_interval(
-                file_source.max_out_of_orderness, day_precision=3
-            ),
-            file_source.timestamp_field,
-            file_source.timestamp_format,
-            schema.get_field_type(file_source.timestamp_field),
-            time_attribute,
-        )
-
-    descriptor_builder = (
-        NativeFlinkTableDescriptor.for_connector("filesystem")
-        .format(file_source.data_format)
-        .option("path", file_source.path)
-        .schema(flink_schema)
-    )
-
-    if file_source.data_format == "csv":
-        # Set ignore-parse-errors to set null in case of csv parse error
-        descriptor_builder.option("csv.ignore-parse-errors", "true")
-
-    table = t_env.from_descriptor(descriptor_builder.build())
-    return table
+    if isinstance(source, FileSystemSource):
+        return get_table_from_file_source(t_env, source, time_attribute)
+    elif isinstance(source, KafkaSource):
+        return get_table_from_kafka_source(t_env, source, time_attribute, source.keys)
+    else:
+        raise FeathubException(f"Unsupported source type {type(source)}.")
 
 
-def _define_watermark(
+def insert_into_sink(
+    t_env: StreamTableEnvironment,
+    table: NativeFlinkTable,
+    sink: FeatureTable,
+    keys: Sequence[str],
+) -> TableResult:
+    """
+    Insert the flink table to the given sink.
+    """
+    if isinstance(sink, FileSystemSink):
+        return insert_into_file_sink(table, sink)
+    elif isinstance(sink, KafkaSink):
+        return insert_into_kafka_sink(t_env, table, sink, keys)
+    else:
+        raise FeathubException(f"Unsupported sink type {type(sink)}.")
+
+
+def define_watermark(
     flink_schema: NativeFlinkSchema,
     max_out_of_orderness_interval: str,
     timestamp_field: str,

@@ -1,0 +1,46 @@
+#  Copyright 2022 The Feathub Authors
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+import glob
+import os
+
+from feathub.common.exceptions import FeathubException
+
+
+def find_jar_lib() -> str:
+    """
+    Find the path to the directory of jars that the Flink processor requires.
+
+    If we are in the development environment, we use the jars in the development
+    directory so that developer doesn't have to install the Feathub every time when
+    change is made to the Java code. If we are not in the development, we use the jars
+    that are packaged in the Feathub wheels.
+    """
+    current_dir = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
+    feathub_root = os.path.abspath(current_dir + "/../../../../")
+    build_target = glob.glob(
+        feathub_root + "/java/feathub-dist/target/feathub-dist-*-bin/feathub-dist-*"
+    )
+    if len(build_target) > 0:
+        # We are in the Feathub development environment.
+        return os.path.join(build_target[0], "lib")
+
+    for feathub_module_path in __import__("feathub").__path__:
+        lib_dir_path = os.path.join(feathub_module_path, "processors", "flink", "lib")
+        if not os.path.exists(lib_dir_path):
+            raise FeathubException(f"Cannot the lib for Feathub at {lib_dir_path}")
+        return lib_dir_path
+
+    raise FeathubException(
+        "Could not the path to the Feathub Flink jar directory in current environment."
+    )

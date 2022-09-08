@@ -37,7 +37,7 @@ from feathub.feature_views.transforms.over_window_transform import (
 from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.table.table_descriptor import TableDescriptor
-from feathub.feature_tables.sources.file_source import FileSource
+from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_views.feature import Feature
 
 
@@ -145,6 +145,7 @@ class LocalProcessor(Processor):
         ).to_pandas()
 
         # TODO: handle allow_overwrite.
+        # TODO: Support FileSystemSink, KafkaSink.
         if isinstance(sink, OnlineStoreSink):
             return self._write_features_to_online_store(
                 features=features_df,
@@ -187,8 +188,8 @@ class LocalProcessor(Processor):
                 timestamp_format="unknown",
             )
 
-        # TODO: Support SlidingFeatureView.
-        if isinstance(features, FileSource):
+        # TODO: Support SlidingFeatureView, KafkaSource.
+        if isinstance(features, FileSystemSource):
             return self._get_table_from_file_source(features)
         elif isinstance(features, DerivedFeatureView):
             return self._get_table_from_derived_feature_view(features)
@@ -215,7 +216,7 @@ class LocalProcessor(Processor):
 
         return LocalJob()
 
-    def _get_table_from_file_source(self, source: FileSource) -> LocalTable:
+    def _get_table_from_file_source(self, source: FileSystemSource) -> LocalTable:
         if source.data_format == "csv":
             df = pd.read_csv(
                 source.path,

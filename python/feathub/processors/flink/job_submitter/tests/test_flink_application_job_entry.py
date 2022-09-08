@@ -34,8 +34,8 @@ from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
 from feathub.processors.flink.job_submitter.flink_application_cluster_job_entry import (
     run_job,
 )
-from feathub.feature_tables.sinks.file_sink import FileSink
-from feathub.feature_tables.sources.file_source import FileSource
+from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
+from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
 
@@ -59,7 +59,7 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
         file_source = self._create_file_source(input_df, Schema(["id"], [Int32]))
 
         sink_path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
-        sink = FileSink(sink_path, "csv")
+        sink = FileSystemSink(sink_path, "csv")
         feathub_config_path = self._prepare_feathub_job_config(
             file_source, None, None, None, sink, {}
         )
@@ -119,7 +119,7 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
         )
 
         sink_path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
-        sink = FileSink(sink_path, "csv")
+        sink = FileSystemSink(sink_path, "csv")
 
         job_config = self._prepare_feathub_job_config(
             feature_view,
@@ -178,10 +178,10 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
         name: str = "source",
         keys: Optional[List[str]] = None,
         timestamp_field: Optional[str] = None,
-    ) -> FileSource:
+    ) -> FileSystemSource:
         path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
         df.to_csv(path, index=False, header=False)
-        return FileSource(
+        return FileSystemSource(
             name,
             path,
             "csv",

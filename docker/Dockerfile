@@ -1,4 +1,4 @@
-FROM flink:1.15.0
+FROM flink:1.15.2
 
 
 # install python3: it has updated Python to 3.9 in Debian 11 and so install Python 3.7 from source
@@ -17,9 +17,6 @@ RUN apt-get update -y && \
     ln -s /usr/local/bin/python3 /usr/local/bin/python && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-# Install PyFlink
-RUN pip3 install apache-flink==1.15.0
 
 # Install feathub
 COPY ./wheels /tmp/wheels

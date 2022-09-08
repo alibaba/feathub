@@ -16,7 +16,7 @@ from typing import Dict
 from feathub.feature_tables.feature_table import FeatureTable
 
 
-class FileSink(FeatureTable):
+class FileSystemSink(FeatureTable):
     """A Sink which writes data to files."""
 
     def __init__(self, path: str, data_format: str) -> None:
@@ -31,7 +31,7 @@ class FileSink(FeatureTable):
 
     def to_json(self) -> Dict:
         return {
-            "type": "FileSink",
+            "type": "FileSystemSink",
             "path": self.path,
             "data_format": self.data_format,
         }

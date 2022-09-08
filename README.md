@@ -39,11 +39,19 @@ architecture](docs/architecture.md) for more details of these components.
 Prerequisites for building python packages:
 - Unix-like operating system (e.g. Linux, Mac OS X)
 - Python 3.7
+- Java 8
+- Maven >= 3.1.1
 
 ### Install Feathub
 
 Run the following command to install Feathub from source.
 ```bash
+# Build Java dependencies for Feathub 
+$ cd java
+$ mvn clean package
+$ cd ..
+
+# Install Feathub
 $ python3 -m pip install ./python
 ```
 

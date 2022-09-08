@@ -19,7 +19,7 @@ See [README](./../README.md#quickstart) for the instruction to run this demo.
 ## Specify source dataset
 
 ```python
-source = FileSource(
+source = FileSystemSource(
     name="source_1",
     path=source_file_path,
     file_format="csv",

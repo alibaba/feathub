@@ -18,18 +18,16 @@ import sys
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import (
     StreamTableEnvironment,
-    TableDescriptor as NativeFlinkTableDescriptor,
 )
 
-from feathub.common.exceptions import FeathubException
-from feathub.processors.flink.table_builder.flink_table_builder import (
-    FlinkTableBuilder,
-)
 from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
     FeathubJobDescriptor,
 )
+from feathub.processors.flink.table_builder.flink_table_builder import (
+    FlinkTableBuilder,
+)
+from feathub.processors.flink.table_builder.source_sink_utils import insert_into_sink
 from feathub.registries.registry import Registry
-from feathub.feature_tables.sinks.file_sink import FileSink
 
 logger = logging.getLogger(__file__)
 
@@ -65,25 +63,19 @@ def run_job(feathub_job_descriptor_path: str) -> None:
         registry=registry,
     )
 
-    if isinstance(feathub_job_descriptor.sink, FileSink):
-        path = feathub_job_descriptor.sink.path
-        native_flink_table = flink_table_builder.build(
-            features=feathub_job_descriptor.features,
-            keys=feathub_job_descriptor.keys,
-            start_datetime=feathub_job_descriptor.start_datetime,
-            end_datetime=feathub_job_descriptor.end_datetime,
-        )
-        table_result = native_flink_table.execute_insert(
-            NativeFlinkTableDescriptor.for_connector("filesystem")
-            .format(feathub_job_descriptor.sink.data_format)
-            .option("path", path)
-            .build()
-        )
-    else:
-        raise FeathubException(
-            f"Unsupported sink type {type(feathub_job_descriptor.sink)}."
-        )
+    native_flink_table = flink_table_builder.build(
+        features=feathub_job_descriptor.features,
+        keys=feathub_job_descriptor.keys,
+        start_datetime=feathub_job_descriptor.start_datetime,
+        end_datetime=feathub_job_descriptor.end_datetime,
+    )
 
+    table_result = insert_into_sink(
+        t_env,
+        native_flink_table,
+        feathub_job_descriptor.sink,
+        feathub_job_descriptor.features.keys,
+    )
     table_result.wait()
 
 

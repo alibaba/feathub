@@ -24,7 +24,7 @@ table join.
 ### Source
 
 A `Source` provides metadata to access and interpret a table of feature
-values from an offline or online feature store. For example, `FileSource`
+values from an offline or online feature store. For example, `FileSystemSource`
 can specify the path of a file containing feature values in csv format.
 
 ### Sink

@@ -16,17 +16,16 @@ from datetime import datetime
 from typing import Optional, Dict, Union
 
 import pandas as pd
-from pyflink.table import TableDescriptor as NativeFlinkTableDescriptor
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sinks.online_store_sink import OnlineStoreSink
 from feathub.online_stores.online_store import OnlineStore
 from feathub.processors.flink.flink_job import FlinkSessionClusterJob
 from feathub.processors.flink.flink_table import FlinkTable
 from feathub.processors.flink.job_submitter.flink_job_submitter import FlinkJobSubmitter
+from feathub.processors.flink.table_builder.source_sink_utils import insert_into_sink
 from feathub.processors.processor_job import ProcessorJob
-from feathub.feature_tables.sinks.file_sink import FileSink
-from feathub.feature_tables.sinks.online_store_sink import OnlineStoreSink
 from feathub.table.table_descriptor import TableDescriptor
 
 if typing.TYPE_CHECKING:
@@ -78,22 +77,17 @@ class FlinkSessionClusterJobSubmitter(FlinkJobSubmitter):
             )
             return FlinkSessionClusterJob(None)
 
-        if isinstance(sink, FileSink):
-            path = sink.path
-            native_flink_table = self.flink_processor.flink_table_builder.build(
-                features=features,
-                keys=keys,
-                start_datetime=start_datetime,
-                end_datetime=end_datetime,
-            )
+        native_flink_table = self.flink_processor.flink_table_builder.build(
+            features=features,
+            keys=keys,
+            start_datetime=start_datetime,
+            end_datetime=end_datetime,
+        )
 
-            table_result = native_flink_table.execute_insert(
-                NativeFlinkTableDescriptor.for_connector("filesystem")
-                .format(sink.data_format)
-                .option("path", path)
-                .build()
-            )
-        else:
-            raise FeathubException(f"Unsupported sink type {type(sink)}.")
-
+        table_result = insert_into_sink(
+            self.flink_processor.flink_table_builder.t_env,
+            native_flink_table,
+            sink,
+            features.keys,
+        )
         return FlinkSessionClusterJob(table_result)

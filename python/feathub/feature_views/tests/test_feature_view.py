@@ -14,7 +14,7 @@
 
 import unittest
 
-from feathub.feature_tables.sources.file_source import FileSource
+from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.registries.local_registry import LocalRegistry
@@ -27,7 +27,7 @@ class FeatureViewTest(unittest.TestCase):
         self.registry = LocalRegistry(config={})
 
     def test_features(self):
-        source = FileSource(
+        source = FileSystemSource(
             name="source_1",
             path="dummy_source_file",
             data_format="csv",

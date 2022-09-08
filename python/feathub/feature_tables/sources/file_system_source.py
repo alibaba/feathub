@@ -18,7 +18,7 @@ from feathub.feature_tables.feature_table import FeatureTable
 from feathub.table.schema import Schema
 
 
-class FileSource(FeatureTable):
+class FileSystemSource(FeatureTable):
     """A source which reads data from files."""
 
     def __init__(
@@ -66,7 +66,7 @@ class FileSource(FeatureTable):
 
     def to_json(self) -> Dict:
         return {
-            "type": "FileSource",
+            "type": "FileSystemSource",
             "name": self.name,
             "path": self.path,
             "data_format": self.data_format,

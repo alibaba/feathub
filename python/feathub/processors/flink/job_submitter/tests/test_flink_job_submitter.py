@@ -28,8 +28,8 @@ from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
 from feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster_job_submitter import (  # noqa
     FlinkKubernetesApplicationClusterJobSubmitter,
 )
-from feathub.feature_tables.sinks.file_sink import FileSink
-from feathub.feature_tables.sources.file_source import FileSource
+from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
+from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.table.schema import Schema
 
 
@@ -69,8 +69,8 @@ class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
         self.assertEqual("test-namespace", submitter.kube_namespace)
 
     def test_create_configmap(self):
-        source = FileSource("source", "/dummy/path", "csv", Schema([], []))
-        sink = FileSink("/dummy/path", "csv")
+        source = FileSystemSource("source", "/dummy/path", "csv", Schema([], []))
+        sink = FileSystemSink("/dummy/path", "csv")
 
         mock_popen_return = MagicMock()
         mock_popen_return.returncode = 0
@@ -141,8 +141,8 @@ class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
             )
 
     def test_submit_job_with_additional_flink_configuration(self):
-        source = FileSource("source", "/dummy/path", "csv", Schema([], []))
-        sink = FileSink("/dummy/path", "csv")
+        source = FileSystemSource("source", "/dummy/path", "csv", Schema([], []))
+        sink = FileSystemSink("/dummy/path", "csv")
         self.submitter.processor_config["flink.additional.configuration"] = "value"
 
         mock_popen_return = MagicMock()
@@ -163,9 +163,9 @@ class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
             )
 
     def test_submit_job_with_join_table(self):
-        source = FileSource("source", "/dummy/path", "csv", Schema([], []))
-        table = FileSource("table", "/dummy/path", "csv", Schema([], []))
-        sink = FileSink("/dummy/path", "csv")
+        source = FileSystemSource("source", "/dummy/path", "csv", Schema([], []))
+        table = FileSystemSource("table", "/dummy/path", "csv", Schema([], []))
+        sink = FileSystemSink("/dummy/path", "csv")
         self.submitter.processor_config["flink.additional.configuration"] = "value"
 
         mock_popen_return = MagicMock()

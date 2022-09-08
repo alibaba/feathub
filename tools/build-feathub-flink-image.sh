@@ -23,6 +23,11 @@ CURRENT_DIR=$(dirname "${BASH_SOURCE-$0}")
 PROJECT_DIR=$(cd "${CURRENT_DIR}/.."; pwd)
 DOCKER_DIR=${PROJECT_DIR}/docker
 PYTHON_DIR=${PROJECT_DIR}/python
+JAVA_DIR=${PROJECT_DIR}/java
+
+# build java dependencies
+cd ${JAVA_DIR}
+mvn clean package
 
 # build wheels
 cd ${PYTHON_DIR}
