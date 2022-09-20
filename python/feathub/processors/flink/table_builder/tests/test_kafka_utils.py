@@ -27,6 +27,9 @@ from pyflink.table import (
 from feathub.common.types import Int64, String
 from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sources.kafka_source import KafkaSource
+from feathub.processors.flink.table_builder.flink_table_builder_constants import (
+    EVENT_TIME_ATTRIBUTE_NAME,
+)
 from feathub.processors.flink.table_builder.source_sink_utils import (
     get_table_from_source,
     insert_into_sink,
@@ -58,7 +61,7 @@ class SourceUtilsTest(unittest.TestCase):
         )
 
         with patch.object(t_env, "from_descriptor") as from_descriptor:
-            get_table_from_source(t_env, source, "__ts__")
+            get_table_from_source(t_env, source)
             flink_table_descriptor: NativeFlinkTableDescriptor = (
                 from_descriptor.call_args[0][0]
             )
@@ -183,8 +186,8 @@ class SourceSinkITTest(unittest.TestCase):
         )
 
         expected_rows = {Row(*data) for data in row_data}
-        table = get_table_from_source(t_env, source, "__ts__")
-        table = table.drop_columns("__ts__")
+        table = get_table_from_source(t_env, source)
+        table = table.drop_columns(EVENT_TIME_ATTRIBUTE_NAME)
         table_result = table.execute()
         result_rows = set()
         with table_result.collect() as results:

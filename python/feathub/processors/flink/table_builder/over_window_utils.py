@@ -30,6 +30,9 @@ from feathub.feature_views.transforms.over_window_transform import OverWindowTra
 from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
 )
+from feathub.processors.flink.table_builder.flink_table_builder_constants import (
+    EVENT_TIME_ATTRIBUTE_NAME,
+)
 from feathub.processors.flink.table_builder.udf import (
     TimeWindowedAggFunction,
     JsonStringToMap,
@@ -127,7 +130,6 @@ def evaluate_over_window_transform(
     flink_table: NativeFlinkTable,
     window_descriptor: "OverWindowDescriptor",
     agg_descriptors: List["AggregationFieldDescriptor"],
-    time_attribute: str,
 ) -> NativeFlinkTable:
     """
     Evaluate the over window transforms on the given flink table and return the
@@ -137,10 +139,9 @@ def evaluate_over_window_transform(
     :param window_descriptor: The descriptor of the over window.
     :param agg_descriptors: A list of descriptor that descriptor the aggregation to
                             perform.
-    :param time_attribute: The field name of the time attribute of the `flink_table`.
     :return:
     """
-    window = _get_flink_over_window(window_descriptor, time_attribute)
+    window = _get_flink_over_window(window_descriptor)
     if window_descriptor.filter_expr is not None:
         agg_table = (
             flink_table.filter(
@@ -149,9 +150,7 @@ def evaluate_over_window_transform(
             .over_window(window.alias("w"))
             .select(
                 native_flink_expr.col("*"),
-                *_get_over_window_agg_column_list(
-                    window_descriptor, agg_descriptors, time_attribute
-                ),
+                *_get_over_window_agg_column_list(window_descriptor, agg_descriptors),
             )
         )
 
@@ -177,26 +176,23 @@ def evaluate_over_window_transform(
 
     return flink_table.over_window(window.alias("w")).select(
         native_flink_expr.col("*"),
-        *_get_over_window_agg_column_list(
-            window_descriptor, agg_descriptors, time_attribute
-        ),
+        *_get_over_window_agg_column_list(window_descriptor, agg_descriptors),
     )
 
 
 def _get_flink_over_window(
     over_window_descriptor: "OverWindowDescriptor",
-    time_attribute: str,
 ) -> OverWindowPartitionedOrderedPreceding:
 
     # Group by key
     if len(over_window_descriptor.group_by_keys) == 0:
-        window = Over.order_by(native_flink_expr.col(time_attribute))
+        window = Over.order_by(native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME))
     else:
         keys = [
             native_flink_expr.col(key) for key in over_window_descriptor.group_by_keys
         ]
         window = Over.partition_by(*keys).order_by(
-            native_flink_expr.col(time_attribute)
+            native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME)
         )
 
     if over_window_descriptor.limit is not None:
@@ -220,7 +216,6 @@ def _get_flink_over_window(
 def _get_over_window_agg_column_list(
     window_descriptor: "OverWindowDescriptor",
     agg_descriptors: List["AggregationFieldDescriptor"],
-    time_attribute: str,
 ) -> List[native_flink_expr.Expression]:
     return [
         _get_over_window_agg_select_expr(
@@ -229,7 +224,6 @@ def _get_over_window_agg_column_list(
             window_descriptor,
             descriptor.agg_func,
             "w",
-            time_attribute,
         )
         .cast(descriptor.field_data_type)
         .alias(descriptor.field_name)
@@ -243,7 +237,6 @@ def _get_over_window_agg_select_expr(
     over_window_descriptor: "OverWindowDescriptor",
     agg_func: AggFunc,
     window_alias: str,
-    time_attribute: str,
 ) -> native_flink_expr.Expression:
 
     if (
@@ -267,7 +260,7 @@ def _get_over_window_agg_select_expr(
         result = native_flink_expr.call(
             udaf(time_windowed_agg_func, result_type=_result_type, func_type="pandas"),
             expr,
-            native_flink_expr.col(time_attribute),
+            native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME),
         )
     else:
         if agg_func == AggFunc.AVG:

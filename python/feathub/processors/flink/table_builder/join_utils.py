@@ -30,6 +30,9 @@ from feathub.processors.flink.table_builder.aggregation_utils import (
     get_default_value_and_type,
     AggregationFieldDescriptor,
 )
+from feathub.processors.flink.table_builder.flink_table_builder_constants import (
+    EVENT_TIME_ATTRIBUTE_NAME,
+)
 from feathub.processors.flink.table_builder.time_utils import (
     timedelta_to_flink_sql_interval,
 )
@@ -184,7 +187,6 @@ def temporal_join(
     left: NativeFlinkTable,
     right: NativeFlinkTable,
     keys: Sequence[str],
-    time_attribute: str,
     right_table_join_field_descriptor: Dict[str, JoinFieldDescriptor],
 ) -> NativeFlinkTable:
     """
@@ -194,8 +196,6 @@ def temporal_join(
     :param left: The left table.
     :param right: The right table.
     :param keys: The join keys.
-    :param time_attribute: The name of the time attribute of the left table and
-                           right table.
     :param right_table_join_field_descriptor: A map from right field name to its
                                               JoinFieldDescriptor.
     :return: The joined table.
@@ -207,14 +207,14 @@ def temporal_join(
         f"""
     SELECT * FROM (SELECT *,
         ROW_NUMBER() OVER (PARTITION BY {",".join(escaped_keys)}
-            ORDER BY `{time_attribute}` DESC) AS rownum
+            ORDER BY `{EVENT_TIME_ATTRIBUTE_NAME}` DESC) AS rownum
         FROM right_table)
     WHERE rownum = 1
     """
     )
 
     right_aliased = _get_field_aliased_right_table(
-        temporal_right_table, [*keys, time_attribute]
+        temporal_right_table, [*keys, EVENT_TIME_ATTRIBUTE_NAME]
     )
 
     t_env.create_temporary_view("temporal_right_table", right_aliased)
@@ -227,7 +227,7 @@ def temporal_join(
         f"""
     SELECT * FROM left_table LEFT JOIN
         temporal_right_table
-        FOR SYSTEM_TIME AS OF left_table.`{time_attribute}`
+        FOR SYSTEM_TIME AS OF left_table.`{EVENT_TIME_ATTRIBUTE_NAME}`
     ON {predicates}
     """
     )
@@ -255,9 +255,9 @@ def temporal_join(
                 ).cast(join_field_descriptor.field_data_type)
             result_table = result_table.add_or_replace_columns(
                 native_flink_expr.if_then_else(
-                    native_flink_expr.col(time_attribute)
+                    native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME)
                     < native_flink_expr.call_sql(
-                        f"`right.{time_attribute}` + {flink_sql_interval}"
+                        f"`right.{EVENT_TIME_ATTRIBUTE_NAME}` + {flink_sql_interval}"
                     ),
                     native_flink_expr.col(right_field_name),
                     default_value_expr,

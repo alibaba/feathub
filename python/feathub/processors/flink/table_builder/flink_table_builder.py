@@ -43,6 +43,9 @@ from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
     get_default_value_and_type,
 )
+from feathub.processors.flink.table_builder.flink_table_builder_constants import (
+    EVENT_TIME_ATTRIBUTE_NAME,
+)
 from feathub.processors.flink.table_builder.join_utils import (
     join_table_on_key,
     full_outer_join_on_key_with_default_value,
@@ -66,8 +69,6 @@ from feathub.table.table_descriptor import TableDescriptor
 
 class FlinkTableBuilder:
     """FlinkTableBuilder is used to convert Feathub feature to a Flink Table."""
-
-    _EVENT_TIME_ATTRIBUTE_NAME = "__event_time_attribute__"
 
     def __init__(
         self,
@@ -136,8 +137,8 @@ class FlinkTableBuilder:
                 )
             table = self._range_table_by_time(table, start_datetime, end_datetime)
 
-        if self._EVENT_TIME_ATTRIBUTE_NAME in table.get_schema().get_field_names():
-            table = table.drop_columns(self._EVENT_TIME_ATTRIBUTE_NAME)
+        if EVENT_TIME_ATTRIBUTE_NAME in table.get_schema().get_field_names():
+            table = table.drop_columns(EVENT_TIME_ATTRIBUTE_NAME)
 
         return table
 
@@ -176,11 +177,7 @@ class FlinkTableBuilder:
         if isinstance(features, FeatureTable):
             self._built_tables[features.name] = (
                 features,
-                get_table_from_source(
-                    self.t_env,
-                    features,
-                    self._EVENT_TIME_ATTRIBUTE_NAME,
-                ),
+                get_table_from_source(self.t_env, features),
             )
         elif isinstance(features, DerivedFeatureView):
             self._built_tables[features.name] = (
@@ -291,8 +288,8 @@ class FlinkTableBuilder:
                 ] = JoinFieldDescriptor.from_field_name(right_timestamp_field)
 
                 right_table_join_field_descriptors[
-                    self._EVENT_TIME_ATTRIBUTE_NAME
-                ] = JoinFieldDescriptor.from_field_name(self._EVENT_TIME_ATTRIBUTE_NAME)
+                    EVENT_TIME_ATTRIBUTE_NAME
+                ] = JoinFieldDescriptor.from_field_name(EVENT_TIME_ATTRIBUTE_NAME)
 
                 right_table_join_field_descriptors[
                     join_transform.feature_name
@@ -310,7 +307,6 @@ class FlinkTableBuilder:
                 tmp_table,
                 over_window_descriptor,
                 agg_descriptor,
-                self._EVENT_TIME_ATTRIBUTE_NAME,
             )
 
         for (
@@ -328,7 +324,6 @@ class FlinkTableBuilder:
                 tmp_table,
                 right_table,
                 keys,
-                self._EVENT_TIME_ATTRIBUTE_NAME,
                 right_table_join_field_descriptors,
             )
 
@@ -390,13 +385,12 @@ class FlinkTableBuilder:
                 tmp_table,
                 window_descriptor,
                 agg_descriptors,
-                self._EVENT_TIME_ATTRIBUTE_NAME,
             )
             if agg_table is None:
                 agg_table = tmp_agg_table
             else:
                 join_keys = list(window_descriptor.group_by_keys)
-                join_keys.append(self._EVENT_TIME_ATTRIBUTE_NAME)
+                join_keys.append(EVENT_TIME_ATTRIBUTE_NAME)
                 agg_table = full_outer_join_on_key_with_default_value(
                     agg_table,
                     tmp_agg_table,
@@ -413,7 +407,7 @@ class FlinkTableBuilder:
             if feature_view.timestamp_format == "epoch":
                 tmp_table = tmp_table.add_columns(
                     native_flink_expr.call_sql(
-                        f"UNIX_TIMESTAMP(CAST(`{self._EVENT_TIME_ATTRIBUTE_NAME}` "
+                        f"UNIX_TIMESTAMP(CAST(`{EVENT_TIME_ATTRIBUTE_NAME}` "
                         f"AS STRING))"
                     ).alias(feature_view.timestamp_field)
                 )
@@ -425,7 +419,7 @@ class FlinkTableBuilder:
                 )
                 tmp_table = tmp_table.add_columns(
                     native_flink_expr.call_sql(
-                        f"DATE_FORMAT(`{self._EVENT_TIME_ATTRIBUTE_NAME}`, "
+                        f"DATE_FORMAT(`{EVENT_TIME_ATTRIBUTE_NAME}`, "
                         f"'{java_datetime_format}')"
                     ).alias(feature_view.timestamp_field)
                 )
@@ -468,7 +462,7 @@ class FlinkTableBuilder:
     ) -> NativeFlinkTable:
         if start_datetime is not None:
             table = table.filter(
-                native_flink_expr.col(self._EVENT_TIME_ATTRIBUTE_NAME).__ge__(
+                native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME).__ge__(
                     native_flink_expr.lit(
                         start_datetime.strftime("%Y-%m-%d %H:%M:%S")
                     ).to_timestamp
@@ -476,7 +470,7 @@ class FlinkTableBuilder:
             )
         if end_datetime is not None:
             table = table.filter(
-                native_flink_expr.col(self._EVENT_TIME_ATTRIBUTE_NAME).__lt__(
+                native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME).__lt__(
                     native_flink_expr.lit(
                         end_datetime.strftime("%Y-%m-%d %H:%M:%S")
                     ).to_timestamp
@@ -488,8 +482,8 @@ class FlinkTableBuilder:
         self, feature_view: FeatureView, source_fields: List[str]
     ) -> List[str]:
         output_fields = feature_view.get_output_fields(source_fields)
-        if self._EVENT_TIME_ATTRIBUTE_NAME not in output_fields:
-            output_fields.append(self._EVENT_TIME_ATTRIBUTE_NAME)
+        if EVENT_TIME_ATTRIBUTE_NAME not in output_fields:
+            output_fields.append(EVENT_TIME_ATTRIBUTE_NAME)
         return output_fields
 
     @staticmethod

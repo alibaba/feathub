@@ -28,9 +28,7 @@ from feathub.processors.flink.table_builder.time_utils import (
 
 
 def get_table_from_file_source(
-    t_env: StreamTableEnvironment,
-    file_source: FileSystemSource,
-    time_attribute: str,
+    t_env: StreamTableEnvironment, file_source: FileSystemSource
 ) -> NativeFlinkTable:
     schema = file_source.schema
     if schema is None:
@@ -54,7 +52,6 @@ def get_table_from_file_source(
             file_source.timestamp_field,
             file_source.timestamp_format,
             schema.get_field_type(file_source.timestamp_field),
-            time_attribute,
         )
 
     descriptor_builder = (

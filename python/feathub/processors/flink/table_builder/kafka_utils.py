@@ -36,7 +36,6 @@ from feathub.processors.flink.table_builder.time_utils import (
 def get_table_from_kafka_source(
     t_env: StreamTableEnvironment,
     kafka_source: KafkaSource,
-    time_attribute: str,
     keys: Sequence[str],
 ) -> NativeFlinkTable:
     t_env.get_config().set("pipeline.jars", _get_kafka_connector_jar())
@@ -60,7 +59,6 @@ def get_table_from_kafka_source(
             kafka_source.timestamp_field,
             kafka_source.timestamp_format,
             schema.get_field_type(kafka_source.timestamp_field),
-            time_attribute,
         )
 
     descriptor_builder = (

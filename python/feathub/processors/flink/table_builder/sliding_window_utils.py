@@ -28,6 +28,9 @@ from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
+from feathub.processors.flink.table_builder.flink_table_builder_constants import (
+    EVENT_TIME_ATTRIBUTE_NAME,
+)
 from feathub.processors.flink.table_builder.time_utils import (
     timedelta_to_flink_sql_interval,
 )
@@ -99,7 +102,6 @@ def evaluate_sliding_window_transform(
     flink_table: NativeFlinkTable,
     window_descriptor: SlidingWindowDescriptor,
     agg_descriptors: List["AggregationFieldDescriptor"],
-    time_attribute: str,
 ) -> NativeFlinkTable:
     """
     Evaluate the sliding window transforms on the given flink table and return the
@@ -129,7 +131,7 @@ def evaluate_sliding_window_transform(
         SELECT * FROM TABLE(
             HOP(
                DATA => TABLE src_table,
-               TIMECOL => DESCRIPTOR({time_attribute}),
+               TIMECOL => DESCRIPTOR({EVENT_TIME_ATTRIBUTE_NAME}),
                SLIDE => {step_interval},
                SIZE => {window_size_interval}))
         """
@@ -142,7 +144,6 @@ def evaluate_sliding_window_transform(
             table,
             window_descriptor.group_by_keys,
             window_descriptor.limit,
-            time_attribute,
             ascending=False,
         )
 
@@ -169,7 +170,7 @@ def evaluate_sliding_window_transform(
     value_counts_table = None
     if len(value_counts_descriptors) != 0:
         value_counts_table = _evaluate_value_counts_json(
-            flink_table, value_counts_descriptors, window_descriptor, time_attribute
+            flink_table, value_counts_descriptors, window_descriptor
         )
     first_last_value_table = _get_first_last_value_table(
         t_env,
@@ -177,7 +178,6 @@ def evaluate_sliding_window_transform(
         window_descriptor.group_by_keys,
         first_value_agg_descriptors,
         last_value_agg_descriptors,
-        time_attribute,
     )
 
     group_by_key_cols = [
@@ -195,7 +195,7 @@ def evaluate_sliding_window_transform(
             _get_sliding_window_agg_select_expr(agg_descriptor)
             for agg_descriptor in filtered_agg_descriptors
         ],
-        native_flink_expr.col("window_time").alias(time_attribute),
+        native_flink_expr.col("window_time").alias(EVENT_TIME_ATTRIBUTE_NAME),
     )
 
     if first_last_value_table is not None:
@@ -204,7 +204,7 @@ def evaluate_sliding_window_transform(
             first_last_value_table,
             [
                 *window_descriptor.group_by_keys,
-                time_attribute,
+                EVENT_TIME_ATTRIBUTE_NAME,
             ],
         )
 
@@ -214,7 +214,7 @@ def evaluate_sliding_window_transform(
             value_counts_table,
             [
                 *window_descriptor.group_by_keys,
-                time_attribute,
+                EVENT_TIME_ATTRIBUTE_NAME,
             ],
         )
 
@@ -227,13 +227,12 @@ def _get_first_last_value_table(
     group_by_keys: Sequence[str],
     first_value_agg_descriptors: List["AggregationFieldDescriptor"],
     last_value_agg_descriptors: List["AggregationFieldDescriptor"],
-    time_attribute: str,
 ) -> Optional[NativeFlinkTable]:
     first_value_table = None
     last_value_table = None
     if len(first_value_agg_descriptors) != 0:
         first_value_table = _window_top_n_by_time(
-            t_env, table, group_by_keys, 1, time_attribute, ascending=True
+            t_env, table, group_by_keys, 1, ascending=True
         ).select(
             *[native_flink_expr.col(key) for key in group_by_keys],
             *[
@@ -242,11 +241,11 @@ def _get_first_last_value_table(
                 .alias(agg_descriptor.field_name)
                 for agg_descriptor in first_value_agg_descriptors
             ],
-            native_flink_expr.col("window_time").alias(time_attribute),
+            native_flink_expr.col("window_time").alias(EVENT_TIME_ATTRIBUTE_NAME),
         )
     if len(last_value_agg_descriptors) != 0:
         last_value_table = _window_top_n_by_time(
-            t_env, table, group_by_keys, 1, time_attribute, ascending=False
+            t_env, table, group_by_keys, 1, ascending=False
         ).select(
             *[native_flink_expr.col(key) for key in group_by_keys],
             *[
@@ -255,13 +254,13 @@ def _get_first_last_value_table(
                 .alias(agg_descriptor.field_name)
                 for agg_descriptor in last_value_agg_descriptors
             ],
-            native_flink_expr.col("window_time").alias(time_attribute),
+            native_flink_expr.col("window_time").alias(EVENT_TIME_ATTRIBUTE_NAME),
         )
     if first_value_table is not None and last_value_table is not None:
         return join_table_on_key(
             first_value_table,
             last_value_table,
-            [*group_by_keys, time_attribute],
+            [*group_by_keys, EVENT_TIME_ATTRIBUTE_NAME],
         )
 
     if first_value_table is not None:
@@ -302,7 +301,6 @@ def _window_top_n_by_time(
     table: NativeFlinkTable,
     group_by_keys: Sequence[str],
     n: int,
-    time_attribute: str,
     ascending: bool = True,
 ) -> NativeFlinkTable:
     # Top-N by time attribute
@@ -317,7 +315,7 @@ def _window_top_n_by_time(
                 ROW_NUMBER() OVER (
                     PARTITION BY window_start, window_end, window_time,
                         {",".join(escaped_keys)}
-                    ORDER BY {time_attribute} {ordering})
+                    ORDER BY {EVENT_TIME_ATTRIBUTE_NAME} {ordering})
                 AS rownum
                 FROM windowed_table)
             WHERE rownum <= {n}
@@ -334,7 +332,6 @@ def _evaluate_value_counts_json(
     flink_table: NativeFlinkTable,
     value_counts_descriptors: List[AggregationFieldDescriptor],
     window_descriptor: SlidingWindowDescriptor,
-    time_attribute: str,
 ) -> NativeFlinkTable:
     value_count_to_json = udaf(
         ValueCountsJsonWithRowLimit(window_descriptor.limit),
@@ -353,7 +350,7 @@ def _evaluate_value_counts_json(
                     window_descriptor.step_size.total_seconds()
                 ).seconds
             )
-            .on(native_flink_expr.col(time_attribute))
+            .on(native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME))
             .alias("w")
         )
         .group_by(
@@ -364,7 +361,7 @@ def _evaluate_value_counts_json(
             *[native_flink_expr.col(key) for key in window_descriptor.group_by_keys],
             native_flink_expr.col("w")
             .rowtime.alias("window_time")
-            .alias(time_attribute),
+            .alias(EVENT_TIME_ATTRIBUTE_NAME),
             *[
                 # Currently python vectorized udtaf does not support returning Map type
                 # and general python udtaf has bug, see
@@ -376,7 +373,7 @@ def _evaluate_value_counts_json(
                     native_flink_expr.call(
                         value_count_to_json,
                         native_flink_expr.call_sql(descriptor.expr),
-                        native_flink_expr.col(time_attribute),
+                        native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME),
                     ),
                 )
                 .alias("value_counts_json")

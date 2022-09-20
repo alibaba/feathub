@@ -32,6 +32,9 @@ from feathub.processors.flink.table_builder.file_system_utils import (
     get_table_from_file_source,
     insert_into_file_sink,
 )
+from feathub.processors.flink.table_builder.flink_table_builder_constants import (
+    EVENT_TIME_ATTRIBUTE_NAME,
+)
 from feathub.processors.flink.table_builder.kafka_utils import (
     get_table_from_kafka_source,
     insert_into_kafka_sink,
@@ -40,9 +43,7 @@ from feathub.feature_tables.sources.file_system_source import FileSystemSource
 
 
 def get_table_from_source(
-    t_env: StreamTableEnvironment,
-    source: FeatureTable,
-    time_attribute: str,
+    t_env: StreamTableEnvironment, source: FeatureTable
 ) -> NativeFlinkTable:
     """
     Get the Flink Table from the given source.
@@ -50,13 +51,12 @@ def get_table_from_source(
     :param t_env: The StreamTableEnvironment under which the source table will be
                   created.
     :param source: The source.
-    :param time_attribute: The field name of the time attribute.
     :return: The flink table.
     """
     if isinstance(source, FileSystemSource):
-        return get_table_from_file_source(t_env, source, time_attribute)
+        return get_table_from_file_source(t_env, source)
     elif isinstance(source, KafkaSource):
-        return get_table_from_kafka_source(t_env, source, time_attribute, source.keys)
+        return get_table_from_kafka_source(t_env, source, source.keys)
     else:
         raise FeathubException(f"Unsupported source type {type(source)}.")
 
@@ -84,7 +84,6 @@ def define_watermark(
     timestamp_field: str,
     timestamp_format: str,
     timestamp_field_dtype: DType,
-    time_attribute: str,
 ) -> NativeFlinkSchema:
     builder = NativeFlinkSchema.new_builder()
     builder.from_schema(flink_schema)
@@ -99,7 +98,7 @@ def define_watermark(
                 "Int32 and Int64."
             )
         builder.column_by_expression(
-            time_attribute,
+            EVENT_TIME_ATTRIBUTE_NAME,
             f"CAST("
             f"  FROM_UNIXTIME(CAST(`{timestamp_field}` AS INTEGER)) "
             f"AS TIMESTAMP(3))",
@@ -114,12 +113,13 @@ def define_watermark(
             "'", "''"  # Escape single quote for sql
         )
         builder.column_by_expression(
-            time_attribute,
+            EVENT_TIME_ATTRIBUTE_NAME,
             f"TO_TIMESTAMP(`{timestamp_field}`, '{java_datetime_format}')",
         )
 
     builder.watermark(
-        time_attribute,
-        watermark_expr=f"`{time_attribute}` " f"- {max_out_of_orderness_interval}",
+        EVENT_TIME_ATTRIBUTE_NAME,
+        watermark_expr=f"`{EVENT_TIME_ATTRIBUTE_NAME}` "
+        f"- {max_out_of_orderness_interval}",
     )
     return builder.build()
