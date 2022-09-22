@@ -52,7 +52,7 @@ $ mvn clean package
 $ cd ..
 
 # Install Feathub
-$ python3 -m pip install ./python
+$ python -m pip install ./python
 ```
 
 ### Quickstart
@@ -63,7 +63,7 @@ Execute the following command to run the
 [nyc_tax.py](python/feathub/examples/nyc_taxi.py) demo which demonstrates the
 capabilities described above.
 ```bash
-$ python3 python/feathub/examples/nyc_taxi.py
+$ python python/feathub/examples/nyc_taxi.py
 ```
 
 #### Quickstart with Flink processor
@@ -85,7 +85,7 @@ can follow the [Flink Processor Quickstart.](./docs/quickstart_flink_processor.m
 ### Install development dependencies
 
 ```bash
-$ python3 -m pip install -r python/dev-requirements.txt
+$ python -m pip install -r python/dev-requirements.txt
 ```
 
 ### Running All Tests
@@ -106,11 +106,11 @@ before uploading PRs for review.
 
 ```bash
 # Format python code
-$ python3 -m black python
+$ python -m black python
 
 # Check python code style
-$ python3 -m flake8 --config=python/setup.cfg python
+$ python -m flake8 --config=python/setup.cfg python
 
 # Check python type annotation
-$ python3 -m mypy --config-file python/setup.cfg python
+$ python -m mypy --config-file python/setup.cfg python
 ```

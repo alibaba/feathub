@@ -32,5 +32,5 @@ Execute the following command to run the
 [nyc_taxi_flink.py](../python/feathub/examples/nyc_taxi_flink.py) demo.
 
 ```bash
-$ python3 python/feathub/examples/nyc_taxi_flink.py
+$ python python/feathub/examples/nyc_taxi_flink.py
 ```
