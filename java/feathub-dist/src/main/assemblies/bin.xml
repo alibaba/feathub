@@ -37,4 +37,14 @@
             </includes>
         </dependencySet>
     </dependencySets>
+
+    <files>
+        <!-- Feathub UDF -->
+        <file>
+            <source>../feathub-udf/target/feathub-udf-${project.version}.jar</source>
+            <outputDirectory>lib</outputDirectory>
+            <destName>feathub-udf-${project.version}.jar</destName>
+            <fileMode>0644</fileMode>
+        </file>
+    </files>
 </assembly>
