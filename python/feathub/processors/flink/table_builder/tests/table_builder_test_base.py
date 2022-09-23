@@ -73,7 +73,7 @@ class FlinkTableBuilderTestBase(unittest.TestCase):
         path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
         df.to_csv(path, index=False, header=False)
         return FileSystemSource(
-            f"source_{uuid.uuid4()}",
+            f"source_{str(uuid.uuid4()).replace('-', '')}_table",
             path,
             "csv",
             schema=schema if schema is not None else self.schema,

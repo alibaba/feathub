@@ -89,7 +89,6 @@ try:
 
     install_requires = [
         "sklearn",
-        "oss2==2.16.0",
         "ply>=3.11",
         "pandas>=1.1.5",
         "numpy>=1.14.3,<1.20",

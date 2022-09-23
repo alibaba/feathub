@@ -14,7 +14,7 @@
 import os
 import unittest
 from datetime import datetime
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 
 from pyflink.common import Row
 from pyflink.datastream import StreamExecutionEnvironment
@@ -60,10 +60,12 @@ class SourceUtilsTest(unittest.TestCase):
             ),
         )
 
-        with patch.object(t_env, "from_descriptor") as from_descriptor:
+        with patch.object(
+            t_env, "create_temporary_table"
+        ) as create_temporary_table, patch.object(t_env, "from_path"):
             get_table_from_source(t_env, source)
             flink_table_descriptor: NativeFlinkTableDescriptor = (
-                from_descriptor.call_args[0][0]
+                create_temporary_table.call_args[0][1]
             )
 
             expected_col_strs = [
@@ -106,11 +108,13 @@ class SinkUtilTest(unittest.TestCase):
             producer_properties={"producer.key": "value"},
         )
 
-        table = Mock()
-        with patch.object(table, "execute_insert") as execute_insert:
+        table = t_env.from_elements([(1,)])
+        with patch.object(
+            t_env, "create_temporary_table"
+        ) as create_temporary_table, patch.object(table, "execute_insert"):
             insert_into_sink(t_env, table, sink, ("id",))
             flink_table_descriptor: NativeFlinkTableDescriptor = (
-                execute_insert.call_args[0][0]
+                create_temporary_table.call_args[0][1]
             )
 
             expected_options = {

@@ -145,7 +145,7 @@ class LocalProcessor(Processor):
         ).to_pandas()
 
         # TODO: handle allow_overwrite.
-        # TODO: Support FileSystemSink, KafkaSink.
+        # TODO: Support FileSystemSink, KafkaSink, PrintSink.
         if isinstance(sink, OnlineStoreSink):
             return self._write_features_to_online_store(
                 features=features_df,
@@ -188,7 +188,7 @@ class LocalProcessor(Processor):
                 timestamp_format="unknown",
             )
 
-        # TODO: Support SlidingFeatureView, KafkaSource.
+        # TODO: Support SlidingFeatureView, KafkaSource, DataGenSource.
         if isinstance(features, FileSystemSource):
             return self._get_table_from_file_source(features)
         elif isinstance(features, DerivedFeatureView):

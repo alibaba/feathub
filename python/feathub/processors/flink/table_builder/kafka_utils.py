@@ -28,6 +28,11 @@ from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sources.kafka_source import KafkaSource
 from feathub.processors.flink.flink_jar_utils import find_jar_lib
 from feathub.processors.flink.flink_types_utils import to_flink_schema
+from feathub.processors.flink.table_builder.source_sink_utils_common import (
+    define_watermark,
+    generate_random_table_name,
+    get_schema_from_table,
+)
 from feathub.processors.flink.table_builder.time_utils import (
     timedelta_to_flink_sql_interval,
 )
@@ -47,10 +52,6 @@ def get_table_from_kafka_source(
 
     # Define watermark if the kafka_source has timestamp field
     if kafka_source.timestamp_field is not None:
-        from feathub.processors.flink.table_builder.source_sink_utils import (
-            define_watermark,
-        )
-
         flink_schema = define_watermark(
             flink_schema,
             timedelta_to_flink_sql_interval(
@@ -99,8 +100,8 @@ def get_table_from_kafka_source(
     if kafka_source.key_format == "csv":
         descriptor_builder.option("key.csv.ignore-parse-errors", "true")
 
-    table = t_env.from_descriptor(descriptor_builder.build())
-    return table
+    t_env.create_temporary_table(kafka_source.name, descriptor_builder.build())
+    return t_env.from_path(kafka_source.name)
 
 
 def insert_into_kafka_sink(
@@ -114,6 +115,7 @@ def insert_into_kafka_sink(
     topic = sink.topic
     kafka_sink_descriptor_builder = (
         NativeFlinkTableDescriptor.for_connector("kafka")
+        .schema(get_schema_from_table(table))
         .option("value.format", sink.value_format)
         .option("properties.bootstrap.servers", bootstrap_server)
         .option("topic", topic)
@@ -127,7 +129,15 @@ def insert_into_kafka_sink(
     for k, v in sink.producer_properties.items():
         kafka_sink_descriptor_builder.option(f"properties.{k}", v)
 
-    return table.execute_insert(kafka_sink_descriptor_builder.build())
+    # TODO: Alibaba Cloud Realtime Compute has bug that assumes all the tables should
+    # have a name in VVR-6.0.2, which should be fixed in next version VVR-6.0.3. As a
+    # current workaround, we have to generate a random table name. We should update the
+    # code to use anonymous table sink after VVR-6.0.3 is released.
+    random_sink_name = generate_random_table_name()
+    t_env.create_temporary_table(
+        random_sink_name, kafka_sink_descriptor_builder.build()
+    )
+    return table.execute_insert(random_sink_name)
 
 
 def _get_kafka_connector_jar() -> str:

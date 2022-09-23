@@ -36,7 +36,7 @@ class KafkaSource(FeatureTable):
         timestamp_format: str = "epoch",
         consumer_properties: Optional[Dict[str, str]] = None,
         max_out_of_orderness: timedelta = timedelta(0),
-        startup_mode: str = "group_offsets",
+        startup_mode: str = "group-offsets",
         startup_datetime: Optional[datetime] = None,
         partition_discovery_interval: timedelta = timedelta(minutes=5),
     ):
