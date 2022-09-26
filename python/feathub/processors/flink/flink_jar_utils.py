@@ -14,6 +14,8 @@
 import glob
 import os
 
+from pyflink.table import StreamTableEnvironment
+
 from feathub.common.exceptions import FeathubException
 
 
@@ -44,3 +46,16 @@ def find_jar_lib() -> str:
     raise FeathubException(
         "Could not the path to the Feathub Flink jar directory in current environment."
     )
+
+
+def add_jar_to_t_env(t_env: StreamTableEnvironment, jar_path: str) -> None:
+    """
+    Add the jar path to the given StreamTableEnvironment if it is not already added.
+    """
+    old_jars = t_env.get_config().get("pipeline.jars", "")
+    old_jars = [] if old_jars == "" else old_jars.split(";")
+    jar_path = f"file://{jar_path}"
+    if jar_path in old_jars:
+        # already added
+        return
+    t_env.get_config().set("pipeline.jars", ";".join([*old_jars, jar_path]))

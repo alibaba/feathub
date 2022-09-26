@@ -26,7 +26,7 @@ from pyflink.table import (
 from feathub.common.exceptions import FeathubException
 from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sources.kafka_source import KafkaSource
-from feathub.processors.flink.flink_jar_utils import find_jar_lib
+from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_env
 from feathub.processors.flink.flink_types_utils import to_flink_schema
 from feathub.processors.flink.table_builder.time_utils import (
     timedelta_to_flink_sql_interval,
@@ -38,7 +38,7 @@ def get_table_from_kafka_source(
     kafka_source: KafkaSource,
     keys: Sequence[str],
 ) -> NativeFlinkTable:
-    t_env.get_config().set("pipeline.jars", _get_kafka_connector_jar())
+    add_jar_to_t_env(t_env, _get_kafka_connector_jar())
     schema = kafka_source.schema
     if schema is None:
         raise FeathubException("Flink processor requires schema for the KafkaSource.")
@@ -109,7 +109,7 @@ def insert_into_kafka_sink(
     sink: KafkaSink,
     keys: Sequence[str],
 ) -> TableResult:
-    t_env.get_config().set("pipeline.jars", _get_kafka_connector_jar())
+    add_jar_to_t_env(t_env, _get_kafka_connector_jar())
     bootstrap_server = sink.bootstrap_server
     topic = sink.topic
     kafka_sink_descriptor_builder = (
@@ -137,4 +137,4 @@ def _get_kafka_connector_jar() -> str:
         raise FeathubException(
             f"Can not find the Flink Kafka connector jar at {lib_dir}."
         )
-    return f"file://{jars[0]}"
+    return jars[0]
