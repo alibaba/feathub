@@ -11,13 +11,33 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import glob
 import json
+import os
 from datetime import timedelta
 from typing import Dict, Optional, List, Callable, Any
 
 import pandas as pd
-from pyflink.table import ScalarFunction, AggregateFunction
+from pyflink.table import ScalarFunction, AggregateFunction, StreamTableEnvironment
 from pyflink.table.udf import ACC, T
+
+from feathub.common.exceptions import FeathubException
+from feathub.feature_views.transforms.agg_func import AggFunc
+from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_env
+from feathub.processors.flink.table_builder.aggregation_utils import (
+    AggregationFieldDescriptor,
+)
+
+
+def get_feathub_udf_jar_path() -> str:
+    """
+    Return the path to the Feathub java udf jar.
+    """
+    lib_dir = find_jar_lib()
+    jars = glob.glob(os.path.join(lib_dir, "feathub-udf-*.jar"))
+    if len(jars) < 1:
+        raise FeathubException(f"Can not find the Feathub udf jar at {lib_dir}.")
+    return jars[0]
 
 
 class JsonStringToMap(ScalarFunction):
@@ -25,32 +45,6 @@ class JsonStringToMap(ScalarFunction):
 
     def eval(self, s: str) -> Dict:
         return json.loads(s)
-
-
-# TODO: Implement in Java for better performance.
-class ValueCountsJsonWithRowLimit(AggregateFunction):
-    """
-    An aggregate function that counts each unique value and returns as json string.
-    """
-
-    def __init__(self, limit: Optional[int]) -> None:
-        """
-        :param limit: Optional. If it is not none, the aggregate function only includes
-                      the latest `limit` rows.
-        """
-        self.limit = limit
-
-    def get_value(self, accumulator: List[pd.Series]) -> str:
-        return accumulator[0].to_json()
-
-    def create_accumulator(self) -> List[pd.Series]:
-        return []
-
-    def accumulate(self, accumulator: List[pd.Series], *args: pd.Series) -> None:
-        df = pd.DataFrame({"val": args[0], "time": args[1]})
-        if self.limit is not None:
-            df = df.nlargest(self.limit, ["time"], keep="all").iloc[: self.limit]
-        accumulator.append(df["val"].value_counts())
 
 
 # TODO: We can implement the TimeWindowedAggFunction in Java to get better performance.
@@ -88,3 +82,30 @@ class TimeWindowedAggFunction(AggregateFunction):
         latest_time = df["time"].max()
         df = df[df.time >= latest_time - self.time_interval]
         accumulator.append(self.agg_op(df["val"]))
+
+
+def register_feathub_java_udf(
+    t_env: StreamTableEnvironment, agg_descriptors: List[AggregationFieldDescriptor]
+) -> None:
+    """
+    Register the Feathub java udf to the StreamTableEnvironment.
+    """
+    agg_funcs = set(descriptor.agg_func for descriptor in agg_descriptors)
+    for agg_func in agg_funcs:
+        if agg_func == AggFunc.VALUE_COUNTS:
+            add_jar_to_t_env(t_env, get_feathub_udf_jar_path())
+            t_env.create_java_temporary_function(
+                "value_counts", "com.alibaba.feathub.udf.ValueCounts"
+            )
+
+
+def unregister_feathub_java_udf(
+    t_env: StreamTableEnvironment, agg_descriptors: List[AggregationFieldDescriptor]
+) -> None:
+    """
+    Unregister the Feathub java udf to the StreamTableEnvironment.
+    """
+    agg_funcs = set(descriptor.agg_func for descriptor in agg_descriptors)
+    for agg_func in agg_funcs:
+        if agg_func == AggFunc.VALUE_COUNTS:
+            t_env.drop_temporary_function("value_counts")

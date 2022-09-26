@@ -304,6 +304,7 @@ class FlinkTableBuilder:
 
         for over_window_descriptor, agg_descriptor in window_agg_map.items():
             tmp_table = evaluate_over_window_transform(
+                self.t_env,
                 tmp_table,
                 over_window_descriptor,
                 agg_descriptor,

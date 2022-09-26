@@ -388,6 +388,7 @@ class FlinkTableBuilderOverWindowTransformTest(FlinkTableBuilderTestBase):
         df = pd.DataFrame(
             [
                 ["Alex", 100, 100, "2022-01-01 08:01:00"],
+                ["Alex", 100, 100, "2022-01-01 08:01:01"],
                 ["Emma", 400, 250, "2022-01-01 08:02:00"],
                 ["Alex", 100, 200, "2022-01-02 08:03:00"],
                 ["Emma", 200, 250, "2022-01-02 08:04:00"],
@@ -403,7 +404,7 @@ class FlinkTableBuilderOverWindowTransformTest(FlinkTableBuilderTestBase):
             source=source,
             features=[
                 Feature(
-                    name="cost_value_counts",
+                    name="cost_value_counts_limit",
                     dtype=MapType(String, Int64),
                     transform=OverWindowTransform(
                         expr="cost",
@@ -413,15 +414,37 @@ class FlinkTableBuilderOverWindowTransformTest(FlinkTableBuilderTestBase):
                         limit=2,
                     ),
                 ),
+                Feature(
+                    name="cost_value_counts",
+                    dtype=MapType(String, Int64),
+                    transform=OverWindowTransform(
+                        expr="cost",
+                        agg_func="VALUE_COUNTS",
+                        group_by_keys=["name"],
+                        window_size=timedelta(days=2),
+                    ),
+                ),
             ],
         )
 
         expected_df = df.copy()
+        expected_df["cost_value_counts_limit"] = pd.Series(
+            [
+                {"100": 1},
+                {"100": 2},
+                {"400": 1},
+                {"100": 2},
+                {"200": 1, "400": 1},
+                {"500": 1},
+                {"100": 1, "600": 1},
+            ]
+        )
         expected_df["cost_value_counts"] = pd.Series(
             [
                 {"100": 1},
-                {"400": 1},
                 {"100": 2},
+                {"400": 1},
+                {"100": 3},
                 {"200": 1, "400": 1},
                 {"500": 1},
                 {"100": 1, "600": 1},

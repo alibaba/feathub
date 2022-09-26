@@ -18,6 +18,7 @@ import pandas as pd
 from pyflink.table import (
     Table as NativeFlinkTable,
     expressions as native_flink_expr,
+    StreamTableEnvironment,
 )
 from pyflink.table.types import DataType, DataTypes
 from pyflink.table.udf import udaf, udf
@@ -25,7 +26,6 @@ from pyflink.table.window import OverWindowPartitionedOrderedPreceding, Over
 
 from feathub.common.exceptions import FeathubTransformationException
 from feathub.feature_views.transforms.agg_func import AggFunc
-
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
 from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
@@ -36,6 +36,8 @@ from feathub.processors.flink.table_builder.flink_table_builder_constants import
 from feathub.processors.flink.table_builder.udf import (
     TimeWindowedAggFunction,
     JsonStringToMap,
+    register_feathub_java_udf,
+    unregister_feathub_java_udf,
 )
 
 
@@ -127,6 +129,7 @@ class OverWindowDescriptor:
 
 
 def evaluate_over_window_transform(
+    t_env: StreamTableEnvironment,
     flink_table: NativeFlinkTable,
     window_descriptor: "OverWindowDescriptor",
     agg_descriptors: List["AggregationFieldDescriptor"],
@@ -135,12 +138,14 @@ def evaluate_over_window_transform(
     Evaluate the over window transforms on the given flink table and return the
     result table.
 
+    :param t_env: The StreamTableEnvironment.
     :param flink_table: The input Flink table.
     :param window_descriptor: The descriptor of the over window.
     :param agg_descriptors: A list of descriptor that descriptor the aggregation to
                             perform.
     :return:
     """
+    register_feathub_java_udf(t_env, agg_descriptors)
     window = _get_flink_over_window(window_descriptor)
     if window_descriptor.filter_expr is not None:
         agg_table = (
@@ -172,12 +177,15 @@ def evaluate_over_window_transform(
         # After union, order of the row with same grouping key is not preserved. We
         # can only preserve the order of the row with the same grouping keys and
         # filter condition.
-        return agg_table.union_all(null_feature_table)
+        result_table = agg_table.union_all(null_feature_table)
+    else:
+        result_table = flink_table.over_window(window.alias("w")).select(
+            native_flink_expr.col("*"),
+            *_get_over_window_agg_column_list(window_descriptor, agg_descriptors),
+        )
 
-    return flink_table.over_window(window.alias("w")).select(
-        native_flink_expr.col("*"),
-        *_get_over_window_agg_column_list(window_descriptor, agg_descriptors),
-    )
+    unregister_feathub_java_udf(t_env, agg_descriptors)
+    return result_table
 
 
 def _get_flink_over_window(
@@ -271,6 +279,8 @@ def _get_over_window_agg_select_expr(
             result = expr.max
         elif agg_func == AggFunc.SUM:
             result = expr.sum
+        elif agg_func == AggFunc.VALUE_COUNTS:
+            result = native_flink_expr.call("value_counts", expr)
         # TODO: FIRST_VALUE AND LAST_VALUE is supported after PyFlink 1.16 without
         # PyFlink UDAF.
         else:
@@ -278,8 +288,13 @@ def _get_over_window_agg_select_expr(
                 f"Unsupported aggregation for FlinkProcessor {agg_func}."
             )
     result = result.over(native_flink_expr.col(window_alias))
-    if agg_func == AggFunc.VALUE_COUNTS:
-        result = native_flink_expr.call(
-            udf(JsonStringToMap(), result_type=result_type), result
-        )
+
+    if (
+        over_window_descriptor.limit is not None
+        and over_window_descriptor.window_size is not None
+    ):
+        if agg_func == AggFunc.VALUE_COUNTS:
+            result = native_flink_expr.call(
+                udf(JsonStringToMap(), result_type=result_type), result
+            )
     return result
