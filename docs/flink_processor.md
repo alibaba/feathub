@@ -6,13 +6,23 @@ sections we describe how to use the Flink processor.
 ## Deployment Mode
 The Flink processor runs the Flink job in one of the following mode:
 
-- Session Mode
-- Kubernetes Application Mode
+- Command-Line mode
+- Session mode
+- Kubernetes Application mode
 
 Session mode is the default mode. User can specify the deployment mode with 
 configuration `deployment_mode`.
 
-### Session Mode
+### Command-Line mode
+
+When running in CLI mode, Feathub itself will not submit the Flink job to a
+Flink cluster. Users need to manually submit the Feathub job as a Flink job
+using the Flink [CLI tool](https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/cli/#command-line-interface).
+
+A quickstart of how to submit a simple Feathub job with CLI mode to a standalone Flink 
+cluster can be found in this [document](quickstarts/flink_processor_cli_quickstart.md).
+
+### Session mode
 
 Session mode assumes that there is a running cluster and the Flink job is submitted to 
 the Flink cluster. User has to specify the `rest.address` and `rest.port` where the
@@ -26,7 +36,10 @@ which means one misbehaving job can affect other jobs. You can refer to
 the [Flink Docs](https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/overview/#session-mode)
 for explanation of session mode. 
 
-### Kubernetes Application Mode
+A quickstart of how to submit a simple Feathub job with session mode to a standalone 
+Flink cluster can be found in this [document](quickstarts/flink_processor_session_quickstart.md).
+
+### Kubernetes Application mode
 
 When running in Kubernetes Application mode, a Flink cluster is created in a Kubernetes 
 cluster per Flink job. This comes with better resource isolation than session mode. 
@@ -34,7 +47,7 @@ You can refer to
 the [Flink Docs](https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/overview/#application-mode)
 for explanation of application mode. 
 
-**Note**: `Table#to_pandas` is not supported in Kubernetes Application Mode.
+**Note**: `Table#to_pandas` is not supported in Kubernetes Application mode.
 
 You can refer to the [Flink Docs](https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/resource-providers/native_kubernetes/#application-mode) 
 for more explanation of Kubernetes Application mode.
@@ -64,9 +77,9 @@ Here is an exhaustive list of configurations for FlinkProcessor.
 ### Basic configuration
 These are the configurations for the FlinkProcessor regardless of the deployment mode.
 
-| key                           | Required | default              | type   | Description                                                                                      |
-|-------------------------------|----------|----------------------|--------|--------------------------------------------------------------------------------------------------|
-| deployment_mode               | optional | session              | String | The flink job deployment mode, it could be "session" or "kubernetes-application".                |
+| key             | Required | default | type   | Description                                                                              |
+|-----------------|----------|---------|--------|------------------------------------------------------------------------------------------|
+| deployment_mode | optional | session | String | The flink job deployment mode, it could be "cli", "session" or "kubernetes-application". |
 
 ### Session Mode Configuration
 These are the configurations for FlinkProcessor running in session mode.

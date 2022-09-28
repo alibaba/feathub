@@ -112,7 +112,6 @@ def evaluate_sliding_window_transform(
     :param window_descriptor: The descriptor of the sliding window.
     :param agg_descriptors: A list of descriptor that descriptor the aggregation to
                             perform.
-    :param time_attribute: The field name of the time attribute of the `flink_table`.
     :return: The result table.
     """
 

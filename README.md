@@ -55,6 +55,14 @@ $ cd ..
 $ python -m pip install ./python
 ```
 
+### Supported Processor
+
+Feathub provides different processors to compute features with different computation
+engine. Here is a list of supported processors and versions:
+
+- Local
+- Flink 1.15.2
+
 ### Quickstart
 
 #### Quickstart with local processor
@@ -68,8 +76,11 @@ $ python python/feathub/examples/nyc_taxi.py
 
 #### Quickstart with Flink processor
 
-If you are interested in computing the Feathub features with a local Flink cluster. You
-can follow the [Flink Processor Quickstart.](./docs/quickstart_flink_processor.md)
+If you are interested in computing the Feathub features with Flink processor in a local 
+Flink cluster. You can see the following quickstart with different deployment modes:
+
+- [Flink Processor Session Mode Quickstart](docs/quickstarts/flink_processor_session_quickstart.md)
+- [Flink Processor Cli Mode Quickstart](docs/quickstarts/flink_processor_cli_quickstart.md)
 
 ## Additional Resources
 

@@ -55,8 +55,8 @@ class FlinkProcessor(Processor):
     The FlinkProcessor computes features with Flink.
 
     Basic Configurations:
-        deployment_mode: The flink job deployment mode, it could be session or
-                         kubernetes-application. Default to "session".
+        deployment_mode: The flink job deployment mode, it could be "cli", "session", or
+                         "kubernetes-application". Default to "session".
 
     Session Mode Configuration:
         rest.address: The ip or hostname where the JobManager runs. Required.
@@ -102,7 +102,17 @@ class FlinkProcessor(Processor):
         except ValueError:
             raise FeathubException("Unsupported deployment mode.")
 
-        if self.deployment_mode == DeploymentMode.SESSION:
+        if self.deployment_mode == DeploymentMode.CLI:
+            self.flink_table_builder = FlinkTableBuilder(
+                self._get_table_env(), self.registry
+            )
+
+            # The type of flink_job_submitter is set explicitly to the base class
+            # FlinkJobSubmitter so that the type checking won't complain.
+            self.flink_job_submitter: FlinkJobSubmitter = (
+                FlinkSessionClusterJobSubmitter(self, self.stores)
+            )
+        elif self.deployment_mode == DeploymentMode.SESSION:
             jobmanager_rpc_address = config.get("rest.address")
             jobmanager_rpc_port = config.get("rest.port")
             if jobmanager_rpc_address is None or jobmanager_rpc_port is None:
@@ -114,8 +124,8 @@ class FlinkProcessor(Processor):
                 self._get_table_env(jobmanager_rpc_address, jobmanager_rpc_port),
                 self.registry,
             )
-            self.flink_job_submitter: FlinkJobSubmitter = (
-                FlinkSessionClusterJobSubmitter(self, self.stores)
+            self.flink_job_submitter = FlinkSessionClusterJobSubmitter(
+                self, self.stores
             )
         elif self.deployment_mode == DeploymentMode.KUBERNETES_APPLICATION:
             self.flink_table_builder = FlinkTableBuilder(
