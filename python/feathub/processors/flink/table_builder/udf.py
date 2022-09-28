@@ -12,14 +12,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import glob
-import json
 import os
-from datetime import timedelta
-from typing import Dict, Optional, List, Callable, Any
+from typing import Optional, List, TYPE_CHECKING, Dict
 
-import pandas as pd
-from pyflink.table import ScalarFunction, AggregateFunction, StreamTableEnvironment
-from pyflink.table.udf import ACC, T
+from pyflink.table import StreamTableEnvironment
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_views.transforms.agg_func import AggFunc
@@ -27,6 +23,21 @@ from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_
 from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
 )
+
+if TYPE_CHECKING:
+    from feathub.processors.flink.table_builder.over_window_utils import (
+        OverWindowDescriptor,
+    )
+
+
+class JavaUDFDescriptor:
+    """
+    Descriptor of Feathub Java UDF.
+    """
+
+    def __init__(self, udf_name: str, java_class_name: str) -> None:
+        self.udf_name = udf_name
+        self.java_class_name = java_class_name
 
 
 def get_feathub_udf_jar_path() -> str:
@@ -40,72 +51,91 @@ def get_feathub_udf_jar_path() -> str:
     return jars[0]
 
 
-class JsonStringToMap(ScalarFunction):
-    """A scalar function that map a json string to map."""
+def _is_row_and_time_based_over_window(
+    over_window_descriptor: Optional["OverWindowDescriptor"],
+) -> bool:
+    return (
+        over_window_descriptor is not None
+        and over_window_descriptor.limit is not None
+        and over_window_descriptor.window_size is not None
+    )
 
-    def eval(self, s: str) -> Dict:
-        return json.loads(s)
 
+JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
+    AggFunc.VALUE_COUNTS: JavaUDFDescriptor(
+        "value_counts", "com.alibaba.feathub.udf.ValueCountsAggFunc"
+    )
+}
 
-# TODO: We can implement the TimeWindowedAggFunction in Java to get better performance.
-class TimeWindowedAggFunction(AggregateFunction):
-    """
-    An aggregate function for Flink table aggregation.
-
-    The aggregate function only aggregate rows with row time in the range of
-    [current_row_time - time_interval, current_row_time]. Currently, Flink SQL/Table
-    only support over window with either time range or row count-based range. This can
-    be used with a row count-based over window to achieve over window with both time
-    range and row count-based range.
-    """
-
-    def __init__(self, time_interval: timedelta, agg_func: Callable[[pd.Series], Any]):
-        """
-        Instantiate a TimeWindowedAggFunction.
-
-        :param time_interval: Only rows with row time in the range of [current_row_time
-                              - time_interval, current_row_time] is included in the
-                              aggregation function.
-        :param agg_func: The name of an aggregation function such as MAX, AVG.
-        """
-        self.time_interval = time_interval
-        self.agg_op = agg_func
-
-    def get_value(self, accumulator: ACC) -> T:
-        return accumulator[0]
-
-    def create_accumulator(self) -> ACC:
-        return []
-
-    def accumulate(self, accumulator: ACC, *args: pd.Series) -> None:
-        df = pd.DataFrame({"val": args[0], "time": args[1]})
-        latest_time = df["time"].max()
-        df = df[df.time >= latest_time - self.time_interval]
-        accumulator.append(self.agg_op(df["val"]))
+ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
+    AggFunc.AVG: JavaUDFDescriptor(
+        "time_windowed_avg", "com.alibaba.feathub.udf.TimeWindowedAvgAggFunc"
+    ),
+    AggFunc.SUM: JavaUDFDescriptor(
+        "time_windowed_sum", "com.alibaba.feathub.udf.TimeWindowedSumAggFunc"
+    ),
+    AggFunc.MIN: JavaUDFDescriptor(
+        "time_windowed_min", "com.alibaba.feathub.udf.TimeWindowedMinAggFunc"
+    ),
+    AggFunc.MAX: JavaUDFDescriptor(
+        "time_windowed_max", "com.alibaba.feathub.udf.TimeWindowedMaxAggFunc"
+    ),
+    AggFunc.FIRST_VALUE: JavaUDFDescriptor(
+        "time_windowed_first_value",
+        "com.alibaba.feathub.udf.TimeWindowedFirstValueAggFunc",
+    ),
+    AggFunc.LAST_VALUE: JavaUDFDescriptor(
+        "time_windowed_last_value",
+        "com.alibaba.feathub.udf.TimeWindowedLastValueAggFunc",
+    ),
+    AggFunc.ROW_NUMBER: JavaUDFDescriptor(
+        "time_windowed_row_number",
+        "com.alibaba.feathub.udf.TimeWindowedRowNumberAggFunc",
+    ),
+    AggFunc.VALUE_COUNTS: JavaUDFDescriptor(
+        "time_windowed_value_counts",
+        "com.alibaba.feathub.udf.TimeWindowedValueCountsAggFunc",
+    ),
+}
 
 
 def register_feathub_java_udf(
-    t_env: StreamTableEnvironment, agg_descriptors: List[AggregationFieldDescriptor]
+    t_env: StreamTableEnvironment,
+    agg_descriptors: List[AggregationFieldDescriptor],
+    over_window_descriptor: Optional["OverWindowDescriptor"] = None,
 ) -> None:
     """
     Register the Feathub java udf to the StreamTableEnvironment.
     """
     agg_funcs = set(descriptor.agg_func for descriptor in agg_descriptors)
     for agg_func in agg_funcs:
-        if agg_func == AggFunc.VALUE_COUNTS:
+
+        if _is_row_and_time_based_over_window(over_window_descriptor):
+            udf_descriptor = ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF.get(agg_func, None)
+        else:
+            udf_descriptor = JAVA_UDF.get(agg_func, None)
+
+        if udf_descriptor is not None:
             add_jar_to_t_env(t_env, get_feathub_udf_jar_path())
             t_env.create_java_temporary_function(
-                "value_counts", "com.alibaba.feathub.udf.ValueCounts"
+                udf_descriptor.udf_name, udf_descriptor.java_class_name
             )
 
 
 def unregister_feathub_java_udf(
-    t_env: StreamTableEnvironment, agg_descriptors: List[AggregationFieldDescriptor]
+    t_env: StreamTableEnvironment,
+    agg_descriptors: List[AggregationFieldDescriptor],
+    over_window_descriptor: Optional["OverWindowDescriptor"] = None,
 ) -> None:
     """
     Unregister the Feathub java udf to the StreamTableEnvironment.
     """
     agg_funcs = set(descriptor.agg_func for descriptor in agg_descriptors)
     for agg_func in agg_funcs:
-        if agg_func == AggFunc.VALUE_COUNTS:
-            t_env.drop_temporary_function("value_counts")
+        if _is_row_and_time_based_over_window(over_window_descriptor):
+            udf_descriptor = ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF.get(agg_func, None)
+        else:
+            udf_descriptor = JAVA_UDF.get(agg_func, None)
+
+        if udf_descriptor is not None:
+            t_env.drop_temporary_function(udf_descriptor.udf_name)

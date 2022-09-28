@@ -38,6 +38,7 @@ from feathub.processors.flink.table_builder.time_utils import (
 from feathub.processors.flink.table_builder.udf import (
     register_feathub_java_udf,
     unregister_feathub_java_udf,
+    JAVA_UDF,
 )
 
 
@@ -267,7 +268,7 @@ def _get_sliding_window_agg_select_expr(
         result = expr.count
         result_type = result_type.not_null()
     elif agg_func == AggFunc.VALUE_COUNTS:
-        result = native_flink_expr.call("value_counts", expr)
+        result = native_flink_expr.call(JAVA_UDF.get(agg_func).udf_name, expr)
     else:
         raise FeathubTransformationException(
             f"Unsupported aggregation for FlinkProcessor {agg_func}."

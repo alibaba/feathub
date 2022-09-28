@@ -12,16 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from datetime import timedelta
-from typing import List, Optional, Sequence, Any, Dict, Callable
+from typing import List, Optional, Sequence
 
-import pandas as pd
 from pyflink.table import (
     Table as NativeFlinkTable,
     expressions as native_flink_expr,
     StreamTableEnvironment,
 )
-from pyflink.table.types import DataType, DataTypes
-from pyflink.table.udf import udaf, udf
 from pyflink.table.window import OverWindowPartitionedOrderedPreceding, Over
 
 from feathub.common.exceptions import FeathubTransformationException
@@ -33,56 +30,14 @@ from feathub.processors.flink.table_builder.aggregation_utils import (
 from feathub.processors.flink.table_builder.flink_table_builder_constants import (
     EVENT_TIME_ATTRIBUTE_NAME,
 )
+from feathub.processors.flink.table_builder.time_utils import (
+    timedelta_to_flink_sql_interval,
+)
 from feathub.processors.flink.table_builder.udf import (
-    TimeWindowedAggFunction,
-    JsonStringToMap,
     register_feathub_java_udf,
     unregister_feathub_java_udf,
+    ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF,
 )
-
-
-def _avg(s: pd.Series) -> Any:
-    return s.mean()
-
-
-def _min(s: pd.Series) -> Any:
-    return s.min()
-
-
-def _max(s: pd.Series) -> Any:
-    return s.max()
-
-
-def _sum(s: pd.Series) -> Any:
-    return s.sum()
-
-
-def _first_value(s: pd.Series) -> Any:
-    return s.iloc[0]
-
-
-def _last_value(s: pd.Series) -> Any:
-    return s.iloc[-1]
-
-
-def _row_num(s: pd.Series) -> Any:
-    return s.size
-
-
-def _value_counts_json(s: pd.Series) -> Any:
-    return s.value_counts().to_json()
-
-
-_AGG_FUNCTIONS: Dict[AggFunc, Callable[[pd.Series], Any]] = {
-    AggFunc.AVG: _avg,
-    AggFunc.SUM: _sum,
-    AggFunc.MAX: _max,
-    AggFunc.MIN: _min,
-    AggFunc.FIRST_VALUE: _first_value,
-    AggFunc.LAST_VALUE: _last_value,
-    AggFunc.ROW_NUMBER: _row_num,
-    AggFunc.VALUE_COUNTS: _value_counts_json,
-}
 
 
 class OverWindowDescriptor:
@@ -145,7 +100,7 @@ def evaluate_over_window_transform(
                             perform.
     :return:
     """
-    register_feathub_java_udf(t_env, agg_descriptors)
+    register_feathub_java_udf(t_env, agg_descriptors, window_descriptor)
     window = _get_flink_over_window(window_descriptor)
     if window_descriptor.filter_expr is not None:
         agg_table = (
@@ -184,7 +139,7 @@ def evaluate_over_window_transform(
             *_get_over_window_agg_column_list(window_descriptor, agg_descriptors),
         )
 
-    unregister_feathub_java_udf(t_env, agg_descriptors)
+    unregister_feathub_java_udf(t_env, agg_descriptors, window_descriptor)
     return result_table
 
 
@@ -228,7 +183,6 @@ def _get_over_window_agg_column_list(
     return [
         _get_over_window_agg_select_expr(
             native_flink_expr.call_sql(descriptor.expr),
-            descriptor.field_data_type,
             window_descriptor,
             descriptor.agg_func,
             "w",
@@ -241,7 +195,6 @@ def _get_over_window_agg_column_list(
 
 def _get_over_window_agg_select_expr(
     expr: native_flink_expr.Expression,
-    result_type: DataType,
     over_window_descriptor: "OverWindowDescriptor",
     agg_func: AggFunc,
     window_alias: str,
@@ -251,50 +204,42 @@ def _get_over_window_agg_select_expr(
         over_window_descriptor.limit is not None
         and over_window_descriptor.window_size is not None
     ):
-        # We use PyFlink UDAF to support over window ranged by both time interval
-        # and row count.
-        if agg_func not in _AGG_FUNCTIONS:
+        interval_expr = native_flink_expr.call_sql(
+            timedelta_to_flink_sql_interval(
+                over_window_descriptor.window_size, day_precision=3
+            )
+        )
+
+        java_udf_descriptor = ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF.get(
+            agg_func, None
+        )
+        if java_udf_descriptor is None:
             raise FeathubTransformationException(
                 f"Unsupported aggregation for FlinkProcessor {agg_func}."
             )
-        time_windowed_agg_func = TimeWindowedAggFunction(
-            over_window_descriptor.window_size,
-            _AGG_FUNCTIONS[agg_func],
-        )
 
-        _result_type = (
-            DataTypes.STRING() if agg_func == AggFunc.VALUE_COUNTS else result_type
-        )
-        result = native_flink_expr.call(
-            udaf(time_windowed_agg_func, result_type=_result_type, func_type="pandas"),
+        return native_flink_expr.call(
+            java_udf_descriptor.udf_name,
+            interval_expr,
             expr,
             native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME),
-        )
-    else:
-        if agg_func == AggFunc.AVG:
-            result = expr.avg
-        elif agg_func == AggFunc.MIN:
-            result = expr.min
-        elif agg_func == AggFunc.MAX:
-            result = expr.max
-        elif agg_func == AggFunc.SUM:
-            result = expr.sum
-        elif agg_func == AggFunc.VALUE_COUNTS:
-            result = native_flink_expr.call("value_counts", expr)
-        # TODO: FIRST_VALUE AND LAST_VALUE is supported after PyFlink 1.16 without
-        # PyFlink UDAF.
-        else:
-            raise FeathubTransformationException(
-                f"Unsupported aggregation for FlinkProcessor {agg_func}."
-            )
-    result = result.over(native_flink_expr.col(window_alias))
+        ).over(native_flink_expr.col(window_alias))
 
-    if (
-        over_window_descriptor.limit is not None
-        and over_window_descriptor.window_size is not None
-    ):
-        if agg_func == AggFunc.VALUE_COUNTS:
-            result = native_flink_expr.call(
-                udf(JsonStringToMap(), result_type=result_type), result
-            )
-    return result
+    if agg_func == AggFunc.AVG:
+        result = expr.avg
+    elif agg_func == AggFunc.MIN:
+        result = expr.min
+    elif agg_func == AggFunc.MAX:
+        result = expr.max
+    elif agg_func == AggFunc.SUM:
+        result = expr.sum
+    elif agg_func == AggFunc.VALUE_COUNTS:
+        result = native_flink_expr.call("value_counts", expr)
+    # TODO: FIRST_VALUE AND LAST_VALUE is supported after PyFlink 1.16 without
+    # PyFlink UDAF.
+    else:
+        raise FeathubTransformationException(
+            f"Unsupported aggregation for FlinkProcessor {agg_func}."
+        )
+
+    return result.over(native_flink_expr.col(window_alias))
