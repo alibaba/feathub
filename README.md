@@ -48,7 +48,7 @@ Run the following command to install Feathub from source.
 ```bash
 # Build Java dependencies for Feathub 
 $ cd java
-$ mvn clean package
+$ mvn clean package -DskipTests
 $ cd ..
 
 # Install Feathub
