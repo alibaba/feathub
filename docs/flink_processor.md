@@ -81,13 +81,20 @@ These are the configurations for the FlinkProcessor regardless of the deployment
 |-----------------|----------|---------|--------|------------------------------------------------------------------------------------------|
 | deployment_mode | optional | session | String | The flink job deployment mode, it could be "cli", "session" or "kubernetes-application". |
 
+### Cli Mode Configuration
+
+| key     | Required | default | type   | Description                                                                                                                                |
+|---------|----------|---------|--------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| flink.* | optional | (none)  | String | This can set and pass arbitrary Flink execution config and table config. The "flink" prefix in the key is removed before passing to Flink. |
+
 ### Session Mode Configuration
 These are the configurations for FlinkProcessor running in session mode.
 
-| key          | Required | default | type    | Description                                   |
-|--------------|----------|---------|---------|-----------------------------------------------|
-| rest.address | required | (none)  | String  | The ip or hostname where the JobManager runs. |
-| rest.port    | required | (none)  | Integer | The port where the JobManager runs.           |
+| key          | Required | default | type    | Description                                                                                                                                |
+|--------------|----------|---------|---------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| rest.address | required | (none)  | String  | The ip or hostname where the JobManager runs.                                                                                              |
+| rest.port    | required | (none)  | Integer | The port where the JobManager runs.                                                                                                        |
+| flink.*      | optional | (none)  | String  | This can set and pass arbitrary Flink execution config and table config. The "flink" prefix in the key is removed before passing to Flink. |
 
 ### Kubernetes Application Mode Configuration
 These are the configurations for FlinkProcessor running in Kubernetes Application mode.

@@ -49,6 +49,8 @@ from feathub.table.table_descriptor import TableDescriptor
 
 logger = logging.getLogger(__file__)
 
+FLINK_CONFIG_PREFIX = "flink"
+
 
 class FlinkProcessor(Processor):
     """
@@ -58,9 +60,17 @@ class FlinkProcessor(Processor):
         deployment_mode: The flink job deployment mode, it could be "cli", "session", or
                          "kubernetes-application". Default to "session".
 
+    Cli Mode Configuration:
+        flink.*: This can set and pass arbitrary Flink execution config and table
+                 config. The "flink" prefix in the key is removed before passing to
+                 Flink.
+
     Session Mode Configuration:
         rest.address: The ip or hostname where the JobManager runs. Required.
         rest.port: The port where the JobManager runs. Required.
+        flink.*: This can set and pass arbitrary Flink execution config and table
+                 config. The "flink" prefix in the key is removed before passing to
+                 Flink.
 
     Kubernetes Application Mode Configuration:
         flink_home: The path to the Flink distribution. If not specified, it uses the
@@ -201,8 +211,8 @@ class FlinkProcessor(Processor):
         # TODO: to be implemented
         pass
 
-    @staticmethod
     def _get_table_env(
+        self,
         jobmanager_rpc_address: Optional[str] = None,
         jobmanager_rpc_port: Optional[str] = None,
     ) -> StreamTableEnvironment:
@@ -217,6 +227,11 @@ class FlinkProcessor(Processor):
 
         env = StreamExecutionEnvironment.get_execution_environment()
         table_env = StreamTableEnvironment.create(env)
+        for k, v in self.config.items():
+            split_k = k.split(".")
+            if split_k[0] != FLINK_CONFIG_PREFIX:
+                continue
+            table_env.get_config().set(".".join(split_k[1:]), v)
 
         if jobmanager_rpc_address is not None and jobmanager_rpc_port is not None:
             os.environ.pop("SUBMIT_ARGS")

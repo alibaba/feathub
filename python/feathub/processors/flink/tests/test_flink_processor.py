@@ -323,3 +323,14 @@ class FlinkProcessorTest(unittest.TestCase):
                     )["val"]
                 )
             )
+
+    def test_flink_config(self):
+        processor = FlinkProcessor(
+            config={"deployment_mode": "cli", "flink.key": "value"},
+            stores=self.stores,
+            registry=self.registry,
+        )
+
+        self.assertEqual(
+            processor.flink_table_builder.t_env.get_config().get("key", None), "value"
+        )
