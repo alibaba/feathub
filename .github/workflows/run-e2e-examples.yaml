@@ -1,0 +1,36 @@
+name: Run E2E Examples
+on:
+  workflow_call:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
+jobs:
+  run-e2e-examples:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up python 3.7
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.7'
+      - name: Install Python Setup Tools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+      - name: Set up JDK 8
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'adopt'
+      - uses: actions/download-artifact@v3
+        with:
+          name: feathub-wheel
+          path: ./wheels
+      - name: Run Examples
+        shell: 'script -q -e -c "bash {0}"'
+        run: bash tools/ci/run-examples.sh
+      - name: Debug with tmate
+        if: ${{ failure() && inputs.debug_enabled }}
+        uses: mxschmitt/action-tmate@v3

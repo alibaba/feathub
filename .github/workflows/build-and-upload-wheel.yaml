@@ -1,0 +1,48 @@
+name: Build and Upload Wheel
+on:
+  workflow_call:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
+      is_nightly:
+        type: boolean
+        description: 'Whether to build for nightly.'
+        required: false
+        default: false
+jobs:
+  build-and-upload-wheel:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 8
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'adopt'
+          cache: 'maven'
+      - name: Set up python 3.7
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.7'
+      - name: Build Feathub Jar
+        run: |
+          cd java
+          mvn clean package -B -DskipTests
+      - name: Build Feathub Wheel
+        env:
+          NIGHTLY_BUILD: ${{ inputs.is_nightly }}
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          cd python
+          python setup.py bdist_wheel
+      - uses: actions/upload-artifact@v3
+        with:
+          name: feathub-wheel
+          path: ./python/dist/*.whl
+          if-no-files-found: error
+      - name: Debug with tmate
+        if: ${{ failure() && inputs.debug_enabled }}
+        uses: mxschmitt/action-tmate@v3
