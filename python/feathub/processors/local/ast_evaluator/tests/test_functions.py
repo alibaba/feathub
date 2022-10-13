@@ -14,7 +14,7 @@
 
 import unittest
 
-from feathub.dsl.functions import get_predefined_function
+from feathub.processors.local.ast_evaluator.functions import get_predefined_function
 
 
 class FunctionTest(unittest.TestCase):

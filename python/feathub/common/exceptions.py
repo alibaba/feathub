@@ -35,3 +35,9 @@ class FeathubTransformationException(FeathubException):
     """
     Raised when there is Feathub transformation problem.
     """
+
+
+class FeathubExpressionException(FeathubException):
+    """
+    Raised when there is problem of Feathub expression.
+    """

@@ -17,6 +17,7 @@ from typing import Optional, List, Dict, Union
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_service.feature_service import FeatureService
+from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstEvaluator
 from feathub.registries.registry import Registry
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
 from feathub.feature_views.transforms.join_transform import JoinTransform
@@ -24,7 +25,7 @@ from feathub.feature_views.transforms.expression_transform import ExpressionTran
 from feathub.online_stores.online_store import OnlineStore
 from feathub.feature_tables.sources.online_store_source import OnlineStoreSource
 from feathub.feature_views.feature import Feature
-from feathub.dsl.parser import ExprParser
+from feathub.dsl.expr_parser import ExprParser
 
 
 class LocalFeatureService(FeatureService):
@@ -42,6 +43,7 @@ class LocalFeatureService(FeatureService):
         self.stores = stores
         self.registry = registry
         self.parser = ExprParser()
+        self.ast_evaluator = LocalAstEvaluator()
 
     def get_online_features(
         self,
@@ -105,7 +107,9 @@ class LocalFeatureService(FeatureService):
         if not isinstance(expression_transform, ExpressionTransform):
             raise FeathubException(f"Feature {feature} should use ExpressionTransform.")
         expr_node = self.parser.parse(expression_transform.expr)
-        df[feature.name] = df.apply(lambda row: expr_node.eval(row), axis=1).tolist()
+        df[feature.name] = df.apply(
+            lambda row: self.ast_evaluator.eval(expr_node, row), axis=1
+        ).tolist()
         return df
 
     def _evaluate_join_transform(
