@@ -127,7 +127,7 @@ public class ValueCountsAggFuncTest {
         tEnv.createTemporaryFunction("VALUE_COUNTS", ValueCountsAggFunc.class);
         final Table table =
                 tEnv.sqlQuery(
-                        "SELECT id, VALUE_COUNTS(val) AS value_cnts, CAST(window_time AS STRING) AS ts FROM TABLE("
+                        "SELECT id, VALUE_COUNTS(val) AS value_cnts, window_time AS ts FROM TABLE("
                                 + "   HOP("
                                 + "       DATA => TABLE input_table,"
                                 + "       TIMECOL => DESCRIPTOR(ts),"
@@ -145,7 +145,7 @@ public class ValueCountsAggFuncTest {
                                         put("a", 1L);
                                     }
                                 },
-                                "1970-01-01 08:00:01.999"),
+                                Instant.ofEpochMilli(1999)),
                         Row.of(
                                 0,
                                 new HashMap<String, Long>() {
@@ -154,7 +154,7 @@ public class ValueCountsAggFuncTest {
                                         put("b", 1L);
                                     }
                                 },
-                                "1970-01-01 08:00:02.999"),
+                                Instant.ofEpochMilli(2999)),
                         Row.of(
                                 0,
                                 new HashMap<String, Long>() {
@@ -163,7 +163,7 @@ public class ValueCountsAggFuncTest {
                                         put("b", 2L);
                                     }
                                 },
-                                "1970-01-01 08:00:03.999"),
+                                Instant.ofEpochMilli(3999)),
                         Row.of(
                                 0,
                                 new HashMap<String, Long>() {
@@ -172,7 +172,7 @@ public class ValueCountsAggFuncTest {
                                         put("c", 1L);
                                     }
                                 },
-                                "1970-01-01 08:00:04.999"),
+                                Instant.ofEpochMilli(4999)),
                         Row.of(
                                 0,
                                 new HashMap<String, Long>() {
@@ -181,7 +181,7 @@ public class ValueCountsAggFuncTest {
                                         put("c", 1L);
                                     }
                                 },
-                                "1970-01-01 08:00:05.999"),
+                                Instant.ofEpochMilli(5999)),
                         Row.of(
                                 0,
                                 new HashMap<String, Long>() {
@@ -189,7 +189,7 @@ public class ValueCountsAggFuncTest {
                                         put("c", 1L);
                                     }
                                 },
-                                "1970-01-01 08:00:06.999"));
+                                Instant.ofEpochMilli(6999)));
         assertThat(actual).isEqualTo(expected);
     }
 }

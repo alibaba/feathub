@@ -1,0 +1,54 @@
+name: Build And Test
+on:
+  push:
+  pull_request:
+    branches:
+      - '**'
+  workflow_call:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
+jobs:
+  build-and-test:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 8
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'adopt'
+          cache: 'maven'
+      - name: Test and Build Feathub Jar
+        run: |
+          cd java
+          mvn clean package -B
+      - name: Set up python 3.7
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.7'
+      - name: Test and Build Feathub Python
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          
+          python -m pip install ./python
+          python -m pip install -r python/dev-requirements.txt
+          
+          python -m black --check python
+          python -m flake8 --config=python/setup.cfg python
+          python -m mypy --config-file python/setup.cfg python
+          
+          pytest -W ignore::DeprecationWarning python
+      - name: Debug with tmate
+        if: ${{ failure() && inputs.debug_enabled }}
+        uses: mxschmitt/action-tmate@v3

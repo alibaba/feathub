@@ -84,7 +84,7 @@ def main() -> None:
     )
 
     sink = PrintSink()
-    client.materialize_features(feature_view, sink=sink, allow_overwrite=True).wait()
+    client.materialize_features(feature_view, sink=sink, allow_overwrite=True)
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@
 #  limitations under the License.
 import os
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 from pyflink.common import Row
@@ -55,8 +55,14 @@ class SourceUtilsTest(unittest.TestCase):
             timestamp_format="epoch",
             consumer_properties={"consumer.key": "value"},
             startup_mode="timestamp",
-            startup_datetime=datetime.strptime(
-                "2022-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"
+            startup_datetime=datetime(
+                year=2022,
+                month=1,
+                day=1,
+                hour=0,
+                minute=0,
+                second=0,
+                tzinfo=timezone.utc,
             ),
         )
 
@@ -85,7 +91,7 @@ class SourceUtilsTest(unittest.TestCase):
                 "properties.consumer.key": "value",
                 "value.format": "json",
                 "scan.startup.mode": "timestamp",
-                "scan.startup.timestamp-millis": "1640966400000",
+                "scan.startup.timestamp-millis": "1640995200000",
                 "scan.topic-partition-discovery.interval": "300000 ms",
                 "key.format": "json",
                 "key.fields": "id1;id2",

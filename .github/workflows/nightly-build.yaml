@@ -1,0 +1,32 @@
+name: Nightly Build
+on:
+  schedule:
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
+jobs:
+  build-and-test:
+    uses: ./.github/workflows/build-and-test.yaml
+    with:
+      debug_enabled: ${{ inputs.debug_enabled }}
+  build-and-upload-wheel:
+    uses: ./.github/workflows/build-and-upload-wheel.yaml
+    with:
+      debug_enabled: ${{ inputs.debug_enabled }}
+      is_nightly: true
+    needs: build-and-test
+  run-e2e-examples:
+    uses: ./.github/workflows/run-e2e-examples.yaml
+    with:
+      debug_enabled: ${{ inputs.debug_enabled }}
+    needs: build-and-upload-wheel
+  publish-wheel:
+    uses: ./.github/workflows/publish-wheel.yaml
+    if: github.repository == 'alibaba/feathub' # Don't do this in forks
+    secrets: inherit
+    needs: run-e2e-examples

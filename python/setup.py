@@ -13,6 +13,7 @@
 #  limitations under the License.
 import os
 import sys
+from datetime import datetime
 from shutil import rmtree, copytree
 
 from setuptools import setup, find_packages
@@ -31,6 +32,7 @@ def remove_if_exists(file_path):
 remove_if_exists("build")
 
 this_directory = os.path.abspath(os.path.dirname(__file__))
+nightly_build = os.getenv("NIGHTLY_BUILD") == "true"
 version_file = os.path.join(this_directory, "feathub/version.py")
 
 try:
@@ -42,6 +44,8 @@ except IOError:
         file=sys.stderr,
     )
     sys.exit(-1)
+
+PACKAGE_NAME = "feathub"
 VERSION = __version__  # noqa
 
 TEMP_PATH = "deps"
@@ -59,6 +63,15 @@ FEATHUB_FLINK_PROCESSOR_LIB_DIR = os.path.join(
     "lib",
 )
 in_feathub_source = os.path.isfile("../java/feathub-dist/pom.xml")
+
+if nightly_build:
+    if "dev" not in VERSION:
+        raise RuntimeError("Nightly wheel is not supported for non dev version")
+    VERSION = VERSION[: str.find(VERSION, "dev") + 3] + datetime.now().strftime(
+        "%Y%m%d"
+    )
+    PACKAGE_NAME = f"{PACKAGE_NAME}_nightly"
+
 
 try:
     if in_feathub_source:
@@ -97,8 +110,11 @@ try:
     ]
 
     setup(
-        name="feathub",
+        name=PACKAGE_NAME,
         version=VERSION,
+        description="A stream-batch unified feature store for real-time machine "
+        "learning",
+        url="https://github.com/alibaba/feathub",
         packages=PACKAGES,
         include_package_data=True,
         package_dir=PACKAGE_DIR,
