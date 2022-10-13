@@ -1,30 +1,32 @@
-# Copyright 2022 The Feathub Authors
+#  Copyright 2022 The Feathub Authors
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
 #
-#     https://www.apache.org/licenses/LICENSE-2.0
+#      https://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
 
 import unittest
 
-from feathub.dsl.parser import ExprParser
+from feathub.dsl.expr_parser import ExprParser
+from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstEvaluator
 
 
-class ExprParserTest(unittest.TestCase):
+class LocalAstEvaluatorTest(unittest.TestCase):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.parser = ExprParser()
+        self.ast_evaluator = LocalAstEvaluator()
 
     def _eval(self, expr, variables=None):
-        node = self.parser.parse(expr)
-        return node.eval(variables)
+        ast = self.parser.parse(expr)
+        return self.ast_evaluator.eval(ast, variables)
 
     def test_binary_op(self):
         expr = "1 + 2 * 3 - 6"

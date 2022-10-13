@@ -20,8 +20,9 @@ from datetime import datetime, timedelta
 import feathub.common.utils as utils
 from feathub.common.exceptions import FeathubException
 from feathub.common.types import to_numpy_dtype
-from feathub.dsl.parser import ExprParser
+from feathub.dsl.expr_parser import ExprParser
 from feathub.feature_tables.feature_table import FeatureTable
+from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstEvaluator
 from feathub.processors.processor import Processor
 from feathub.registries.registry import Registry
 from feathub.processors.local.local_job import LocalJob
@@ -71,6 +72,7 @@ class LocalProcessor(Processor):
         self.registry = registry
         self.singled_online_store = None
         self.parser = ExprParser()
+        self.ast_evaluator = LocalAstEvaluator()
 
         online_stores = [
             store for store in stores.values() if isinstance(store, OnlineStore)
@@ -240,7 +242,9 @@ class LocalProcessor(Processor):
         self, df: pd.DataFrame, transform: ExpressionTransform
     ) -> List:
         expr_node = self.parser.parse(transform.expr)
-        return df.apply(lambda row: expr_node.eval(row), axis=1).tolist()
+        return df.apply(
+            lambda row: self.ast_evaluator.eval(expr_node, row), axis=1
+        ).tolist()
 
     def _get_table_from_derived_feature_view(
         self, feature_view: DerivedFeatureView
@@ -411,7 +415,9 @@ class LocalProcessor(Processor):
         # TODO: Support OverWindowTransform with filter.
         expr_node = self.parser.parse(transform.expr)
         df_copy = df.copy()
-        df_copy[temp_column] = df_copy.apply(lambda row: expr_node.eval(row), axis=1)
+        df_copy[temp_column] = df_copy.apply(
+            lambda row: self.ast_evaluator.eval(expr_node, row), axis=1
+        )
 
         # Sorts dataframe by the time column in ascending order.
         unix_time_column = utils.append_and_sort_unix_time_column(
