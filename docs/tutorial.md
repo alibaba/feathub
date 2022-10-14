@@ -35,15 +35,15 @@ source = FileSystemSource(
 f_trip_time_duration = Feature(
     name="f_trip_time_duration",
     dtype=types.Int32,
-    transform="unix_timestamp(lpep_dropoff_datetime) - "
-    "unix_timestamp(lpep_pickup_datetime)",
+    transform="UNIX_TIMESTAMP(lpep_dropoff_datetime) - "
+    "UNIX_TIMESTAMP(lpep_pickup_datetime)",
 )
 
 f_location_avg_fare = Feature(
     name="f_location_avg_fare",
     dtype=types.Float32,
     transform=OverWindowTransform(
-        expr="cast_float(fare_amount)",
+        expr="CAST(fare_amount AS FLOAT)",
         agg_func="AVG",
         group_by_keys=["DOLocationID"],
         window_size=timedelta(days=90),
@@ -54,7 +54,7 @@ f_location_max_fare = Feature(
     name="f_location_max_fare",
     dtype=types.Float32,
     transform=OverWindowTransform(
-        expr="cast_float(fare_amount)",
+        expr="CAST(fare_amount AS FLOAT)",
         agg_func="MAX",
         group_by_keys=["DOLocationID"],
         window_size=timedelta(days=90),
@@ -65,7 +65,7 @@ f_location_total_fare_cents = Feature(
     name="f_location_total_fare_cents",
     dtype=types.Float32,
     transform=OverWindowTransform(
-        expr="cast_float(fare_amount * 100)",
+        expr="CAST(fare_amount * 100 AS FLOAT)",
         agg_func="SUM",
         group_by_keys=["DOLocationID"],
         window_size=timedelta(days=90),
@@ -93,7 +93,7 @@ f_trip_time_rounded = Feature(
 f_is_long_trip_distance = Feature(
     name="f_is_long_trip_distance",
     dtype=types.Bool,
-    transform="cast_float(trip_distance)>30",
+    transform="CAST(trip_distance AS FLOAT)>30",
 )
 
 feature_view_2 = DerivedFeatureView(

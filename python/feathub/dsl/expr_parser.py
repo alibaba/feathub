@@ -27,14 +27,22 @@ from feathub.dsl.ast import (
     FuncCallOp,
     ArgListNode,
     VariableNode,
+    CastOp,
+    LogicalOp,
     GroupNode,
 )
 from feathub.dsl.expr_lexer_rules import ExprLexerRules
 
 
 class ExprParser:
+    """
+    Expr Parser parses the Feathub expression and builds the Abstract Syntax Tree(AST).
+    The AST will be further evaluated by the AST evaluator of each Processor.
+    """
 
     precedence = (
+        ("left", "OR"),
+        ("left", "AND"),
         ("left", "LT", "LE", "GT", "GE", "EQ", "NE"),
         ("left", "+", "-"),
         ("left", "*", "/"),
@@ -95,6 +103,13 @@ class ExprParser:
         """
         p[0] = ValueNode(p[1][1:-1])
 
+    def p_expression_boolean(self, p: yacc.YaccProduction) -> None:
+        """
+        expression : TRUE
+                   | FALSE
+        """
+        p[0] = ValueNode(p[1])
+
     def p_expression_function_call(self, p: yacc.YaccProduction) -> None:
         """expression : ID LPAREN arglist RPAREN"""
         p[0] = FuncCallOp(p[1], p[3])
@@ -112,6 +127,28 @@ class ExprParser:
     def p_expression_variable(self, p: yacc.YaccProduction) -> None:
         """expression : ID"""
         p[0] = VariableNode(p[1])
+
+    def p_expression_cast(self, p: yacc.YaccProduction) -> None:
+        """
+        expression : CAST LPAREN expression AS DTYPE RPAREN
+                   | TRY_CAST LPAREN expression AS DTYPE RPAREN
+        """
+        if p[1] == "CAST":
+            p[0] = CastOp(p[3], p[5])
+            return
+
+        if p[1] == "TRY_CAST":
+            p[0] = CastOp(p[3], p[5], exception_on_failure=False)
+            return
+
+        raise FeathubExpressionException(f"Unknown cast type {p[1]}.")
+
+    def p_expression_logical_op(self, p: yacc.YaccProduction) -> None:
+        """
+        expression : expression OR expression
+                   | expression AND expression
+        """
+        p[0] = LogicalOp(p[2], p[1], p[3])
 
     def p_error(self, p: yacc.YaccProduction) -> None:  # noqa
         if p:

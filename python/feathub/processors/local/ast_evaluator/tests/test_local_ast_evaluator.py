@@ -13,7 +13,9 @@
 #  limitations under the License.
 
 import unittest
+from datetime import datetime
 
+from feathub.common.exceptions import FeathubException
 from feathub.dsl.expr_parser import ExprParser
 from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstEvaluator
 
@@ -42,7 +44,7 @@ class LocalAstEvaluatorTest(unittest.TestCase):
         expr = "-a + 9"
         self.assertEqual(3, self._eval(expr, {"a": 6}))
 
-    def test_compare_oop(self):
+    def test_compare_op(self):
         expr = "(1 + 2) > 3"
         self.assertEqual(False, self._eval(expr))
         expr = "(1 + 2) >= 3"
@@ -69,12 +71,35 @@ class LocalAstEvaluatorTest(unittest.TestCase):
         unix_timestamp("2020-01-01 00:24:39") - unix_timestamp("2020-01-01 00:23:40")
         """
         self.assertEqual(59, self._eval(expr))
-        expr = "cast_float('12.3')"
-        self.assertEqual(12.3, self._eval(expr))
-        expr = "cast_int('12')"
-        self.assertEqual(12, self._eval(expr))
 
         expr = """
         unix_timestamp("2020-01-01 00:24:39") - unix_timestamp(ts)
         """
         self.assertEqual(59, self._eval(expr, {"ts": "2020-01-01 00:23:40"}))
+
+    def test_cast(self):
+        self.assertEqual(b"59", self._eval('CAST("59" AS bytes)'))
+        self.assertEqual("0.1", self._eval("CAST(0.1 AS STRING)"))
+        self.assertEqual(59, self._eval('CAST("59" AS INTEGER)'))
+        self.assertEqual(59, self._eval("CAST(a AS INTEGER)", {"a": "59"}))
+        self.assertEqual(59, self._eval('CAST("59" AS BIGINT)'))
+        self.assertEqual(59.0, self._eval('CAST("59" AS FLOAT)'))
+        self.assertEqual(59.0, self._eval('CAST("59" AS DOUBLE)'))
+        self.assertEqual(True, self._eval('CAST("true" AS BOOLEAN)'))
+        self.assertEqual(True, self._eval("CAST(1 AS BOOLEAN)"))
+        self.assertEqual(False, self._eval('CAST("false" AS BOOLEAN)'))
+        with self.assertRaises(FeathubException) as cm:
+            self.assertEqual(False, self._eval('CAST("invalid" AS BOOLEAN)'))
+        self.assertIn("Cannot parser", cm.exception.args[0])
+        self.assertEqual(
+            datetime(2022, 1, 1, 0, 0, 0, 1000),
+            self._eval('CAST("2022-01-01 00:00:00.001" AS TIMESTAMP)'),
+        )
+
+        self.assertEqual("59", self._eval("TRY_CAST(59 AS STRING)"))
+        self.assertEqual(None, self._eval('TRY_CAST("INVALID" AS DOUBLE)'))
+
+    def test_logical_op(self):
+        self.assertEqual(True, self._eval("false || True"))
+        self.assertEqual(True, self._eval("a || True", {"a": True}))
+        self.assertEqual(False, self._eval("true && FALSE"))
