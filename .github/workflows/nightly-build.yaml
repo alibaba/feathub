@@ -13,17 +13,17 @@ jobs:
   build-and-test:
     uses: ./.github/workflows/build-and-test.yaml
     with:
-      debug_enabled: ${{ inputs.debug_enabled }}
+      debug_enabled: ${{ inputs.debug_enabled || false }}
   build-and-upload-wheel:
     uses: ./.github/workflows/build-and-upload-wheel.yaml
     with:
-      debug_enabled: ${{ inputs.debug_enabled }}
+      debug_enabled: ${{ inputs.debug_enabled || false }}
       is_nightly: true
     needs: build-and-test
   run-e2e-examples:
     uses: ./.github/workflows/run-e2e-examples.yaml
     with:
-      debug_enabled: ${{ inputs.debug_enabled }}
+      debug_enabled: ${{ inputs.debug_enabled || false }}
     needs: build-and-upload-wheel
   publish-wheel:
     uses: ./.github/workflows/publish-wheel.yaml
