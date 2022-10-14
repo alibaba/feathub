@@ -75,6 +75,40 @@ class UminusOp(ExprAST):
         }
 
 
+class LogicalOp(ExprAST):
+    def __init__(self, op_type: str, left_child: ExprAST, right_child: ExprAST) -> None:
+        super().__init__(node_type="LogicalOp")
+        self.op_type = op_type
+        self.left_child = left_child
+        self.right_child = right_child
+
+    def to_json(self) -> Dict:
+        return {
+            "node_type": "LogicalOp",
+            "op_type": self.op_type,
+            "left_child": self.left_child.to_json(),
+            "right_child": self.right_child.to_json(),
+        }
+
+
+class CastOp(ExprAST):
+    def __init__(
+        self, child: ExprAST, type_name: str, exception_on_failure: bool = True
+    ):
+        super().__init__(node_type="CastOp")
+        self.child = child
+        self.type_name = type_name
+        self.exception_on_failure = exception_on_failure
+
+    def to_json(self) -> Dict:
+        return {
+            "node_type": "CastOp",
+            "child": self.child.to_json(),
+            "type_name": self.type_name,
+            "exception_on_failure": self.exception_on_failure,
+        }
+
+
 class ValueNode(ExprAST):
     def __init__(self, value: Any) -> None:
         super().__init__(node_type="ValueNode")

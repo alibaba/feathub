@@ -25,6 +25,8 @@ from feathub.dsl.ast import (
     FuncCallOp,
     VariableNode,
     ArgListNode,
+    CastOp,
+    LogicalOp,
     GroupNode,
 )
 
@@ -57,6 +59,10 @@ class AbstractAstEvaluator(ABC):
             return self.eval_variable_node(ast, variables)
         if isinstance(ast, ArgListNode):
             return self.eval_arglist_node(ast, variables)
+        if isinstance(ast, CastOp):
+            return self.eval_cast_node(ast, variables)
+        if isinstance(ast, LogicalOp):
+            return self.eval_logical_op(ast, variables)
         if isinstance(ast, GroupNode):
             return self.eval_group_node(ast, variables)
 
@@ -88,6 +94,14 @@ class AbstractAstEvaluator(ABC):
 
     @abc.abstractmethod
     def eval_arglist_node(self, ast: ArgListNode, variables: Optional[Dict]) -> Any:
+        pass
+
+    @abc.abstractmethod
+    def eval_cast_node(self, ast: CastOp, variables: Optional[Dict]) -> Any:
+        pass
+
+    @abc.abstractmethod
+    def eval_logical_op(self, ast: LogicalOp, variables: Optional[Dict]) -> Any:
         pass
 
     @abc.abstractmethod

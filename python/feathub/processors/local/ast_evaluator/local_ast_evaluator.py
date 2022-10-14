@@ -11,8 +11,10 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from datetime import datetime
 from typing import Any, Dict, Optional
 
+from feathub.common.exceptions import FeathubException, FeathubExpressionException
 from feathub.dsl.abstract_ast_evaluator import AbstractAstEvaluator
 from feathub.dsl.ast import (
     ArgListNode,
@@ -22,9 +24,14 @@ from feathub.dsl.ast import (
     CompareOp,
     UminusOp,
     BinaryOp,
+    LogicalOp,
+    CastOp,
     GroupNode,
 )
 from feathub.processors.local.ast_evaluator.functions import get_predefined_function
+
+_TRUE_STRINGS = ("t", "true", "y", "yes", "1")
+_FALSE_STRINGS = ("f", "false", "n", "no", "0")
 
 
 class LocalAstEvaluator(AbstractAstEvaluator):
@@ -90,6 +97,48 @@ class LocalAstEvaluator(AbstractAstEvaluator):
 
     def eval_arglist_node(self, ast: ArgListNode, variables: Optional[Dict]) -> Any:
         return [self.eval(value, variables) for value in ast.values]
+
+    def eval_cast_node(self, ast: CastOp, variables: Optional[Dict]) -> Any:
+        try:
+            return self._eval_cast_node(ast, variables)
+        except Exception as e:
+            if ast.exception_on_failure:
+                raise e
+            return None
+
+    def _eval_cast_node(self, ast: CastOp, variables: Optional[Dict]) -> Any:
+        val = self.eval(ast.child, variables)
+        if ast.type_name == "BYTES":
+            if isinstance(val, str):
+                return bytes(val, "utf-8")
+            raise FeathubException(f"Cannot cast '{val}' to bytes")
+        if ast.type_name == "STRING":
+            return str(val)
+        if ast.type_name == "INTEGER" or ast.type_name == "BIGINT":
+            return int(val)
+        if ast.type_name == "FLOAT" or ast.type_name == "DOUBLE":
+            return float(val)
+        if ast.type_name == "BOOLEAN":
+            if isinstance(val, str):
+                if val.lower() in _TRUE_STRINGS:
+                    return True
+                if val.lower() in _FALSE_STRINGS:
+                    return False
+                raise FeathubException(f"Cannot parser '{val}' as BOOLEAN")
+            return bool(val)
+        if ast.type_name == "TIMESTAMP":
+            return datetime.strptime(val, "%Y-%m-%d %H:%M:%S.%f")
+
+        raise FeathubExpressionException(f"Unknown datatype: {ast.type_name}.")
+
+    def eval_logical_op(self, ast: LogicalOp, variables: Optional[Dict]) -> Any:
+        left_value = self.eval(ast.left_child, variables)
+        right_value = self.eval(ast.right_child, variables)
+
+        if ast.op_type == "&&":
+            return left_value and right_value
+        elif ast.op_type == "||":
+            return left_value or right_value
 
     def eval_group_node(self, ast: GroupNode, variables: Optional[Dict]) -> Any:
         return self.eval(ast.child, variables)

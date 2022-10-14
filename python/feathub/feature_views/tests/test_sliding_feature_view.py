@@ -50,7 +50,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
             name="feature_2",
             dtype=types.Float32,
             transform=SlidingWindowTransform(
-                expr="cast_float(fare_amount) + 1",
+                expr="CAST(fare_amount AS FLOAT) + 1",
                 agg_func="SUM",
                 window_size=timedelta(seconds=30),
                 group_by_keys=["feature_1"],
@@ -99,7 +99,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
             name="feature_2",
             dtype=types.Float32,
             transform=SlidingWindowTransform(
-                expr="cast_float(fare_amount) + 1",
+                expr="CAST(fare_amount AS FLOAT) + 1",
                 agg_func="SUM",
                 window_size=timedelta(seconds=30),
                 group_by_keys=["id"],
@@ -125,7 +125,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
             name="feature_2",
             dtype=types.Float32,
             transform=SlidingWindowTransform(
-                expr="cast_float(fare_amount) + 1",
+                expr="CAST(fare_amount AS FLOAT) + 1",
                 agg_func="SUM",
                 window_size=timedelta(seconds=30),
                 group_by_keys=["id"],
@@ -149,7 +149,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
             name="feature_1",
             dtype=types.Float32,
             transform=SlidingWindowTransform(
-                expr="cast_float(fare_amount)",
+                expr="CAST(fare_amount AS FLOAT)",
                 agg_func="SUM",
                 window_size=timedelta(seconds=30),
                 group_by_keys=["id"],
@@ -161,7 +161,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
             name="feature_2",
             dtype=types.Float32,
             transform=SlidingWindowTransform(
-                expr="cast_float(fare_amount) + 1",
+                expr="CAST(fare_amount AS FLOAT) + 1",
                 agg_func="SUM",
                 window_size=timedelta(seconds=30),
                 group_by_keys=["id2"],
@@ -185,7 +185,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
             name="feature_1",
             dtype=types.Float32,
             transform=SlidingWindowTransform(
-                expr="cast_float(fare_amount)",
+                expr="CAST(fare_amount AS FLOAT)",
                 agg_func="SUM",
                 window_size=timedelta(seconds=30),
                 group_by_keys=["id"],
@@ -197,7 +197,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
             name="feature_2",
             dtype=types.Float32,
             transform=SlidingWindowTransform(
-                expr="cast_float(fare_amount) + 1",
+                expr="CAST(fare_amount AS FLOAT) + 1",
                 agg_func="SUM",
                 window_size=timedelta(seconds=30),
                 group_by_keys=["id"],
@@ -221,7 +221,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
             name="feature_1",
             dtype=types.Float32,
             transform=SlidingWindowTransform(
-                expr="cast_float(fare_amount)",
+                expr="CAST(fare_amount AS FLOAT)",
                 agg_func="SUM",
                 window_size=timedelta(seconds=30),
                 group_by_keys=["id"],
@@ -233,7 +233,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
             name="feature_2",
             dtype=types.Float32,
             transform=SlidingWindowTransform(
-                expr="cast_float(fare_amount) + 1",
+                expr="CAST(fare_amount AS FLOAT) + 1",
                 agg_func="SUM",
                 window_size=timedelta(seconds=31),
                 group_by_keys=["id"],

@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Dict, Tuple, Optional, Any
+from typing import Dict, Optional, Any, Tuple
 
 from ply import lex
 from ply.lex import TOKEN
@@ -22,13 +22,26 @@ from feathub.common.exceptions import FeathubExpressionException
 class ExprLexerRules:
     literals = ["+", "-", "*", "/"]
 
+    data_types = [
+        "bytes",
+        "string",
+        "integer",
+        "bigint",
+        "float",
+        "double",
+        "boolean",
+        "timestamp",
+    ]
+
     # Map from reserved keywords to its token type and token value. If token value is
     # None, the value is set to the text that matches the reserved keywords.
     reserved: Dict[str, Tuple[str, Optional[Any]]] = {
-        # 'if': 'IF',
-        # 'then': 'THEN',
-        # 'else': 'ELSE',
-        # 'while': 'WHILE',
+        "true": ("TRUE", True),
+        "false": ("FALSE", False),
+        "cast": ("CAST", "CAST"),
+        "try_cast": ("TRY_CAST", "TRY_CAST"),
+        "as": ("AS", "AS"),
+        **{dtype: ("DTYPE", dtype.upper()) for dtype in data_types},
     }
 
     # List of token names. This is always required
@@ -41,6 +54,8 @@ class ExprLexerRules:
         "GE",
         "EQ",
         "NE",
+        "OR",
+        "AND",
         "COMMA",
         "FLOAT",
         "INTEGER",
@@ -57,6 +72,8 @@ class ExprLexerRules:
     t_GE = r">="
     t_EQ = r"==?"
     t_NE = r"<>"
+    t_OR = r"\|\|"
+    t_AND = r"\&\&"
     t_COMMA = r"\,"
     t_STRING = r"(\".*?\"|\'.*?\')"
 
@@ -73,11 +90,21 @@ class ExprLexerRules:
         t.value = int(t.value)
         return t
 
-    @TOKEN(r"[a-zA-Z_][a-zA-Z0-9_]*")
+    @TOKEN(r"[a-zA-Z_][a-zA-Z0-9_]*|`[a-zA-Z_][a-zA-Z0-9_]*`")
     def t_ID(self, t: lex.LexToken) -> lex.LexToken:
-        t.type = ExprLexerRules.reserved.get(
-            t.value.lower(), "ID"
-        )  # Check for reserved words
+
+        # Do not check the reserved keywords map if the id is surrounded by backticks
+        if t.value[0] == "`" and t.value[-1] == "`":
+            t.type = "ID"
+            t.value = t.value[1:-1]
+            return t
+
+        token_type, token_value = ExprLexerRules.reserved.get(
+            t.value.lower(), ("ID", None)
+        )
+        t.type = token_type  # Check for reserved words case-insensitive
+        if token_value is not None:
+            t.value = token_value
         return t
 
     # Define a rule so we can track line numbers

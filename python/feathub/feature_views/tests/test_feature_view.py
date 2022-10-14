@@ -39,13 +39,13 @@ class FeatureViewTest(unittest.TestCase):
         feature_1 = Feature(
             name="feature_1",
             dtype=types.Float32,
-            transform="cast_float(fare_amount) + 1",
+            transform="CAST(fare_amount AS FLOAT) + 1",
         )
 
         feature_2 = Feature(
             name="feature_2",
             dtype=types.Float32,
-            transform="cast_float(fare_amount) + 2",
+            transform="CAST(fare_amount AS FLOAT) + 2",
         )
 
         feature_view_1 = DerivedFeatureView(
@@ -61,7 +61,7 @@ class FeatureViewTest(unittest.TestCase):
         feature_3 = Feature(
             name="feature_3",
             dtype=types.Bool,
-            transform="cast_float(trip_distance)>30",
+            transform="CAST(trip_distance AS FLOAT)>30",
         )
 
         feature_view_2 = DerivedFeatureView(
