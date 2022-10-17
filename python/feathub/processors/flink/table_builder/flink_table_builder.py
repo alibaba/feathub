@@ -43,6 +43,9 @@ from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
     get_default_value_and_type,
 )
+from feathub.processors.flink.table_builder.flink_sql_expr_utils import (
+    to_flink_sql_expr,
+)
 from feathub.processors.flink.table_builder.flink_table_builder_constants import (
     EVENT_TIME_ATTRIBUTE_NAME,
 )
@@ -450,7 +453,7 @@ class FlinkTableBuilder:
     ) -> NativeFlinkTable:
         result_type = to_flink_type(result_type)
         return source_table.add_or_replace_columns(
-            native_flink_expr.call_sql(transform.expr)
+            native_flink_expr.call_sql(to_flink_sql_expr(transform.expr))
             .cast(result_type)
             .alias(result_field_name)
         )
