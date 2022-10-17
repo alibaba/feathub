@@ -27,6 +27,9 @@ from feathub.feature_views.transforms.over_window_transform import OverWindowTra
 from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
 )
+from feathub.processors.flink.table_builder.flink_sql_expr_utils import (
+    to_flink_sql_expr,
+)
 from feathub.processors.flink.table_builder.flink_table_builder_constants import (
     EVENT_TIME_ATTRIBUTE_NAME,
 )
@@ -61,11 +64,16 @@ class OverWindowDescriptor:
     def from_over_window_transform(
         window_agg_transform: OverWindowTransform,
     ) -> "OverWindowDescriptor":
+        filter_expr = (
+            to_flink_sql_expr(window_agg_transform.filter_expr)
+            if window_agg_transform.filter_expr is not None
+            else None
+        )
         return OverWindowDescriptor(
             window_agg_transform.window_size,
             window_agg_transform.limit,
             window_agg_transform.group_by_keys,
-            window_agg_transform.filter_expr,
+            filter_expr,
         )
 
     def __eq__(self, other: object) -> bool:

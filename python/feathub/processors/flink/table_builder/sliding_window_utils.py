@@ -28,6 +28,9 @@ from feathub.feature_views.transforms.sliding_window_transform import (
 from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
 )
+from feathub.processors.flink.table_builder.flink_sql_expr_utils import (
+    to_flink_sql_expr,
+)
 from feathub.processors.flink.table_builder.flink_table_builder_constants import (
     EVENT_TIME_ATTRIBUTE_NAME,
 )
@@ -65,12 +68,17 @@ class SlidingWindowDescriptor:
     def from_sliding_window_transform(
         sliding_window_agg: SlidingWindowTransform,
     ) -> "SlidingWindowDescriptor":
+        filter_expr = (
+            to_flink_sql_expr(sliding_window_agg.filter_expr)
+            if sliding_window_agg.filter_expr is not None
+            else None
+        )
         return SlidingWindowDescriptor(
             sliding_window_agg.window_size,
             sliding_window_agg.step_size,
             sliding_window_agg.limit,
             sliding_window_agg.group_by_keys,
-            sliding_window_agg.filter_expr,
+            filter_expr,
         )
 
     def __eq__(self, other: object) -> bool:

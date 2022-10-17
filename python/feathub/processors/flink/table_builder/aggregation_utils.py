@@ -24,6 +24,9 @@ from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
 from feathub.processors.flink.flink_types_utils import to_flink_type
+from feathub.processors.flink.table_builder.flink_sql_expr_utils import (
+    to_flink_sql_expr,
+)
 
 
 class AggregationFieldDescriptor:
@@ -56,7 +59,7 @@ class AggregationFieldDescriptor:
         return AggregationFieldDescriptor(
             feature.name,
             to_flink_type(feature.dtype),
-            transform.expr,
+            to_flink_sql_expr(transform.expr),
             transform.agg_func,
         )
 
