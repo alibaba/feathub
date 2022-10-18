@@ -98,6 +98,7 @@ try:
 
     PACKAGE_DATA = {
         "feathub.processors.flink.lib": ["*.jar"],
+        "feathub.examples": ["*.csv"],
     }
 
     install_requires = [
