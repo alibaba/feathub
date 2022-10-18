@@ -15,10 +15,9 @@
 import sys
 from pathlib import Path
 
-from feathub.examples.nyc_taxi import run_nyc_taxi_example
-
 sys.path.append(str(Path(__file__).parent.parent.parent.resolve()))
 
+from feathub.examples.nyc_taxi import run_nyc_taxi_example
 from feathub.feathub_client import FeathubClient
 
 
