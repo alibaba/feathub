@@ -44,6 +44,13 @@ Prerequisites for building python packages:
 
 ### Install Feathub
 
+#### Install Nightly Build
+Run the following command to install preview(nightly) version of Feathub.
+```bash
+$ python -m pip install feathub-nightly
+```
+
+#### Install From Source
 Run the following command to install Feathub from source.
 ```bash
 # Build Java dependencies for Feathub 
