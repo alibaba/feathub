@@ -128,8 +128,6 @@ def run_nyc_taxi_example(client: FeathubClient) -> None:
 
 
 def build_features(client: FeathubClient) -> FeatureView:
-    # source_file_path = "https://azurefeathrstorage.blob.core.windows.net/public" \
-    #                    "/sample_data/green_tripdata_2020-04_with_index.csv"
     source_file_path = path.join(Path(__file__).parent.resolve(), "sample_data.csv")
 
     schema = Schema(
@@ -196,23 +194,6 @@ def build_features(client: FeathubClient) -> FeatureView:
         transform="UNIX_TIMESTAMP(CAST(lpep_dropoff_datetime AS STRING)) - "
         "UNIX_TIMESTAMP(CAST(lpep_pickup_datetime AS STRING))",
     )
-
-    # f_trip_distance = Feature(
-    #     name="f_trip_distance", dtype=types.Float32, transform="trip_distance"
-    # )
-    #
-    # f_day_of_week = Feature(
-    #     name="f_day_of_week",
-    #     dtype=types.Int32,
-    #     transform="dayofweek(lpep_dropoff_datetime)",
-    # )
-    #
-    # f_trip_time_distance = Feature(
-    #     name="f_trip_time_distance",
-    #     dtype=types.Float32,
-    #     transform="trip_distance * f_trip_duration",
-    #     input_features=[f_trip_distance, f_trip_time_duration],
-    # )
 
     f_location_avg_fare = Feature(
         name="f_location_avg_fare",

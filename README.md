@@ -23,14 +23,14 @@ Feathub provides SDK and infra that enable the following capabilities:
 - Fetch online features by joining features from online feature store with
   on-demand transformations.
 
-## Architecture
+## Architecture and Concepts
 
 <img src="docs/figures/architecture_1.png" width="60%" height="auto">
 
 <img src="docs/figures/architecture_2.png" width="60%" height="auto">
 
 The above figures show the Feathub architecture. Please checkout [Feathub
-architecture](docs/architecture.md) for more details of these components.
+architecture and concepts](docs/architecture.md) for more details.
 
 ## Getting Started
 
