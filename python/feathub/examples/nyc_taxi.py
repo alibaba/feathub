@@ -191,15 +191,15 @@ def build_features(client: FeathubClient) -> FeatureView:
     f_trip_time_duration = Feature(
         name="f_trip_time_duration",
         dtype=types.Int32,
-        transform="UNIX_TIMESTAMP(CAST(lpep_dropoff_datetime AS STRING)) - "
-        "UNIX_TIMESTAMP(CAST(lpep_pickup_datetime AS STRING))",
+        transform="UNIX_TIMESTAMP(lpep_dropoff_datetime) - "
+        "UNIX_TIMESTAMP(lpep_pickup_datetime)",
     )
 
     f_location_avg_fare = Feature(
         name="f_location_avg_fare",
         dtype=types.Float32,
         transform=OverWindowTransform(
-            expr="CAST(fare_amount AS FLOAT)",
+            expr="fare_amount",
             agg_func="AVG",
             group_by_keys=["DOLocationID"],
             window_size=timedelta(days=90),
@@ -210,7 +210,7 @@ def build_features(client: FeathubClient) -> FeatureView:
         name="f_location_max_fare",
         dtype=types.Float32,
         transform=OverWindowTransform(
-            expr="CAST(fare_amount AS FLOAT)",
+            expr="fare_amount",
             agg_func="MAX",
             group_by_keys=["DOLocationID"],
             window_size=timedelta(days=90),
@@ -221,7 +221,7 @@ def build_features(client: FeathubClient) -> FeatureView:
         name="f_location_total_fare_cents",
         dtype=types.Float32,
         transform=OverWindowTransform(
-            expr="CAST(fare_amount * 100 AS FLOAT)",
+            expr="fare_amount * 100",
             agg_func="SUM",
             group_by_keys=["DOLocationID"],
             window_size=timedelta(days=90),
@@ -249,7 +249,7 @@ def build_features(client: FeathubClient) -> FeatureView:
     f_is_long_trip_distance = Feature(
         name="f_is_long_trip_distance",
         dtype=types.Bool,
-        transform="CAST(trip_distance AS FLOAT)>30",
+        transform="trip_distance > 30",
     )
 
     feature_view_2 = DerivedFeatureView(
