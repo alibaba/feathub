@@ -45,22 +45,15 @@ client = FeathubClient(
 ## Specify source dataset
 
 ```python
-schema = Schema(
-    field_names=[
-        "trip_id",
-        "VendorID",
-        "lpep_pickup_datetime",
-        "lpep_dropoff_datetime",
+schema = (
+        Schema.new_builder()
+        .column("trip_id", types.Int64)
+        .column("VendorID", types.Float64)
+        .column("lpep_pickup_datetime", types.String)
+        .column("lpep_dropoff_datetime", types.String)
         ...
-    ],
-    field_types=[
-        types.Int64,
-        types.Float64,
-        types.String,
-        types.String,
-        ...
-    ],
-)
+        .build()
+    )
 
 source = FileSystemSource(
     name="source_1",

@@ -130,53 +130,30 @@ def run_nyc_taxi_example(client: FeathubClient) -> None:
 def build_features(client: FeathubClient) -> FeatureView:
     source_file_path = path.join(Path(__file__).parent.resolve(), "sample_data.csv")
 
-    schema = Schema(
-        field_names=[
-            "trip_id",
-            "VendorID",
-            "lpep_pickup_datetime",
-            "lpep_dropoff_datetime",
-            "store_and_fwd_flag",
-            "RatecodeID",
-            "PULocationID",
-            "DOLocationID",
-            "passenger_count",
-            "trip_distance",
-            "fare_amount",
-            "extra",
-            "mta_tax",
-            "tip_amount",
-            "tolls_amount",
-            "ehail_fee",
-            "improvement_surcharge",
-            "total_amount",
-            "payment_type",
-            "trip_type",
-            "congestion_surcharge",
-        ],
-        field_types=[
-            types.Int64,
-            types.Float64,
-            types.String,
-            types.String,
-            types.String,
-            types.Float64,
-            types.Int64,
-            types.Int64,
-            types.Float64,
-            types.Float64,
-            types.Float64,
-            types.Float64,
-            types.Float64,
-            types.Float64,
-            types.Float64,
-            types.Float64,
-            types.Float64,
-            types.Float64,
-            types.Float64,
-            types.Float64,
-            types.Float64,
-        ],
+    schema = (
+        Schema.new_builder()
+        .column("trip_id", types.Int64)
+        .column("VendorID", types.Float64)
+        .column("lpep_pickup_datetime", types.String)
+        .column("lpep_dropoff_datetime", types.String)
+        .column("store_and_fwd_flag", types.String)
+        .column("RatecodeID", types.Float64)
+        .column("PULocationID", types.Int64)
+        .column("DOLocationID", types.Int64)
+        .column("passenger_count", types.Float64)
+        .column("trip_distance", types.Float64)
+        .column("fare_amount", types.Float64)
+        .column("extra", types.Float64)
+        .column("mta_tax", types.Float64)
+        .column("tip_amount", types.Float64)
+        .column("tolls_amount", types.Float64)
+        .column("ehail_fee", types.Float64)
+        .column("improvement_surcharge", types.Float64)
+        .column("total_amount", types.Float64)
+        .column("payment_type", types.Float64)
+        .column("trip_type", types.Float64)
+        .column("congestion_surcharge", types.Float64)
+        .build()
     )
 
     source = FileSystemSource(

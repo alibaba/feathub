@@ -61,3 +61,26 @@ class Schema:
             raise FeathubException(f"{field_name} not in the schema.")
 
         return self.field_types[self.field_names.index(field_name)]
+
+    @staticmethod
+    def new_builder() -> "Schema.Builder":
+        return Schema.Builder()
+
+    class Builder:
+        """
+        A builder for constructing a Feathub Schema.
+        """
+
+        def __init__(self) -> None:
+            self._columns: Dict[str, DType] = {}
+
+        def column(self, column_name: str, dtype: DType) -> "Schema.Builder":
+            if column_name in self._columns:
+                raise FeathubException(
+                    f"Column {column_name} already defined with type {DType}."
+                )
+            self._columns[column_name] = dtype
+            return self
+
+        def build(self) -> "Schema":
+            return Schema(list(self._columns.keys()), list(self._columns.values()))
