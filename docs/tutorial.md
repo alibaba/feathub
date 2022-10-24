@@ -16,13 +16,57 @@ into online feature store for online feature serving.
 
 See [README](./../README.md#quickstart) for the instruction to run this demo.
 
+## Initialize FeatHub client
+
+```python
+client = FeathubClient(
+    config={
+        "processor": {
+            "processor_type": "local",
+            "local": {},
+        },
+        "online_store": {
+            "memory": {},
+        },
+        "registry": {
+            "registry_type": "local",
+            "local": {
+                "namespace": "default",
+            },
+        },
+        "feature_service": {
+            "service_type": "local",
+            "local": {},
+        },
+    }
+)
+```
+
 ## Specify source dataset
 
 ```python
+schema = Schema(
+    field_names=[
+        "trip_id",
+        "VendorID",
+        "lpep_pickup_datetime",
+        "lpep_dropoff_datetime",
+        ...
+    ],
+    field_types=[
+        types.Int64,
+        types.Float64,
+        types.String,
+        types.String,
+        ...
+    ],
+)
+
 source = FileSystemSource(
     name="source_1",
     path=source_file_path,
-    file_format="csv",
+    data_format="csv",
+    schema=schema,
     timestamp_field="lpep_dropoff_datetime",
     timestamp_format="%Y-%m-%d %H:%M:%S",
 )
@@ -35,8 +79,8 @@ source = FileSystemSource(
 f_trip_time_duration = Feature(
     name="f_trip_time_duration",
     dtype=types.Int32,
-    transform="UNIX_TIMESTAMP(lpep_dropoff_datetime) - "
-    "UNIX_TIMESTAMP(lpep_pickup_datetime)",
+    transform="UNIX_TIMESTAMP(CAST(lpep_dropoff_datetime AS STRING)) - "
+    "UNIX_TIMESTAMP(CAST(lpep_pickup_datetime AS STRING))",
 )
 
 f_location_avg_fare = Feature(
@@ -114,7 +158,7 @@ client.build_features(features_list=[feature_view_1, feature_view_2])
 ## Transform features into Pandas DataFrame for offline training.
 
 ```python
-train_df = client.get_features(features).to_pandas()
+train_df = client.get_features(feature_view_2).to_pandas()
 ```
 
 
