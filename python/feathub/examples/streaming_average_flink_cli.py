@@ -59,7 +59,11 @@ def main() -> None:
                 "val": RandomField(minimum=0, maximum=100),
             },
         ),
-        schema=Schema(["id", "val", "ts"], [Int32, Int32, Timestamp]),
+        schema=Schema.new_builder()
+        .column("id", Int32)
+        .column("val", Int32)
+        .column("ts", Timestamp)
+        .build(),
         keys=["id"],
         timestamp_field="ts",
     )
