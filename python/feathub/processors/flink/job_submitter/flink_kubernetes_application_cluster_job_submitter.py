@@ -123,7 +123,7 @@ class FlinkKubernetesApplicationClusterJobSubmitter(FlinkJobSubmitter):
             sink=sink,
             local_registry_tables=local_registry_tables,
             allow_overwrite=allow_overwrite,
-            config=self.processor_config.original_props,
+            props=self.processor_config.original_props,
         )
 
         job_id = str(uuid.uuid4())

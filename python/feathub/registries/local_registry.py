@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from feathub.common.config import BaseConfig, ConfigDef
 from feathub.common.exceptions import FeathubException
@@ -58,7 +58,7 @@ class LocalRegistry(Registry):
     # TODO: maintain the version and version_timestamp so that we can recover the
     # lineage information of a table as upstream table evolves.
     def build_features(
-        self, features_list: List[TableDescriptor]
+        self, features_list: List[TableDescriptor], props: Optional[Dict] = None
     ) -> List[TableDescriptor]:
         result = []
         for table in features_list:
@@ -66,7 +66,7 @@ class LocalRegistry(Registry):
                 raise FeathubException(
                     "Cannot build a TableDescriptor with empty name."
                 )
-            self.tables[table.name] = table.build(self)
+            self.tables[table.name] = table.build(self, props)
             result.append(self.tables[table.name])
 
         return result

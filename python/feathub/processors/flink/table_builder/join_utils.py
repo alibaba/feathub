@@ -21,7 +21,10 @@ from pyflink.table import (
 )
 from pyflink.table.types import DataType
 
-from feathub.feature_views.sliding_feature_view import SlidingFeatureView
+from feathub.feature_views.sliding_feature_view import (
+    SlidingFeatureView,
+    ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG,
+)
 from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
@@ -76,8 +79,10 @@ class JoinFieldDescriptor:
         feature = table_descriptor.get_feature(field_name)
         transform = feature.transform
 
-        if not isinstance(table_descriptor, SlidingFeatureView) or not isinstance(
-            transform, SlidingWindowTransform
+        if (
+            not isinstance(table_descriptor, SlidingFeatureView)
+            or not isinstance(transform, SlidingWindowTransform)
+            or table_descriptor.config.get(ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG)
         ):
             return JoinFieldDescriptor(field_name, to_flink_type(feature.dtype))
 

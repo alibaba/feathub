@@ -11,11 +11,13 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Dict, Union, Sequence, Set
+from typing import Dict, Union, Sequence, Set, Any, Optional
+
+from feathub.common.config import BaseConfig, ConfigDef
 
 from feathub.common import types
 
-from feathub.common.exceptions import FeathubException
+from feathub.common.exceptions import FeathubException, FeathubConfigurationException
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
@@ -25,6 +27,44 @@ from feathub.feature_views.transforms.sliding_window_transform import (
 )
 from feathub.registries.registry import Registry
 from feathub.table.table_descriptor import TableDescriptor
+
+ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG = (
+    "sdk.sliding_feature_view.enable_empty_window_output"
+)
+ENABLE_EMPTY_WINDOW_OUTPUT_DOC = (
+    "If it is True, when the sliding window becomes emtpy, it outputs zero value for "
+    "aggregation function SUM and COUNT, and output None for other aggregation "
+    "function. If it is False, the sliding window doesn't output anything when the "
+    "sliding window becomes empty."
+)
+
+SKIP_SAME_WINDOW_OUTPUT_CONFIG = "sdk.sliding_feature_view.skip_same_window_output"
+SKIP_SAME_WINDOW_OUTPUT_DOC = (
+    "If it is True, the sliding feature view only outputs when the result of the "
+    "sliding window changes. If it is False, the sliding feature view outputs at every "
+    "step size even if the result of the sliding window doesn't change."
+)
+
+
+class SlidingFeatureViewConfig(BaseConfig):
+    def __init__(self, original_props: Dict[str, Any]):
+        super().__init__(
+            [
+                ConfigDef(
+                    name=ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG,
+                    value_type=bool,
+                    description=ENABLE_EMPTY_WINDOW_OUTPUT_DOC,
+                    default_value=True,
+                ),
+                ConfigDef(
+                    name=SKIP_SAME_WINDOW_OUTPUT_CONFIG,
+                    value_type=bool,
+                    description=SKIP_SAME_WINDOW_OUTPUT_DOC,
+                    default_value=True,
+                ),
+            ],
+            original_props,
+        )
 
 
 class SlidingFeatureView(FeatureView):
@@ -46,6 +86,22 @@ class SlidingFeatureView(FeatureView):
     the `features` parameter, their group-by keys, and an additional field "window_time"
     that represents the timestamp when the sliding window closed with default format
     "epoch". Other fields in the source table will not be included.
+
+    The SlidingFeatureView can be configured with the following global configuration:
+    - sdk.sliding_feature_view.enable_empty_window_output: Default to True. If it is
+      True, when the sliding window becomes emtpy, it outputs zero value for aggregation
+      function SUM and COUNT, and output None for other aggregation function. If it is
+      False, the sliding window doesn't output anything when the sliding window becomes
+      empty.
+    - sdk.sliding_feature_view.skip_same_window_output: Default to True. If it is True,
+      the sliding feature view only outputs when the result of the sliding window
+      changes. If it is False, the sliding feature view outputs at every step size even
+      if the result of the sliding window doesn't change.
+
+    Note that setting sdk.sliding_feature_view.enable_empty_window_output to False and
+    sdk.sliding_feature_view.skip_same_window_output to True is forbidden and an
+    exception will be thrown, because, with this setting, we cannot determine if a
+    sliding window result is expired or not.
     """
 
     def __init__(
@@ -55,6 +111,7 @@ class SlidingFeatureView(FeatureView):
         features: Sequence[Union[str, Feature]],
         timestamp_field: str = "window_time",
         timestamp_format: str = "epoch_millis",
+        props: Optional[Dict] = None,
     ):
         """
         :param name: The unique identifier of this feature view in the registry.
@@ -76,6 +133,8 @@ class SlidingFeatureView(FeatureView):
                                 SlidingFeatureView that represents the closed window end
                                 time for each row.
         :param timestamp_format: The format of the timestamp field.
+        :param props: Optional. It is not None, it is the properties of the
+                      SlidingFeatureView.
         """
         window_time_feature = self._get_window_time_feature(
             timestamp_field, timestamp_format
@@ -90,6 +149,20 @@ class SlidingFeatureView(FeatureView):
         )
 
         self._validate(features)
+
+        self.config = (
+            SlidingFeatureViewConfig({})
+            if props is None
+            else SlidingFeatureViewConfig(props)
+        )
+        if not self.config.get(ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG) and self.config.get(
+            SKIP_SAME_WINDOW_OUTPUT_CONFIG
+        ):
+            raise FeathubConfigurationException(
+                "Setting sdk.sliding_feature_view.enable_empty_window_output to False"
+                "and sdk.sliding_feature_view.skip_same_window_output to True "
+                "is forbidden."
+            )
 
     @staticmethod
     def _get_window_time_feature(
@@ -106,7 +179,9 @@ class SlidingFeatureView(FeatureView):
         )
         return window_time_feature
 
-    def build(self, registry: Registry) -> TableDescriptor:
+    def build(
+        self, registry: Registry, props: Optional[Dict] = None
+    ) -> TableDescriptor:
         """
         Gets a copy of self as a resolved table descriptor.
 
@@ -119,7 +194,9 @@ class SlidingFeatureView(FeatureView):
         if isinstance(self.source, str):
             source = registry.get_features(name=self.source)
         else:
-            source = registry.build_features(features_list=[self.source])[0]
+            source = registry.build_features(features_list=[self.source], props=props)[
+                0
+            ]
 
         features = []
         for feature in self.features:
@@ -127,7 +204,16 @@ class SlidingFeatureView(FeatureView):
                 feature = source.get_feature(feature_name=feature)
             features.append(feature)
 
-        return SlidingFeatureView(name=self.name, source=source, features=features)
+        props = {} if props is None else props
+        feature_view = SlidingFeatureView(
+            name=self.name,
+            source=source,
+            features=features,
+            timestamp_field=self.timestamp_field,
+            timestamp_format=self.timestamp_format,
+            props={**props, **self.config.original_props},
+        )
+        return feature_view
 
     def to_json(self) -> Dict:
         return {
