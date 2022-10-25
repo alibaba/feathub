@@ -19,4 +19,4 @@ jobs:
           path: ./wheels
       - name: Upload Feathub package
         run: |
-          twine upload --username=${{ secrets.PYPI_REPOSITORY_USERNAME }} --password=${{ secrets.PYPI_REPOSITORY_PASSWORD }} wheels/*
+          twine upload --skip-existing --username=${{ secrets.PYPI_REPOSITORY_USERNAME }} --password=${{ secrets.PYPI_REPOSITORY_PASSWORD }} wheels/*
