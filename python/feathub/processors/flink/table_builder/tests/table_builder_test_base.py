@@ -70,7 +70,8 @@ class FlinkTableBuilderTestBase(unittest.TestCase):
         timestamp_format: str = "%Y-%m-%d %H:%M:%S",
         schema: Optional[Schema] = None,
     ) -> FileSystemSource:
-        path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
+        # Add suffix so that it is not inferred with compression, e.g. xz, zip, etc.
+        path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name + ".csv"
         df.to_csv(path, index=False, header=False)
         return FileSystemSource(
             f"source_{str(uuid.uuid4()).replace('-', '')}_table",
