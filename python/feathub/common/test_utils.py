@@ -15,6 +15,8 @@
 import unittest
 import tempfile
 import shutil
+from datetime import datetime
+
 import pandas as pd
 from typing import Optional, List
 
@@ -94,3 +96,19 @@ class LocalProcessorTestCase(unittest.TestCase):
             include_timestamp_field=include_timestamp_field,
             store_type=MemoryOnlineStore.STORE_TYPE,
         )
+
+
+def to_epoch_millis(
+    timestamp_str: str, timestamp_format: str = "%Y-%m-%d %H:%M:%S.%f"
+) -> int:
+    """
+    Returns the number of milliseconds since epoch for the given timestamp string.
+    """
+    return int(datetime.strptime(timestamp_str, timestamp_format).timestamp() * 1000)
+
+
+def to_epoch(timestamp_str: str, timestamp_format: str = "%Y-%m-%d %H:%M:%S.%f") -> int:
+    """
+    Returns the number of seconds since epoch for the given timestamp string.
+    """
+    return int(datetime.strptime(timestamp_str, timestamp_format).timestamp())

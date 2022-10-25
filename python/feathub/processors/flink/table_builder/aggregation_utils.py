@@ -14,7 +14,7 @@
 
 from typing import Any, Tuple
 
-from pyflink.table.types import DataType
+from pyflink.table.types import DataType, DataTypes
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_views.feature import Feature
@@ -64,6 +64,16 @@ class AggregationFieldDescriptor:
         )
 
 
+INTEGER_TYPES = {
+    type(DataTypes.TINYINT()),
+    type(DataTypes.SMALLINT()),
+    type(DataTypes.INT()),
+    type(DataTypes.BIGINT()),
+}
+
+FLOAT_TYPES = {type(DataTypes.FLOAT()), type(DataTypes.DOUBLE())}
+
+
 def get_default_value_and_type(
     agg_descriptor: AggregationFieldDescriptor,
 ) -> Tuple[Any, DataType]:
@@ -71,7 +81,15 @@ def get_default_value_and_type(
         agg_descriptor.agg_func == AggFunc.COUNT
         or agg_descriptor.agg_func == AggFunc.SUM
     ):
-        default_value = 0
+        if type(agg_descriptor.field_data_type) in INTEGER_TYPES:
+            default_value: Any = 0
+        elif type(agg_descriptor.field_data_type) in FLOAT_TYPES:
+            default_value = 0.0
+        else:
+            raise FeathubException(
+                f"Unsupported DataType of AggFunc COUNT or SUM: "
+                f"{type(agg_descriptor.field_data_type)}"
+            )
     else:
         default_value = None
     return (

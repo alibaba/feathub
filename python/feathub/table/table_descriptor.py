@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING, Dict
 from abc import abstractmethod
 
 from feathub.registries.entity import Entity
@@ -56,15 +56,21 @@ class TableDescriptor(Entity):
         self.timestamp_field = timestamp_field
         self.timestamp_format = timestamp_format
 
-    def build(self, registry: "Registry") -> TableDescriptor:
+    def build(
+        self, registry: "Registry", props: Optional[Dict] = None
+    ) -> TableDescriptor:
         """
         Gets a copy of self after recursively replacing the dependent table and feature
-        names with the corresponding table descriptors and features.
+        names with the corresponding table descriptors and features, then
+        recursively configuring the table descriptor and its dependent table with the
+        given global properties if it is not configured already.
 
         And caches this descriptor as well as its dependent table descriptors in memory
         so that they can be used when building other table descriptors.
 
         :param registry: The entity registry to retrieve table description by name.
+        :param props: Optional. If it is not None, it is the global properties that are
+                      used to configure the given table descriptors.
         :return: A resolved table descriptor.
         """
 

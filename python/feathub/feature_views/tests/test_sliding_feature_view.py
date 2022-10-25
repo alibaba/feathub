@@ -13,11 +13,16 @@
 #  limitations under the License.
 import unittest
 from datetime import timedelta
+from typing import cast
 
 from feathub.common import types
-from feathub.common.exceptions import FeathubException
+from feathub.common.exceptions import FeathubException, FeathubConfigurationException
 from feathub.feature_views.feature import Feature
-from feathub.feature_views.sliding_feature_view import SlidingFeatureView
+from feathub.feature_views.sliding_feature_view import (
+    SlidingFeatureView,
+    ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG,
+    SKIP_SAME_WINDOW_OUTPUT_CONFIG,
+)
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
@@ -347,3 +352,91 @@ class SlidingFeatureViewTest(unittest.TestCase):
         self.assertEqual(
             expected_timestamp_feature, feature_view.get_feature("my_window_time_field")
         )
+
+    def test_invalid_config(self):
+        feature = Feature(
+            name="feature",
+            dtype=types.Float32,
+            transform=SlidingWindowTransform(
+                expr="CAST(fare_amount AS FLOAT) + 1",
+                agg_func="SUM",
+                window_size=timedelta(seconds=30),
+                group_by_keys=["id"],
+                step_size=timedelta(seconds=10),
+            ),
+        )
+
+        with self.assertRaises(FeathubConfigurationException) as cm:
+            SlidingFeatureView(
+                name="feature_view_1",
+                source=self.source,
+                features=[
+                    feature,
+                ],
+                props={
+                    ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: False,
+                    SKIP_SAME_WINDOW_OUTPUT_CONFIG: True,
+                },
+            )
+        self.assertIn("is forbidden", cm.exception.args[0])
+
+    def test_build_with_config(self):
+        feature = Feature(
+            name="feature",
+            dtype=types.Float32,
+            transform=SlidingWindowTransform(
+                expr="CAST(fare_amount AS FLOAT) + 1",
+                agg_func="SUM",
+                window_size=timedelta(seconds=30),
+                group_by_keys=["id"],
+                step_size=timedelta(seconds=10),
+            ),
+        )
+
+        features = SlidingFeatureView(
+            name="feature_view_1",
+            source=self.source,
+            features=[
+                feature,
+            ],
+            props={
+                ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: False,
+                SKIP_SAME_WINDOW_OUTPUT_CONFIG: False,
+            },
+        )
+
+        built_feature = cast(
+            SlidingFeatureView,
+            features.build(
+                self.registry,
+                props={
+                    ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: True,
+                    SKIP_SAME_WINDOW_OUTPUT_CONFIG: False,
+                },
+            ),
+        )
+
+        self.assertFalse(built_feature.config.get(ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG))
+        self.assertFalse(built_feature.config.get(SKIP_SAME_WINDOW_OUTPUT_CONFIG))
+
+        features = SlidingFeatureView(
+            name="feature_view_1",
+            source=self.source,
+            features=[
+                feature,
+            ],
+        )
+
+        built_feature = cast(
+            SlidingFeatureView,
+            features.build(
+                self.registry,
+                props={
+                    ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: True,
+                    SKIP_SAME_WINDOW_OUTPUT_CONFIG: False,
+                },
+            ),
+        )
+
+        self.assertTrue(built_feature.config.get(ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG))
+        self.assertFalse(built_feature.config.get(SKIP_SAME_WINDOW_OUTPUT_CONFIG))

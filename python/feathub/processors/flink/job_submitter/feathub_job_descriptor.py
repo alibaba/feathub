@@ -32,7 +32,7 @@ class FeathubJobDescriptor:
         sink: FeatureTable,
         local_registry_tables: Dict[str, TableDescriptor],
         allow_overwrite: bool,
-        config: Dict,
+        props: Dict,
     ):
         """
         Instantiate a FeathubJobDescriptor.
@@ -59,7 +59,7 @@ class FeathubJobDescriptor:
                                       table.
         :param allow_overwrite: If it is true, throw error if the features collide with
                                 existing data in the given sink.
-        :param config: All configurations of Feathub.
+        :param props: All properties of Feathub.
         """
         self.features = features
         self.keys = keys
@@ -68,7 +68,7 @@ class FeathubJobDescriptor:
         self.sink = sink
         self.local_registry_tables = local_registry_tables
         self.allow_overwrite = allow_overwrite
-        self.config = config
+        self.props = props
 
     def __eq__(self, other: Any) -> bool:
         return (
@@ -80,5 +80,5 @@ class FeathubJobDescriptor:
             and self.sink == other.sink
             and self.local_registry_tables == other.local_registry_tables
             and self.allow_overwrite == other.allow_overwrite
-            and self.config == other.config
+            and self.props == other.props
         )

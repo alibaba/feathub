@@ -160,7 +160,7 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
             sink=sink,
             local_registry_tables=join_table,
             allow_overwrite=True,
-            config={},
+            props={},
         )
 
         with open(path, "wb") as f:

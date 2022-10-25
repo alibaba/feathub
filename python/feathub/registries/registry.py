@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import List, Dict
+from typing import List, Dict, Optional
 from abc import ABC, abstractmethod
 
 from feathub.registries.registry_config import (
@@ -40,18 +40,23 @@ class Registry(ABC):
 
     @abstractmethod
     def build_features(
-        self, features_list: List[TableDescriptor]
+        self, features_list: List[TableDescriptor], props: Optional[Dict] = None
     ) -> List[TableDescriptor]:
         """
         For each table descriptor in the given list, resolve this descriptor by
         recursively replacing its dependent table and feature names with the
         corresponding table descriptors and features from the cache or registry.
+        Then recursively configure the table descriptor and its dependent table that is
+        referred by a TableDescriptor with the given global properties if it is not
+        configured already.
 
         And caches the resolved descriptors and well as their dependent table
         descriptors in memory so that they can be used when building other table
         descriptors.
 
         :param features_list: A list of table descriptors.
+        :param props: Optional. If it is not None, it is the global properties that are
+                      used to configure the given table descriptors.
         :return: A list of resolved descriptors corresponding to the input descriptors.
         """
         pass

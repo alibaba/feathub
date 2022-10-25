@@ -14,6 +14,7 @@
 from datetime import timedelta
 from typing import List, Optional, Sequence
 
+from pyflink.java_gateway import get_gateway
 from pyflink.table import (
     StreamTableEnvironment,
     Table as NativeFlinkTable,
@@ -21,12 +22,18 @@ from pyflink.table import (
 )
 
 from feathub.common.exceptions import FeathubTransformationException
+from feathub.feature_views.sliding_feature_view import (
+    SlidingFeatureViewConfig,
+    ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG,
+    SKIP_SAME_WINDOW_OUTPUT_CONFIG,
+)
 from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
 from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
+    get_default_value_and_type,
 )
 from feathub.processors.flink.table_builder.flink_sql_expr_utils import (
     to_flink_sql_expr,
@@ -101,21 +108,27 @@ class SlidingWindowDescriptor:
         )
 
 
+# TODO: Retracting the value when the window becomes empty when the Sink support
+#  DynamicTable with retraction.
 def evaluate_sliding_window_transform(
     t_env: StreamTableEnvironment,
     flink_table: NativeFlinkTable,
     window_descriptor: SlidingWindowDescriptor,
     agg_descriptors: List["AggregationFieldDescriptor"],
+    config: SlidingFeatureViewConfig,
 ) -> NativeFlinkTable:
     """
     Evaluate the sliding window transforms on the given flink table and return the
     result table.
+
 
     :param t_env: The StreamTableEnvironment of the `flink_table`.
     :param flink_table: The input Flink table.
     :param window_descriptor: The descriptor of the sliding window.
     :param agg_descriptors: A list of descriptor that descriptor the aggregation to
                             perform.
+    :param config: The config of the SlidingFeatureView that the window_descriptor
+                   belongs to.
     :return: The result table.
     """
 
@@ -198,6 +211,23 @@ def evaluate_sliding_window_transform(
                 EVENT_TIME_ATTRIBUTE_NAME,
             ],
         )
+
+    if config.get(ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG):
+        result = _apply_post_sliding_window_process_function(
+            result,
+            window_descriptor,
+            agg_descriptors,
+            config.get(SKIP_SAME_WINDOW_OUTPUT_CONFIG),
+        )
+    else:
+        assert config.get(SKIP_SAME_WINDOW_OUTPUT_CONFIG) is False
+        # Setting ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG to False and
+        # SKIP_SAME_WINDOW_OUTPUT_CONFIG to True is forbidden, and it is checked in
+        # SlidingFeatureView.
+        # The default behavior the Flink SlidingWindow is the same as
+        # ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG == False and
+        # SKIP_SAME_WINDOW_OUTPUT_CONFIG == False, so we don't apply the post process
+        # function.
 
     return result
 
@@ -306,4 +336,32 @@ def _window_top_n_by_time(
     )
     table = table.drop_columns("rownum")
     t_env.drop_temporary_view("windowed_table")
+    return table
+
+
+def _apply_post_sliding_window_process_function(
+    table: NativeFlinkTable,
+    window_descriptor: SlidingWindowDescriptor,
+    agg_descriptors: List[AggregationFieldDescriptor],
+    skip_same_window_output: bool,
+) -> NativeFlinkTable:
+    gateway = get_gateway()
+    object_class = gateway.jvm.String
+    key_array = gateway.new_array(object_class, len(window_descriptor.group_by_keys))
+    for idx, key in enumerate(window_descriptor.group_by_keys):
+        key_array[idx] = key
+    default_row = gateway.jvm.org.apache.flink.types.Row.withNames()
+    for agg_descriptor in agg_descriptors:
+        default_value, data_type = get_default_value_and_type(agg_descriptor)
+        default_row.setField(agg_descriptor.field_name, default_value)
+    j_table = gateway.jvm.com.alibaba.feathub.flink.udf.PostSlidingWindowUtils.postSlidingWindow(  # noqa
+        table._t_env._j_tenv,
+        table._j_table,
+        int(window_descriptor.step_size.total_seconds() * 1000),
+        default_row,
+        skip_same_window_output,
+        EVENT_TIME_ATTRIBUTE_NAME,
+        key_array,
+    )
+    table = NativeFlinkTable(j_table, table._t_env)
     return table

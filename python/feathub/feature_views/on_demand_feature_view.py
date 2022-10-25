@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, Dict, Sequence
+from typing import Union, Dict, Sequence, Optional
 
 from feathub.common import types
 from feathub.feature_tables.feature_table import FeatureTable
@@ -92,7 +92,9 @@ class OnDemandFeatureView(FeatureView):
                 )
 
     # TODO: cache the feature view itself in the registry. Same for other views.
-    def build(self, registry: Registry) -> TableDescriptor:
+    def build(
+        self, registry: Registry, props: Optional[Dict] = None
+    ) -> TableDescriptor:
         """
         Gets a copy of self as a resolved table descriptor.
 

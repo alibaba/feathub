@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Union, Dict, Sequence
+from typing import Union, Dict, Sequence, Optional
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_views.transforms.join_transform import JoinTransform
@@ -61,7 +61,9 @@ class DerivedFeatureView(FeatureView):
             keep_source_fields=keep_source_fields,
         )
 
-    def build(self, registry: Registry) -> TableDescriptor:
+    def build(
+        self, registry: Registry, props: Optional[Dict] = None
+    ) -> TableDescriptor:
         """
         Gets a copy of self as a resolved table descriptor.
 

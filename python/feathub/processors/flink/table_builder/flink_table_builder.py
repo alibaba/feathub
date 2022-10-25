@@ -458,6 +458,7 @@ class FlinkTableBuilder:
                 tmp_table,
                 window_descriptor,
                 agg_descriptors,
+                feature_view.config,
             )
             if agg_table is None:
                 agg_table = tmp_agg_table
