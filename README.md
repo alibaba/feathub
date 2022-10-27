@@ -25,12 +25,13 @@ Feathub provides SDK and infra that enable the following capabilities:
 
 ## Architecture and Concepts
 
-<img src="docs/figures/architecture_1.png" width="60%" height="auto">
+<img src="docs/figures/architecture_1.png" width="50%" height="auto">
 
-<img src="docs/figures/architecture_2.png" width="60%" height="auto">
+<img src="docs/figures/architecture_2.png" width="70%" height="auto">
 
-The above figures show the Feathub architecture. Please checkout [Feathub
-architecture and concepts](docs/architecture.md) for more details.
+The above figures show the Feathub architecture and how FeatHub can be used for
+machine learning training and inference. Please checkout [Feathub architecture
+and concepts](docs/architecture.md) for more details.
 
 ## Getting Started
 
@@ -132,3 +133,21 @@ $ python -m flake8 --config=python/setup.cfg python
 # Check python type annotation
 $ python -m mypy --config-file python/setup.cfg python
 ```
+
+## Contact Us
+
+Chinese-speaking users are recommended to join the following DingTalk group for
+questions and discussion.
+
+<img src="docs/figures/dingtalk.png" width="20%" height="auto">
+
+English-speaking users can use this [invitation
+link](https://join.slack.com/t/feathubworkspace/shared_invite/zt-1ik9wk0xe-MoMEotpCEYvRRc3ulpvg2Q)
+to join our [Slack channel](https://feathub.slack.com/) for questions and
+discussion.
+
+We are actively looking for user feedback and contributors from the community.
+Please feel free to create pull requests and open Github issues for feedback and
+feature requests.
+
+Come join us!
