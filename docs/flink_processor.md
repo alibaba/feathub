@@ -1,16 +1,26 @@
 # Flink Processor
 
-Flink processor is used to compute the Feathub features with Flink. In the following 
-sections we describe how to use the Flink processor.
+The FlinkProcessor does feature ETL using Flink as the processing engine. In the
+following sections we describe the deployment modes supported by FlinkProcessor
+and the configuration keys accepted by each mode.
 
 ## Deployment Mode
-The Flink processor runs the Flink job in one of the following mode:
+The Flink processor runs the Flink job in one of the following deployment modes:
 
-- Command-Line mode
-- Session mode
-- Kubernetes Application mode
+- **Command-Line mode**. This mode should be used if you want to run the FeatHub
+  program using Flink's [command-line
+interface](https://nightlies.apache.org/flink/flink-docs-stable/docs/deployment/cli/#command-line-interface).
+- **Session mode**. This mode should be used if you want to run the FeatHub program
+  in the Flink [session
+mode](https://nightlies.apache.org/flink/flink-docs-release-1.16/docs/deployment/overview/#session-mode).
+This mode runs Flink jobs in an already running Flink cluster.
+- **Kubernetes Application mode**. This mode should be used if you want to run the
+  FeatHub program in the Flink [application
+mode](https://nightlies.apache.org/flink/flink-docs-release-1.16/docs/deployment/overview/#application-mode)
+on a Kubernetes cluster. This mode creates a dedicated Flink cluster and runs
+Flink jobs in this cluster.
 
-Session mode is the default mode. User can specify the deployment mode with 
+Session mode is the default mode. User can specify the deployment mode with
 configuration `deployment_mode`.
 
 ### Command-Line mode
@@ -72,32 +82,30 @@ configuration `kubernetes.image`.
 
 ## Configurations
 
-Here is an exhaustive list of configurations for FlinkProcessor.
+In the following we describe the configuration keys accepted by the
+configuration dict passed to the FlinkProcessor. Note that the accepted
+configuration keys depend on the deployment_mode of the FlinkProcessor.
 
-### Basic configuration
-These are the configurations for the FlinkProcessor regardless of the deployment mode.
+### Basic Configuration
+
+These are the configuration keys accepted by all deployment modes.
 
 | key             | Required | default | type   | Description                                                                              |
 |-----------------|----------|---------|--------|------------------------------------------------------------------------------------------|
 | deployment_mode | optional | session | String | The flink job deployment mode, it could be "cli", "session" or "kubernetes-application". |
-
-### Cli Mode Configuration
-
-| key     | Required | default | type   | Description                                                                                                                                |
-|---------|----------|---------|--------|--------------------------------------------------------------------------------------------------------------------------------------------|
-| flink.* | optional | (none)  | String | This can set and pass arbitrary Flink execution config and table config. The "flink" prefix in the key is removed before passing to Flink. |
+| native.*                | optional | (none)         | String | Any key with the "native" prefix will be forwarded to the Flink job config after the "native" prefix is removed. For example, if the processor config has an entry "native.parallelism.default: 2", then the Flink job config will have an entry "parallelism.default: 2". |
 
 ### Session Mode Configuration
-These are the configurations for FlinkProcessor running in session mode.
+
+These are the extra configuration keys accepted when deployment_mode = "session":
 
 | key          | Required | default | type    | Description                                                                                                                                |
 |--------------|----------|---------|---------|--------------------------------------------------------------------------------------------------------------------------------------------|
 | rest.address | required | (none)  | String  | The ip or hostname where the JobManager runs.                                                                                              |
 | rest.port    | required | (none)  | Integer | The port where the JobManager runs.                                                                                                        |
-| flink.*      | optional | (none)  | String  | This can set and pass arbitrary Flink execution config and table config. The "flink" prefix in the key is removed before passing to Flink. |
-
 ### Kubernetes Application Mode Configuration
-These are the configurations for FlinkProcessor running in Kubernetes Application mode.
+
+These are the extra configuration keys accepted when deployment_mode = "kubernetes-application":
 
 | key                    | Required | default        | type   | Description                                                                                                                                                                                                                                                                                                                                                                                        |
 |------------------------|----------|----------------|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -105,4 +113,3 @@ These are the configurations for FlinkProcessor running in Kubernetes Applicatio
 | kubernetes.image       | optional | feathub:latest | String | The docker image to start the JobManager and TaskManager pod.                                                                                                                                                                                                                                                                                                                                      |
 | kubernetes.namespace   | optional | default        | String | The namespace of the Kubernetes cluster to run the Flink job.                                                                                                                                                                                                                                                                                                                                      |
 | kubernetes.config.file | optional | ~/.kube/config | String | The kubernetes config file is used to connector to the Kubernetes cluster.                                                                                                                                                                                                                                                                                                                         |
-| flink.*                | optional | (none)         | String | This can set and pass arbitrary Flink configuration. The "flink" prefix in the key is removed before passing to Flink. For example, you can set the default parallelism via "flink.parallelism.default". Some configurations are ignored because they are overridden by Feathub. For example, the value of "flink.kubernetes.namespace" will be overridden by the value of "kubernetes.namespace". |

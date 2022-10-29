@@ -49,30 +49,30 @@ from feathub.table.table_descriptor import TableDescriptor
 
 logger = logging.getLogger(__file__)
 
-FLINK_CONFIG_PREFIX = "flink"
+NATIVE_CONFIG_PREFIX = "native"
 
 
 class FlinkProcessor(Processor):
     """
-    The FlinkProcessor computes features with Flink.
+    The FlinkProcessor does feature ETL using Flink as the processing engine.
 
-    Basic Configurations:
+    In the following we describe the keys accepted by the `config` dict passed to the
+    FlinkProcessor constructor. Note that the accepted config keys depend on the
+    `deployment_mode` of the FlinkProcessor.
+
+    Config keys accepted by all deployment modes:
         deployment_mode: The flink job deployment mode, it could be "cli", "session", or
                          "kubernetes-application". Default to "session".
+        native.*: Any key with the "native" prefix will be forwarded to the Flink job
+                  config after the "native" prefix is removed. For example, if the
+                  processor config has an entry "native.parallelism.default: 2",
+                  then the Flink job config will have an entry "parallelism.default: 2".
 
-    Cli Mode Configuration:
-        flink.*: This can set and pass arbitrary Flink execution config and table
-                 config. The "flink" prefix in the key is removed before passing to
-                 Flink.
-
-    Session Mode Configuration:
+    Extra config keys accepted when deployment_mode = "session":
         rest.address: The ip or hostname where the JobManager runs. Required.
         rest.port: The port where the JobManager runs. Required.
-        flink.*: This can set and pass arbitrary Flink execution config and table
-                 config. The "flink" prefix in the key is removed before passing to
-                 Flink.
 
-    Kubernetes Application Mode Configuration:
+    Extra config keys accepted when deployment_mode = "kubernetes-application":
         flink_home: The path to the Flink distribution. If not specified, it uses the
                     Flink's distribution in PyFlink.
         kubernetes.image: The docker image to start the JobManager and TaskManager pod.
@@ -81,11 +81,6 @@ class FlinkProcessor(Processor):
                               job. Default to "default".
         kubernetes.config.file: The kubernetes config file is used to connector to
                                 the Kubernetes cluster. Default to "~/.kube/config".
-        flink.*: This can set and pass arbitrary Flink configuration. The "flink" prefix
-                 in the key is removed before passing to Flink. For example, you can set
-                 the default parallelism via "flink.parallelism.default".
-                 configuration is overridden, e.g. "kubernetes.namespace" and
-                 "kubernetes.config.file".
     """
 
     PROCESSOR_TYPE = "flink"
@@ -107,7 +102,7 @@ class FlinkProcessor(Processor):
 
         try:
             self.deployment_mode = DeploymentMode(
-                config.get("deployment_mode", "session")
+                self.config.get("deployment_mode", "session")
             )
         except ValueError:
             raise FeathubException("Unsupported deployment mode.")
@@ -123,8 +118,8 @@ class FlinkProcessor(Processor):
                 FlinkSessionClusterJobSubmitter(self, self.stores)
             )
         elif self.deployment_mode == DeploymentMode.SESSION:
-            jobmanager_rpc_address = config.get("rest.address")
-            jobmanager_rpc_port = config.get("rest.port")
+            jobmanager_rpc_address = self.config.get("rest.address")
+            jobmanager_rpc_port = self.config.get("rest.port")
             if jobmanager_rpc_address is None or jobmanager_rpc_port is None:
                 raise FeathubException(
                     "rest.address or rest.port has to be set with session "
@@ -142,7 +137,7 @@ class FlinkProcessor(Processor):
                 self._get_table_env(), self.registry
             )
             self.flink_job_submitter = FlinkKubernetesApplicationClusterJobSubmitter(
-                processor_config=config,
+                processor_config=self.config,
                 registry_type=self.registry.registry_type,
                 registry_config=self.registry.config,
             )
@@ -227,9 +222,10 @@ class FlinkProcessor(Processor):
 
         env = StreamExecutionEnvironment.get_execution_environment()
         table_env = StreamTableEnvironment.create(env)
+        # TODO: report error when processor configs conflict with native.* configs.
         for k, v in self.config.items():
             split_k = k.split(".")
-            if split_k[0] != FLINK_CONFIG_PREFIX:
+            if split_k[0] != NATIVE_CONFIG_PREFIX:
                 continue
             table_env.get_config().set(".".join(split_k[1:]), v)
 
