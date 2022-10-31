@@ -28,9 +28,9 @@ from feathub.online_stores.online_store import OnlineStore
 
 class Processor(ABC):
     """
-    A processor is a pluggable compute engine that implements APIs to extract, transform
-    and load features values into feature stores. It should recognize all table
-    descriptors and translate declarative transformation into execution jobs.
+    A processor is a pluggable processing engine that provides APIs to extract,
+    transform and load feature data into feature stores. It should recognize all table
+    descriptors and translate those declarative descriptors into processing jobs.
     """
 
     def __init__(self) -> None:

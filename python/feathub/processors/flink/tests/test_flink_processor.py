@@ -326,7 +326,7 @@ class FlinkProcessorTest(unittest.TestCase):
 
     def test_flink_config(self):
         processor = FlinkProcessor(
-            config={"deployment_mode": "cli", "flink.key": "value"},
+            config={"deployment_mode": "cli", "native.key": "value"},
             stores=self.stores,
             registry=self.registry,
         )
