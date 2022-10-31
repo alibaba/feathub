@@ -132,9 +132,15 @@ public abstract class AbstractTimeWindowedAggFunc<INPUT_T, RESULT_T>
                                                         MapView.newMapViewDataType(
                                                                 DataTypes.BIGINT(),
                                                                 DataTypes.ARRAY(
-                                                                        callContext
-                                                                                .getArgumentDataTypes()
-                                                                                .get(1)))),
+                                                                                getResultDataType(
+                                                                                        callContext
+                                                                                                .getArgumentDataTypes()
+                                                                                                .get(
+                                                                                                        1)))
+                                                                        // TODO: Add unit test with
+                                                                        // state backend to test
+                                                                        // serializer
+                                                                        .bridgedTo(List.class))),
                                                 DataTypes.FIELD(
                                                         "latestTimestamp", DataTypes.BIGINT()))))
                 .build();
