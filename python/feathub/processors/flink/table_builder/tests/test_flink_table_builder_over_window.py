@@ -185,6 +185,57 @@ class FlinkTableBuilderOverWindowTransformTest(FlinkTableBuilderTestBase):
         )
         self.assertTrue(expected_result_df.equals(result_df))
 
+    def test_expression_transform_on_over_window_transform(self):
+        df = pd.DataFrame(
+            [
+                ["Alex", 100, 100, "2022-01-01 08:00:00.001"],
+                ["Emma", 400, 250, "2022-01-01 08:00:00.002"],
+                ["Alex", 300, 200, "2022-01-01 08:00:00.003"],
+                ["Emma", 200, 250, "2022-01-01 08:00:00.004"],
+                ["Jack", 500, 500, "2022-01-01 08:00:00.005"],
+                ["Alex", 600, 800, "2022-01-01 08:00:00.006"],
+            ],
+            columns=["name", "cost", "distance", "time"],
+        )
+
+        source = self._create_file_source(df)
+
+        features = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                Feature(
+                    name="cost_sum",
+                    dtype=Int64,
+                    transform=OverWindowTransform(
+                        expr="cost",
+                        agg_func="SUM",
+                        group_by_keys=["name"],
+                        window_size=timedelta(milliseconds=3),
+                    ),
+                ),
+                Feature(name="double_cost_sum", dtype=Int64, transform="cost_sum * 2"),
+            ],
+        )
+
+        expected_result_df = df
+        expected_result_df["cost_sum"] = pd.Series([100, 400, 400, 600, 500, 900])
+        expected_result_df["double_cost_sum"] = pd.Series(
+            [200, 800, 800, 1200, 1000, 1800]
+        )
+        expected_result_df.drop(["cost", "distance"], axis=1, inplace=True)
+        expected_result_df = expected_result_df.sort_values(
+            by=["name", "time"]
+        ).reset_index(drop=True)
+
+        result_df = (
+            self.flink_table_builder.build(features=features)
+            .to_pandas()
+            .sort_values(by=["name", "time"])
+            .reset_index(drop=True)
+        )
+        self.assertTrue(expected_result_df.equals(result_df))
+
     def test_over_window_transform_with_window_size_and_limit(self):
         df = pd.DataFrame(
             [

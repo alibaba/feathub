@@ -46,7 +46,10 @@ class DerivedFeatureView(FeatureView):
                          feature is a string, it should be either in the format
                          {table_name}.{feature_name}, which refers to a feature in the
                          table with the given name, or in the format {feature_name},
-                         which refers to a feature in the source table.
+                         which refers to a feature in the source table. For any feature
+                         computed by ExpressionTransform or OverWindowTransform, its
+                         expression can only depend on the features specified earlier in
+                         this list and the features in the source table.
         :param keep_source_fields: True iff all fields in the source table should be
                                    included in this table.
         """
@@ -100,6 +103,10 @@ class DerivedFeatureView(FeatureView):
                         f"'{join_table_name}' does not have keys specified."
                     )
             features.append(feature)
+
+        # TODO: Validate ExpressionTransform features that depends on
+        #  OverWindowTransform or JoinTransform features are listed after the first
+        #  OverWindowTransform or JoinTransform feature.
 
         return DerivedFeatureView(
             name=self.name,
