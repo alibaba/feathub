@@ -5,6 +5,14 @@ Commandline Tool to a standalone Flink cluster. The Feathub job simply consumes
 the data from the Flink datagen connector, computes some feature, and prints out the 
 result.
 
+### Prerequisites
+
+The prerequisites to run the quickstart are listed below.
+
+- Unix-like operating system (e.g. Linux, Mac OS X)
+- Python 3.7
+- Java 8
+
 ### Install Flink 
 
 Download a stable release of Flink 1.15, then extract the archive:
@@ -38,9 +46,7 @@ to install the dependencies to the Docker image.
 
 We provide the script to package a zip that contains the Python dependencies to run
 Feathub job. In this example, we will submit the Flink job together with the zip file to
-the standalone Flink cluster. 
-
-Note that you need to have docker installed to run the following script.
+the standalone Flink cluster.
 
 ```bash
 $ bash tools/cli-deps/build-cli-deps.sh
@@ -48,8 +54,13 @@ $ bash tools/cli-deps/build-cli-deps.sh
 
 The dependencies zip will be available at `tools/cli-dep/deps.zip`. 
 
-You can modify the script to include any additional Python dependencies to the 
-`deps.zip`.
+You can modify `tools/cli-dep/requirements.txt` to include any additional Python 
+dependencies to the `deps.zip`.
+
+If the Python dependencies is a [Platform Wheel](https://packaging.python.org/en/latest/guides/distributing-packages-using-setuptools/#platform-wheels)
+that are specific to certain platform, like Linux, macOS, or Windows. You need to make
+sure that the environment that run the building script is the same as the environment
+the Flink cluster runs.
 
 ## Submit Job with Flink Cli
 
