@@ -275,3 +275,91 @@ class FlinkTableBuilderDerivedFeatureViewTest(FlinkTableBuilderTestBase):
 
         self.assertListEqual(["name"], built_feature_view_2.keys)
         self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_over_window_on_join_field(self):
+        df_1 = self.input_data.copy()
+        source = self._create_file_source(df_1)
+
+        df_2 = pd.DataFrame(
+            [
+                ["Alex", 100.0, "2022-01-01,09:01:00"],
+                ["Emma", 400.0, "2022-01-01,09:02:00"],
+                ["Alex", 200.0, "2022-01-02,09:03:00"],
+                ["Emma", 300.0, "2022-01-02,09:04:00"],
+                ["Jack", 500.0, "2022-01-03,09:05:00"],
+                ["Alex", 450.0, "2022-01-03,09:06:00"],
+            ],
+            columns=["name", "avg_cost", "time"],
+        )
+        source_2 = self._create_file_source(
+            df_2,
+            schema=Schema(["name", "avg_cost", "time"], [String, Float64, String]),
+            timestamp_format="%Y-%m-%d,%H:%M:%S",
+            keys=["name"],
+        )
+        feature_view_2 = DerivedFeatureView(
+            name="feature_view_2",
+            source=source,
+            features=[
+                Feature(
+                    name="cost",
+                    dtype=Int64,
+                    transform="cost",
+                ),
+                "distance",
+                f"{source_2.name}.avg_cost",
+                Feature(
+                    name="derived_cost",
+                    dtype=Float64,
+                    transform="avg_cost * distance",
+                ),
+                Feature(
+                    name="last_avg_cost",
+                    dtype=Int64,
+                    transform=OverWindowTransform(
+                        expr="avg_cost",
+                        agg_func="LAST_VALUE",
+                        window_size=timedelta(days=2),
+                        group_by_keys=["name"],
+                        limit=2,
+                    ),
+                ),
+                Feature(
+                    name="double_last_avg_cost",
+                    dtype=Float64,
+                    transform="last_avg_cost * 2",
+                ),
+            ],
+            keep_source_fields=False,
+        )
+
+        [_, built_feature_view_2] = self.registry.build_features(
+            [source_2, feature_view_2]
+        )
+
+        expected_result_df = df_1
+        expected_result_df["avg_cost"] = pd.Series(
+            [None, None, 100.0, 400.0, None, 200.0]
+        )
+        expected_result_df["derived_cost"] = pd.Series(
+            [None, None, 20000.0, 100000.0, None, 160000.0]
+        )
+        expected_result_df["last_avg_cost"] = pd.Series(
+            [None, None, 100.0, 400.0, None, 200.0]
+        )
+        expected_result_df["double_last_avg_cost"] = pd.Series(
+            [None, None, 200.0, 800.0, None, 400.0]
+        )
+        expected_result_df = expected_result_df.sort_values(
+            by=["name", "time"]
+        ).reset_index(drop=True)
+
+        result_df = (
+            self.flink_table_builder.build(features=built_feature_view_2)
+            .to_pandas()
+            .sort_values(by=["name", "time"])
+            .reset_index(drop=True)
+        )
+
+        self.assertListEqual(["name"], built_feature_view_2.keys)
+        self.assertTrue(expected_result_df.equals(result_df))

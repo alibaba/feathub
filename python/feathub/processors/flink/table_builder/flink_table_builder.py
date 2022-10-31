@@ -315,14 +315,6 @@ class FlinkTableBuilder:
                     f"{type(feature.transform).__name__} for feature {feature.name}."
                 )
 
-        for over_window_descriptor, agg_descriptor in window_agg_map.items():
-            tmp_table = evaluate_over_window_transform(
-                self.t_env,
-                tmp_table,
-                over_window_descriptor,
-                agg_descriptor,
-            )
-
         for (
             right_table_name,
             keys,
@@ -339,6 +331,14 @@ class FlinkTableBuilder:
                 right_table,
                 keys,
                 right_table_join_field_descriptors,
+            )
+
+        for over_window_descriptor, agg_descriptor in window_agg_map.items():
+            tmp_table = evaluate_over_window_transform(
+                self.t_env,
+                tmp_table,
+                over_window_descriptor,
+                agg_descriptor,
             )
 
         for feature in expression_features_following_first_over_window_or_join:
