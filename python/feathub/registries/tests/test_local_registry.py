@@ -71,8 +71,8 @@ class LocalRegistryTest(unittest.TestCase):
             self.registry.get_features(source.name)
             self.fail("RuntimeError should be raised.")
         except RuntimeError as err:
-            self.assertEqual(
-                str(err), "Table 'source' is not found in the cache or registry."
+            self.assertTrue(
+                "Table 'source' is not found in the cache or registry" in str(err)
             )
 
         self.registry.build_features([source])
@@ -102,8 +102,8 @@ class LocalRegistryTest(unittest.TestCase):
             self.processor.get_table(features=features).to_pandas()
             self.fail("RuntimeError should be raised.")
         except RuntimeError as err:
-            self.assertEqual(
-                str(err), "Table 'feature_view' is not found in the cache or registry."
+            self.assertTrue(
+                "Table 'feature_view' is not found in the cache or registry" in str(err)
             )
 
         # build_features() should fail because 'source' is not built or registered.
@@ -111,8 +111,8 @@ class LocalRegistryTest(unittest.TestCase):
             self.registry.build_features([features])
             self.fail("RuntimeError should be raised.")
         except RuntimeError as err:
-            self.assertEqual(
-                str(err), "Table 'source' is not found in the cache or registry."
+            self.assertTrue(
+                "Table 'source' is not found in the cache or registry" in str(err)
             )
 
         self.registry.build_features([source, features])

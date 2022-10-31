@@ -30,7 +30,7 @@ from feathub.table.schema import Schema
 
 
 class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
-    def test_sliding_window_transform_without_key(self):
+    def test_transform_without_key(self):
         df = self.input_data.copy()
         source = self._create_file_source(df)
 
@@ -70,7 +70,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
         self.assertTrue(expected_result_df.equals(result_df))
 
-    def test_sliding_window_transform_with_limit(self):
+    def test_transform_with_limit(self):
         df = self.input_data.copy()
         source = self._create_file_source(df)
 
@@ -123,7 +123,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
         self.assertTrue(expected_result_df.equals(result_df))
 
-    def test_sliding_window_transform_with_expression_as_group_by_key(self):
+    def test_transform_with_expression_as_group_by_key(self):
         df = self.input_data.copy()
         source = self._create_file_source(df)
 
@@ -180,7 +180,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
         self.assertTrue(expected_result_df.equals(result_df))
 
-    def test_sliding_window_transform_filter_expr(self):
+    def test_transform_with_filter_expr(self):
         df = pd.DataFrame(
             [
                 ["Alex", "pay", 100.0, "2022-01-01 09:01:00"],
@@ -281,7 +281,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
         self.assertTrue(expected_result_df.equals(result_df))
 
-    def test_sliding_window_transform_first_last_value(self):
+    def test_transform_with_expr_feature_after_sliding_feature(self):
         df = self.input_data.copy()
         source = self._create_file_source(df)
 
@@ -312,6 +312,13 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                     ),
                 ),
                 Feature(
+                    name="total_time",
+                    dtype=Float64,
+                    transform="(UNIX_TIMESTAMP(last_time) - "
+                    "UNIX_TIMESTAMP(first_time))",
+                    keys=["name"],
+                ),
+                Feature(
                     name="cnt",
                     dtype=Int64,
                     transform=SlidingWindowTransform(
@@ -321,6 +328,13 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                         window_size=timedelta(days=2),
                         step_size=timedelta(days=1),
                     ),
+                ),
+                Feature(
+                    name="avg_time_per_trip",
+                    dtype=Float64,
+                    transform="(UNIX_TIMESTAMP(last_time) - "
+                    "UNIX_TIMESTAMP(first_time)) / cnt",
+                    keys=["name"],
                 ),
             ],
         )
@@ -332,66 +346,92 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                     "2022-01-01 23:59:59",
                     "2022-01-01 08:01:00",
                     "2022-01-01 08:01:00",
+                    0.0,
                     1,
+                    0.0,
                 ],
                 [
                     "Alex",
                     "2022-01-02 23:59:59",
                     "2022-01-01 08:01:00",
                     "2022-01-02 08:03:00",
+                    86520.0,
                     2,
+                    43260.0,
                 ],
                 [
                     "Alex",
                     "2022-01-03 23:59:59",
                     "2022-01-02 08:03:00",
                     "2022-01-03 08:06:00",
+                    86580.0,
                     2,
+                    43290.0,
                 ],
                 [
                     "Alex",
                     "2022-01-04 23:59:59",
                     "2022-01-03 08:06:00",
                     "2022-01-03 08:06:00",
+                    0.0,
                     1,
+                    0.0,
                 ],
                 [
                     "Emma",
                     "2022-01-01 23:59:59",
                     "2022-01-01 08:02:00",
                     "2022-01-01 08:02:00",
+                    0.0,
                     1,
+                    0.0,
                 ],
                 [
                     "Emma",
                     "2022-01-02 23:59:59",
                     "2022-01-01 08:02:00",
                     "2022-01-02 08:04:00",
+                    86520.0,
                     2,
+                    43260.0,
                 ],
                 [
                     "Emma",
                     "2022-01-03 23:59:59",
                     "2022-01-02 08:04:00",
                     "2022-01-02 08:04:00",
+                    0.0,
                     1,
+                    0.0,
                 ],
                 [
                     "Jack",
                     "2022-01-03 23:59:59",
                     "2022-01-03 08:05:00",
                     "2022-01-03 08:05:00",
+                    0.0,
                     1,
+                    0.0,
                 ],
                 [
                     "Jack",
                     "2022-01-04 23:59:59",
                     "2022-01-03 08:05:00",
                     "2022-01-03 08:05:00",
+                    0.0,
                     1,
+                    0.0,
                 ],
             ],
-            columns=["name", "time", "first_time", "last_time", "cnt"],
+            columns=[
+                "name",
+                "time",
+                "first_time",
+                "last_time",
+                "total_time",
+                "cnt",
+                "avg_time_per_trip",
+            ],
         )
 
         expected_result_df = expected_result_df.sort_values(
@@ -494,7 +534,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
         self.assertTrue(expected_result_df.equals(result_df))
 
-    def test_sliding_window_transform_value_counts(self):
+    def test_transform_with_value_counts(self):
         df = pd.DataFrame(
             [
                 ["Alex", 100.0, "2022-01-01 09:01:00"],

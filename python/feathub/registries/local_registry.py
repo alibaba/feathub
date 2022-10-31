@@ -63,7 +63,10 @@ class LocalRegistry(Registry):
 
     def get_features(self, name: str) -> TableDescriptor:
         if name not in self.tables:
-            raise RuntimeError(f"Table '{name}' is not found in the cache or registry.")
+            raise RuntimeError(
+                f"Table '{name}' is not found in the cache or registry. "
+                "Please invoke build_features(..) for this table."
+            )
         return self.tables[name]
 
     def delete_features(self, name: str) -> bool:

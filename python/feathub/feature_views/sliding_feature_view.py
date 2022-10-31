@@ -38,6 +38,10 @@ class SlidingFeatureView(FeatureView):
     not equal the number of rows in its source table. This is because the features
     defined by a sliding window transformation can change over time even if there is no
     change in the source table.
+
+    The output fields of this feature view consist of the features explicitly listed in
+    the `features` parameter, their group-by keys, and the timestamp field (if exists)
+    in the source table. Other fields in the source table will not be included.
     """
 
     def __init__(
@@ -54,13 +58,14 @@ class SlidingFeatureView(FeatureView):
         :param features: A list of features to be computed from the source table. The
                          feature should be computed by either ExpressionTransform or
                          SlidingWindowTransform. It must have at least one feature with
-                         SlidingWindowTransform. If a feature is computed by
-                         ExpressionTransform it should be used as one of the grouping
-                         keys of SlidingWindowTransforms. If a feature is a string, it
-                         should refer to a feature name in the source table, and it
-                         should be used as one of the grouping key of
-                         SlidingWindowTransforms. All the SlidingWindowTransforms should
-                         have the same step_size, window size and group-by key.
+                         SlidingWindowTransform. Features computed by
+                         SlidingWindowTransform must have the same step_size, window
+                         size and group-by keys. For any feature computed by
+                         ExpressionTransform, it should either be included as one of the
+                         group-by keys of SlidingWindowTransform features in this list,
+                         or its expression must only depend on the
+                         SlidingWindowTransform features specified earlier in this list
+                         and their group-by keys.
         """
         super().__init__(
             name=name,
@@ -121,16 +126,21 @@ class SlidingFeatureView(FeatureView):
                 "SlidingWindowTransform."
             )
 
+        # ExpressionTransform features listsed before the first SlidingWindowTransform
+        # feature.
         expression_feature_names: Set[str] = set()
         sliding_window_transforms_group_by_keys: Set[str] = set()
+
         for feature in features:
             if isinstance(feature, str):
-                expression_feature_names.add(feature)
+                if len(sliding_window_transforms_group_by_keys) == 0:
+                    expression_feature_names.add(feature)
                 continue
 
             transform = feature.transform
             if isinstance(transform, ExpressionTransform):
-                expression_feature_names.add(feature.name)
+                if len(sliding_window_transforms_group_by_keys) == 0:
+                    expression_feature_names.add(feature.name)
             elif isinstance(transform, SlidingWindowTransform):
                 sliding_window_transforms_group_by_keys.update(transform.group_by_keys)
             else:
@@ -139,6 +149,9 @@ class SlidingFeatureView(FeatureView):
                     f"'{type(transform)}'."
                 )
 
+        # TODO: validate that ExpressionTransform feature after the first
+        #  SlidingWindowTransform feature depends only on SlidingWindowTransform
+        #  features and their group-by keys.
         invalid_expression_feature_names = set()
         for expression_feature_name in expression_feature_names:
             if expression_feature_name not in sliding_window_transforms_group_by_keys:
