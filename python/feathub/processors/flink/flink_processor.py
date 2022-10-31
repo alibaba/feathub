@@ -35,9 +35,6 @@ from feathub.processors.flink.table_builder.flink_table_builder import (
     FlinkTableBuilder,
 )
 from feathub.processors.flink.job_submitter.flink_job_submitter import FlinkJobSubmitter
-from feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster_job_submitter import (  # noqa
-    FlinkKubernetesApplicationClusterJobSubmitter,
-)
 from feathub.processors.flink.job_submitter.flink_session_cluster_job_submitter import (
     FlinkSessionClusterJobSubmitter,
 )
@@ -133,6 +130,13 @@ class FlinkProcessor(Processor):
                 self, self.stores
             )
         elif self.deployment_mode == DeploymentMode.KUBERNETES_APPLICATION:
+            # Only import FlinkKubernetesApplicationClusterJobSubmitter in
+            # kubernetes-application mode so that kubernetes is not required when the
+            # job is run in cli mode or session mode.
+            from feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster_job_submitter import (  # noqa
+                FlinkKubernetesApplicationClusterJobSubmitter,
+            )
+
             self.flink_table_builder = FlinkTableBuilder(
                 self._get_table_env(), self.registry
             )

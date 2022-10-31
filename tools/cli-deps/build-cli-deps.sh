@@ -21,19 +21,11 @@ set -e
 
 CURRENT_DIR=$(dirname "${BASH_SOURCE-$0}")
 CURRENT_DIR=$(cd "${CURRENT_DIR}"; pwd)
-PROJECT_DIR=$(cd "${CURRENT_DIR}/../.."; pwd)
-PYTHON_DIR=${PROJECT_DIR}/python
-JAVA_DIR=${PROJECT_DIR}/java
 
-# build java dependencies
-cd "${JAVA_DIR}"
-mvn clean package -DskipTests
-
-# build wheels
-cd "${PYTHON_DIR}"
-WITHOUT_PYFLINK=1 python3 setup.py bdist_wheel
-[ -d "${CURRENT_DIR}"/wheels ] && rm -rf "${CURRENT_DIR}"/wheels
-mkdir "${CURRENT_DIR}"/wheels
-cp dist/feathub-*.whl "${CURRENT_DIR}"/wheels
-
-docker run -it --rm -v "${CURRENT_DIR}":/build -w /build quay.io/pypa/manylinux2014_x86_64 ./build.sh
+# zip Feathub and its dependencies
+cd "${CURRENT_DIR}"
+# TODO: Install the latest stable version after Feathub released.
+python -m pip install --target __pypackages__ feathub-nightly --no-deps
+python -m pip install --target __pypackages__ -r requirements.txt
+cd __pypackages__ && zip -r deps.zip . && mv deps.zip ../ && cd ..
+rm -rf __pypackages__

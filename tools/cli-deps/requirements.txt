@@ -1,2 +1,1 @@
 ply>=3.11
-kubernetes~=24.2
