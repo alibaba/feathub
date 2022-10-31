@@ -234,16 +234,26 @@ class FlinkTableBuilder:
             Tuple[str, Sequence[str]], Dict[str, JoinFieldDescriptor]
         ] = {}
 
+        # This list contains all ExpressionTransform features listed after the first
+        # JoinTransform or OverWindowTransform feature in the dependent_features.
+        # These features are evaluated after all over windows and table join.
+        expression_features_following_first_over_window_or_join = []
+
         for feature in dependent_features:
             if feature.name in tmp_table.get_schema().get_field_names():
                 continue
             if isinstance(feature.transform, ExpressionTransform):
-                tmp_table = self._evaluate_expression_transform(
-                    tmp_table,
-                    feature.transform,
-                    feature.name,
-                    feature.dtype,
-                )
+                if len(right_tables) > 0 or len(window_agg_map) > 0:
+                    expression_features_following_first_over_window_or_join.append(
+                        feature
+                    )
+                else:
+                    tmp_table = self._evaluate_expression_transform(
+                        tmp_table,
+                        feature.transform,
+                        feature.name,
+                        feature.dtype,
+                    )
             elif isinstance(feature.transform, OverWindowTransform):
                 if feature_view.timestamp_field is None:
                     raise FeathubException(
@@ -305,14 +315,6 @@ class FlinkTableBuilder:
                     f"{type(feature.transform).__name__} for feature {feature.name}."
                 )
 
-        for over_window_descriptor, agg_descriptor in window_agg_map.items():
-            tmp_table = evaluate_over_window_transform(
-                self.t_env,
-                tmp_table,
-                over_window_descriptor,
-                agg_descriptor,
-            )
-
         for (
             right_table_name,
             keys,
@@ -329,6 +331,24 @@ class FlinkTableBuilder:
                 right_table,
                 keys,
                 right_table_join_field_descriptors,
+            )
+
+        for over_window_descriptor, agg_descriptor in window_agg_map.items():
+            tmp_table = evaluate_over_window_transform(
+                self.t_env,
+                tmp_table,
+                over_window_descriptor,
+                agg_descriptor,
+            )
+
+        for feature in expression_features_following_first_over_window_or_join:
+            if not isinstance(feature.transform, ExpressionTransform):
+                raise FeathubTransformationException("Unsupported transformation type")
+            tmp_table = self._evaluate_expression_transform(
+                tmp_table,
+                feature.transform,
+                feature.name,
+                feature.dtype,
             )
 
         output_fields = self._get_output_fields(feature_view, source_fields)
