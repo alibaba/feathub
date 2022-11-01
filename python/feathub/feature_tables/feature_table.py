@@ -20,6 +20,8 @@ from feathub.table.table_descriptor import TableDescriptor
 from feathub.table.schema import Schema
 
 
+# TODO: Update Sink implementation of FeatureTable to support rename timestamp field
+#  and convert timestamp_format.
 class FeatureTable(TableDescriptor, ABC):
     """
     Provides properties to uniquely identify and describe a physical table.

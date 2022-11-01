@@ -78,3 +78,22 @@ class FeatureViewTest(unittest.TestCase):
         self.assertEqual(feature_1, built_feature_view.get_feature("feature_1"))
         self.assertEqual(feature_2, built_feature_view.get_feature("feature_2"))
         self.assertEqual(feature_3, built_feature_view.get_feature("feature_3"))
+
+    def test_unresolved_feature_view(self):
+        feature_1 = Feature(
+            name="feature_1",
+            dtype=types.Float32,
+            transform="CAST(fare_amount AS FLOAT) + 1",
+        )
+
+        feature_view_1 = DerivedFeatureView(
+            name="feature_view_1",
+            source="source_1",
+            features=[
+                feature_1,
+            ],
+            keep_source_fields=True,
+        )
+
+        self.assertTrue(feature_view_1.is_unresolved())
+        self.assertIsNone(feature_view_1.timestamp_field)

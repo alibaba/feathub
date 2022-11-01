@@ -31,6 +31,8 @@ class FeatureView(TableDescriptor, ABC):
         source: Union[str, TableDescriptor],
         features: Sequence[Union[str, Feature]],
         keep_source_fields: bool = False,
+        timestamp_field: Optional[str] = None,
+        timestamp_format: str = "epoch",
     ):
         """
         :param name: The unique identifier of this feature view in the registry.
@@ -44,6 +46,17 @@ class FeatureView(TableDescriptor, ABC):
                          which refers to a feature in the source table.
         :param keep_source_fields: True iff all fields in the source table should be
                                    included in this table.
+        :param timestamp_field: Optional. If not None, the feature with the given name
+                                is used as the `timestamp_field` of the TableDescriptor
+                                represented by this FeatureView. Otherwise, the
+                                `timestamp_field` of the source TableDescriptor is used
+                                as the `timestamp_field` of the TableDescriptor
+                                represented by this FeatureView.
+        :param timestamp_format: The format of the timestamp field. This argument only
+                                 takes effect when the `timestamp_field` is not None.
+                                 Otherwise, the `timestamp_format` of the source
+                                 TableDescriptor is used as the `timestamp_format` of
+                                 the TableDescriptor represented by this FeatureView.
         """
 
         self.source = source
@@ -56,15 +69,16 @@ class FeatureView(TableDescriptor, ABC):
             # Uses table's keys as features' keys if features' keys are not specified.
             for feature in [f for f in self.get_resolved_features() if f.keys is None]:
                 feature.keys = keys
+
+            if timestamp_field is None:
+                timestamp_field = cast(TableDescriptor, self.source).timestamp_field
+                timestamp_format = cast(TableDescriptor, self.source).timestamp_format
+
         super().__init__(
             name=name,
             keys=keys,
-            timestamp_field=None
-            if is_unresolved
-            else cast(TableDescriptor, self.source).timestamp_field,
-            timestamp_format=None
-            if is_unresolved
-            else cast(TableDescriptor, self.source).timestamp_format,
+            timestamp_field=timestamp_field,
+            timestamp_format=timestamp_format,
         )
 
     def is_unresolved(self) -> bool:

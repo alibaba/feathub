@@ -274,3 +274,55 @@ class SlidingFeatureViewTest(unittest.TestCase):
         self.assertIn(
             "at least one feature with SlidingWindowTransform", cm.exception.args[0]
         )
+
+    def test_sliding_feature_view_window_timestamp(self):
+        feature = Feature(
+            name="feature",
+            dtype=types.Float32,
+            transform=SlidingWindowTransform(
+                expr="CAST(fare_amount AS FLOAT) + 1",
+                agg_func="SUM",
+                window_size=timedelta(seconds=30),
+                group_by_keys=["id"],
+                step_size=timedelta(seconds=10),
+            ),
+        )
+
+        feature_view = SlidingFeatureView(
+            name="feature_view_1",
+            source=self.source,
+            features=[
+                feature,
+            ],
+        )
+
+        expected_timestamp_feature = Feature(
+            name="window_time",
+            dtype=types.Int64,
+            transform="CURRENT_EVENT_TIME()",
+            keys=["id"],
+        )
+
+        self.assertEqual(
+            expected_timestamp_feature, feature_view.get_feature("window_time")
+        )
+
+        feature_view = SlidingFeatureView(
+            name="feature_view_1",
+            source=self.source,
+            features=[
+                feature,
+            ],
+            timestamp_field="my_window_time_field",
+        )
+
+        expected_timestamp_feature = Feature(
+            name="my_window_time_field",
+            dtype=types.Int64,
+            transform="CURRENT_EVENT_TIME()",
+            keys=["id"],
+        )
+
+        self.assertEqual(
+            expected_timestamp_feature, feature_view.get_feature("my_window_time_field")
+        )

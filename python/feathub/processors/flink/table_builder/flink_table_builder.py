@@ -432,16 +432,6 @@ class FlinkTableBuilder:
         if agg_table is not None:
             tmp_table = agg_table
 
-        for feature in expression_features_following_first_sliding_feature:
-            if not isinstance(feature.transform, ExpressionTransform):
-                raise FeathubTransformationException("Unsupported transformation type")
-            tmp_table = self._evaluate_expression_transform(
-                tmp_table,
-                feature.transform,
-                feature.name,
-                feature.dtype,
-            )
-
         # Add the timestamp field according to the timestamp format from
         # event time(window time).
         if feature_view.timestamp_field is not None:
@@ -464,6 +454,23 @@ class FlinkTableBuilder:
                         f"'{java_datetime_format}')"
                     ).alias(feature_view.timestamp_field)
                 )
+
+        for feature in expression_features_following_first_sliding_feature:
+            if not isinstance(feature.transform, ExpressionTransform):
+                raise FeathubTransformationException("Unsupported transformation type")
+
+            # This is a temporary solution to ignore the CURRENT_EVENT_TIME function as
+            # the event time (window time) is added above.
+            # TODO: Refactor FlinkAstEvaluator to properly handle CURRENT_EVENT_TIME and
+            #  expose CURRENT_EVENT_TIME as a built-in function of Feathub expression.
+            if feature.transform.expr == "CURRENT_EVENT_TIME()":
+                continue
+            tmp_table = self._evaluate_expression_transform(
+                tmp_table,
+                feature.transform,
+                feature.name,
+                feature.dtype,
+            )
 
         output_fields = self._get_output_fields(feature_view, source_fields)
         return tmp_table.select(

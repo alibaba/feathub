@@ -11,6 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import datetime
 from datetime import timedelta
 
 import pandas as pd
@@ -53,18 +54,18 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
         expected_result_df = pd.DataFrame(
             [
-                ["2022-01-01 23:59:59", 500],
-                ["2022-01-02 23:59:59", 1000],
-                ["2022-01-03 23:59:59", 1600],
-                ["2022-01-04 23:59:59", 1100],
+                [self._to_unix_timestamp("2022-01-01 23:59:59.999"), 500],
+                [self._to_unix_timestamp("2022-01-02 23:59:59.999"), 1000],
+                [self._to_unix_timestamp("2022-01-03 23:59:59.999"), 1600],
+                [self._to_unix_timestamp("2022-01-04 23:59:59.999"), 1100],
             ],
-            columns=["time", "total_cost"],
+            columns=["window_time", "total_cost"],
         )
 
         result_df = (
             self.flink_table_builder.build(features=features)
             .to_pandas()
-            .sort_values(by=["time"])
+            .sort_values(by=["window_time"])
             .reset_index(drop=True)
         )
 
@@ -95,29 +96,29 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
         expected_result_df = pd.DataFrame(
             [
-                ["Alex", "2022-01-01 23:59:59", 100],
-                ["Alex", "2022-01-02 23:59:59", 400],
-                ["Alex", "2022-01-03 23:59:59", 900],
-                ["Alex", "2022-01-04 23:59:59", 900],
-                ["Alex", "2022-01-05 23:59:59", 600],
-                ["Emma", "2022-01-01 23:59:59", 400],
-                ["Emma", "2022-01-02 23:59:59", 600],
-                ["Emma", "2022-01-03 23:59:59", 600],
-                ["Emma", "2022-01-04 23:59:59", 200],
-                ["Jack", "2022-01-03 23:59:59", 500],
-                ["Jack", "2022-01-04 23:59:59", 500],
-                ["Jack", "2022-01-05 23:59:59", 500],
+                ["Alex", self._to_unix_timestamp("2022-01-01 23:59:59.999"), 100],
+                ["Alex", self._to_unix_timestamp("2022-01-02 23:59:59.999"), 400],
+                ["Alex", self._to_unix_timestamp("2022-01-03 23:59:59.999"), 900],
+                ["Alex", self._to_unix_timestamp("2022-01-04 23:59:59.999"), 900],
+                ["Alex", self._to_unix_timestamp("2022-01-05 23:59:59.999"), 600],
+                ["Emma", self._to_unix_timestamp("2022-01-01 23:59:59.999"), 400],
+                ["Emma", self._to_unix_timestamp("2022-01-02 23:59:59.999"), 600],
+                ["Emma", self._to_unix_timestamp("2022-01-03 23:59:59.999"), 600],
+                ["Emma", self._to_unix_timestamp("2022-01-04 23:59:59.999"), 200],
+                ["Jack", self._to_unix_timestamp("2022-01-03 23:59:59.999"), 500],
+                ["Jack", self._to_unix_timestamp("2022-01-04 23:59:59.999"), 500],
+                ["Jack", self._to_unix_timestamp("2022-01-05 23:59:59.999"), 500],
             ],
-            columns=["name", "time", "total_cost"],
+            columns=["name", "window_time", "total_cost"],
         )
         expected_result_df = expected_result_df.sort_values(
-            by=["name", "time"]
+            by=["name", "window_time"]
         ).reset_index(drop=True)
 
         result_df = (
             self.flink_table_builder.build(features=features)
             .to_pandas()
-            .sort_values(by=["name", "time"])
+            .sort_values(by=["name", "window_time"])
             .reset_index(drop=True)
         )
 
@@ -152,29 +153,29 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
         expected_result_df = pd.DataFrame(
             [
-                ["2022-01-01 23:59:59", "Alex_Alex", 100],
-                ["2022-01-02 23:59:59", "Alex_Alex", 400],
-                ["2022-01-03 23:59:59", "Alex_Alex", 900],
-                ["2022-01-04 23:59:59", "Alex_Alex", 900],
-                ["2022-01-05 23:59:59", "Alex_Alex", 600],
-                ["2022-01-01 23:59:59", "Emma_Emma", 400],
-                ["2022-01-02 23:59:59", "Emma_Emma", 600],
-                ["2022-01-03 23:59:59", "Emma_Emma", 600],
-                ["2022-01-04 23:59:59", "Emma_Emma", 200],
-                ["2022-01-03 23:59:59", "Jack_Jack", 500],
-                ["2022-01-04 23:59:59", "Jack_Jack", 500],
-                ["2022-01-05 23:59:59", "Jack_Jack", 500],
+                [self._to_unix_timestamp("2022-01-01 23:59:59.999"), "Alex_Alex", 100],
+                [self._to_unix_timestamp("2022-01-02 23:59:59.999"), "Alex_Alex", 400],
+                [self._to_unix_timestamp("2022-01-03 23:59:59.999"), "Alex_Alex", 900],
+                [self._to_unix_timestamp("2022-01-04 23:59:59.999"), "Alex_Alex", 900],
+                [self._to_unix_timestamp("2022-01-05 23:59:59.999"), "Alex_Alex", 600],
+                [self._to_unix_timestamp("2022-01-01 23:59:59.999"), "Emma_Emma", 400],
+                [self._to_unix_timestamp("2022-01-02 23:59:59.999"), "Emma_Emma", 600],
+                [self._to_unix_timestamp("2022-01-03 23:59:59.999"), "Emma_Emma", 600],
+                [self._to_unix_timestamp("2022-01-04 23:59:59.999"), "Emma_Emma", 200],
+                [self._to_unix_timestamp("2022-01-03 23:59:59.999"), "Jack_Jack", 500],
+                [self._to_unix_timestamp("2022-01-04 23:59:59.999"), "Jack_Jack", 500],
+                [self._to_unix_timestamp("2022-01-05 23:59:59.999"), "Jack_Jack", 500],
             ],
-            columns=["time", "name_name", "total_cost"],
+            columns=["window_time", "name_name", "total_cost"],
         )
         expected_result_df = expected_result_df.sort_values(
-            by=["name_name", "time"]
+            by=["name_name", "window_time"]
         ).reset_index(drop=True)
 
         result_df = (
             self.flink_table_builder.build(features=features)
             .to_pandas()
-            .sort_values(by=["name_name", "time"])
+            .sort_values(by=["name_name", "window_time"])
             .reset_index(drop=True)
         )
 
@@ -246,22 +247,94 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
         expected_result_df = pd.DataFrame(
             [
-                ["Alex", "2022-01-01 09:01:59", 300.0, 300.0, 2],
-                ["Alex", "2022-01-01 09:02:59", 300.0, 300.0, 2],
-                ["Alex", "2022-01-01 09:03:59", 0.0, 200.0, 0],
-                ["Alex", "2022-01-01 09:04:59", 0.0, 200.0, 0],
-                ["Alex", "2022-01-01 09:06:59", 450.0, 0.0, 1],
-                ["Alex", "2022-01-01 09:07:59", 450.0, 0.0, 1],
-                ["Emma", "2022-01-01 09:02:59", 400.0, 500.0, 1],
-                ["Emma", "2022-01-01 09:03:59", 400.0, 500.0, 1],
-                ["Emma", "2022-01-01 09:04:59", 300.0, 0.0, 1],
-                ["Emma", "2022-01-01 09:05:59", 300.0, 0.0, 1],
-                ["Jack", "2022-01-01 09:05:59", 0.0, 500.0, 0],
-                ["Jack", "2022-01-01 09:06:59", 0.0, 500.0, 0],
+                [
+                    "Alex",
+                    self._to_unix_timestamp("2022-01-01 09:01:59.999"),
+                    300.0,
+                    300.0,
+                    2,
+                ],
+                [
+                    "Alex",
+                    self._to_unix_timestamp("2022-01-01 09:02:59.999"),
+                    300.0,
+                    300.0,
+                    2,
+                ],
+                [
+                    "Alex",
+                    self._to_unix_timestamp("2022-01-01 09:03:59.999"),
+                    0.0,
+                    200.0,
+                    0,
+                ],
+                [
+                    "Alex",
+                    self._to_unix_timestamp("2022-01-01 09:04:59.999"),
+                    0.0,
+                    200.0,
+                    0,
+                ],
+                [
+                    "Alex",
+                    self._to_unix_timestamp("2022-01-01 09:06:59.999"),
+                    450.0,
+                    0.0,
+                    1,
+                ],
+                [
+                    "Alex",
+                    self._to_unix_timestamp("2022-01-01 09:07:59.999"),
+                    450.0,
+                    0.0,
+                    1,
+                ],
+                [
+                    "Emma",
+                    self._to_unix_timestamp("2022-01-01 09:02:59.999"),
+                    400.0,
+                    500.0,
+                    1,
+                ],
+                [
+                    "Emma",
+                    self._to_unix_timestamp("2022-01-01 09:03:59.999"),
+                    400.0,
+                    500.0,
+                    1,
+                ],
+                [
+                    "Emma",
+                    self._to_unix_timestamp("2022-01-01 09:04:59.999"),
+                    300.0,
+                    0.0,
+                    1,
+                ],
+                [
+                    "Emma",
+                    self._to_unix_timestamp("2022-01-01 09:05:59.999"),
+                    300.0,
+                    0.0,
+                    1,
+                ],
+                [
+                    "Jack",
+                    self._to_unix_timestamp("2022-01-01 09:05:59.999"),
+                    0.0,
+                    500.0,
+                    0,
+                ],
+                [
+                    "Jack",
+                    self._to_unix_timestamp("2022-01-01 09:06:59.999"),
+                    0.0,
+                    500.0,
+                    0,
+                ],
             ],
             columns=[
                 "name",
-                "time",
+                "window_time",
                 "last_2_minute_total_pay",
                 "last_2_minute_total_receive",
                 "pay_count",
@@ -269,13 +342,13 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
         )
 
         expected_result_df = expected_result_df.sort_values(
-            by=["name", "time"]
+            by=["name", "window_time"]
         ).reset_index(drop=True)
 
         result_df = (
             self.flink_table_builder.build(features=features)
             .to_pandas()
-            .sort_values(by=["name", "time"])
+            .sort_values(by=["name", "window_time"])
             .reset_index(drop=True)
         )
 
@@ -343,7 +416,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
             [
                 [
                     "Alex",
-                    "2022-01-01 23:59:59",
+                    self._to_unix_timestamp("2022-01-01 23:59:59.999"),
                     "2022-01-01 08:01:00",
                     "2022-01-01 08:01:00",
                     0.0,
@@ -352,7 +425,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Alex",
-                    "2022-01-02 23:59:59",
+                    self._to_unix_timestamp("2022-01-02 23:59:59.999"),
                     "2022-01-01 08:01:00",
                     "2022-01-02 08:03:00",
                     86520.0,
@@ -361,7 +434,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Alex",
-                    "2022-01-03 23:59:59",
+                    self._to_unix_timestamp("2022-01-03 23:59:59.999"),
                     "2022-01-02 08:03:00",
                     "2022-01-03 08:06:00",
                     86580.0,
@@ -370,7 +443,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Alex",
-                    "2022-01-04 23:59:59",
+                    self._to_unix_timestamp("2022-01-04 23:59:59.999"),
                     "2022-01-03 08:06:00",
                     "2022-01-03 08:06:00",
                     0.0,
@@ -379,7 +452,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Emma",
-                    "2022-01-01 23:59:59",
+                    self._to_unix_timestamp("2022-01-01 23:59:59.999"),
                     "2022-01-01 08:02:00",
                     "2022-01-01 08:02:00",
                     0.0,
@@ -388,7 +461,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Emma",
-                    "2022-01-02 23:59:59",
+                    self._to_unix_timestamp("2022-01-02 23:59:59.999"),
                     "2022-01-01 08:02:00",
                     "2022-01-02 08:04:00",
                     86520.0,
@@ -397,7 +470,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Emma",
-                    "2022-01-03 23:59:59",
+                    self._to_unix_timestamp("2022-01-03 23:59:59.999"),
                     "2022-01-02 08:04:00",
                     "2022-01-02 08:04:00",
                     0.0,
@@ -406,7 +479,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Jack",
-                    "2022-01-03 23:59:59",
+                    self._to_unix_timestamp("2022-01-03 23:59:59.999"),
                     "2022-01-03 08:05:00",
                     "2022-01-03 08:05:00",
                     0.0,
@@ -415,7 +488,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Jack",
-                    "2022-01-04 23:59:59",
+                    self._to_unix_timestamp("2022-01-04 23:59:59.999"),
                     "2022-01-03 08:05:00",
                     "2022-01-03 08:05:00",
                     0.0,
@@ -425,7 +498,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
             ],
             columns=[
                 "name",
-                "time",
+                "window_time",
                 "first_time",
                 "last_time",
                 "total_time",
@@ -435,13 +508,13 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
         )
 
         expected_result_df = expected_result_df.sort_values(
-            by=["name", "time"]
+            by=["name", "window_time"]
         ).reset_index(drop=True)
 
         result_df = (
             self.flink_table_builder.build(features=features)
             .to_pandas()
-            .sort_values(by=["name", "time"])
+            .sort_values(by=["name", "window_time"])
             .reset_index(drop=True)
         )
 
@@ -581,21 +654,122 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
         expected_result_df = pd.DataFrame(
             [
-                ["Alex", "2022-01-01 09:01:59", {"100.0": 2}, 2],
-                ["Alex", "2022-01-01 09:02:59", {"200.0": 2, "100.0": 1}, 3],
-                ["Alex", "2022-01-01 09:03:59", {"200.0": 2}, 2],
+                [
+                    "Alex",
+                    self._to_unix_timestamp("2022-01-01 09:01:59.999"),
+                    {"100.0": 2},
+                    2,
+                ],
+                [
+                    "Alex",
+                    self._to_unix_timestamp("2022-01-01 09:02:59.999"),
+                    {"200.0": 2, "100.0": 1},
+                    3,
+                ],
+                [
+                    "Alex",
+                    self._to_unix_timestamp("2022-01-01 09:03:59.999"),
+                    {"200.0": 2},
+                    2,
+                ],
             ],
-            columns=["name", "time", "last_2_minute_cost_value_counts", "cnt"],
+            columns=["name", "window_time", "last_2_minute_cost_value_counts", "cnt"],
         )
         expected_result_df = expected_result_df.sort_values(
-            by=["name", "time"]
+            by=["name", "window_time"]
         ).reset_index(drop=True)
 
         table = self.flink_table_builder.build(features)
         result_df = (
             flink_table_to_pandas(table)
-            .sort_values(by=["name", "time"])
+            .sort_values(by=["name", "window_time"])
             .reset_index(drop=True)
         )
 
         self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_sliding_window_with_millisecond_sliding_window_timestamp(self):
+        df = pd.DataFrame(
+            [
+                ["Alex", 100.0, "2022-01-01 09:01:00"],
+                ["Alex", 100.0, "2022-01-01 09:01:20"],
+                ["Alex", 200.0, "2022-01-01 09:02:00"],
+                ["Alex", 200.0, "2022-01-01 09:02:30"],
+            ],
+            columns=["name", "cost", "time"],
+        )
+
+        schema = Schema(["name", "cost", "time"], [String, Float64, String])
+        source = self._create_file_source(
+            df, schema=schema, keys=["name"], timestamp_format="%Y-%m-%d %H:%M:%S"
+        )
+
+        features = SlidingFeatureView(
+            name="features",
+            source=source,
+            features=[
+                Feature(
+                    name="cnt",
+                    dtype=Int64,
+                    transform=SlidingWindowTransform(
+                        expr="1",
+                        agg_func="COUNT",
+                        group_by_keys=["name"],
+                        window_size=timedelta(minutes=2),
+                        step_size=timedelta(minutes=1),
+                        limit=3,
+                    ),
+                ),
+                Feature(
+                    name="epoch_window_time",
+                    dtype=Int64,
+                    transform="UNIX_TIMESTAMP(sliding_window_timestamp)",
+                ),
+            ],
+            timestamp_field="sliding_window_timestamp",
+            timestamp_format="%Y-%m-%d %H:%M:%S.%f",
+        )
+
+        expected_result_df = pd.DataFrame(
+            [
+                [
+                    "Alex",
+                    "2022-01-01 09:01:59.999",
+                    2,
+                    self._to_unix_timestamp("2022-01-01 09:01:59.999"),
+                ],
+                [
+                    "Alex",
+                    "2022-01-01 09:02:59.999",
+                    3,
+                    self._to_unix_timestamp("2022-01-01 09:02:59.999"),
+                ],
+                [
+                    "Alex",
+                    "2022-01-01 09:03:59.999",
+                    2,
+                    self._to_unix_timestamp("2022-01-01 09:03:59.999"),
+                ],
+            ],
+            columns=["name", "sliding_window_timestamp", "cnt", "epoch_window_time"],
+        )
+        expected_result_df = expected_result_df.sort_values(
+            by=["name", "sliding_window_timestamp"]
+        ).reset_index(drop=True)
+
+        table = self.flink_table_builder.build(features)
+        result_df = (
+            flink_table_to_pandas(table)
+            .sort_values(by=["name", "sliding_window_timestamp"])
+            .reset_index(drop=True)
+        )
+
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    @staticmethod
+    def _to_unix_timestamp(
+        timestamp_str: str, timestamp_format: str = "%Y-%m-%d %H:%M:%S.%f"
+    ) -> int:
+        return int(
+            datetime.datetime.strptime(timestamp_str, timestamp_format).timestamp()
+        )

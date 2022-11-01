@@ -39,7 +39,7 @@ class RandomField:
                         random generated field, work for numeric types. If it is None,
                         it uses the maximum value of the field type.
         :param max_past: It specifies the maximum past of a timestamp field,
-                         only works for timestamp types. Default to 0.
+                         only works for timestamp types.
         :param length: Size or length of field type String or VectorType. Default to
                        100.
         """
@@ -90,8 +90,7 @@ class DataGenConfig:
         field_configs: Optional[Dict[str, Union[RandomField, SequenceField]]] = None,
     ) -> None:
         """
-        :param rows_per_second: Rows per second to control the emit rate. Default to
-                                10000.
+        :param rows_per_second: Rows per second to control the emit rate.
         :param number_of_rows: Optional. If it is None, unlimited number of rows will be
                                generated. If it is not None, it specifies the total
                                number of rows to emit.
