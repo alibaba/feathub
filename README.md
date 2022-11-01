@@ -27,11 +27,14 @@ Feathub provides SDK and infra that enable the following capabilities:
 
 <img src="docs/figures/architecture_1.png" width="50%" height="auto">
 
+The figure above shows the key components and concepts in the FeatHub
+architecture.
+
 <img src="docs/figures/architecture_2.png" width="70%" height="auto">
 
-The above figures show the Feathub architecture and how FeatHub can be used for
-machine learning training and inference. Please checkout [Feathub architecture
-and concepts](docs/architecture.md) for more details.
+The figure above shows how a developer can use FeatHub to facilitate feature
+engineering for model training and model inference. Please checkout [Feathub
+architecture and concepts](docs/architecture.md) for more details.
 
 ## Getting Started
 
@@ -133,6 +136,18 @@ $ python -m flake8 --config=python/setup.cfg python
 # Check python type annotation
 $ python -m mypy --config-file python/setup.cfg python
 ```
+
+## Roadmap
+
+Here is a list of key features that we plan to support. Stay tuned!
+
+- [x] Support all FeatureView transformations with FlinkProcessor
+- [ ] Support all FeatureView transformations with LocalProcessor
+- [ ] Support common online and offline feature storages (e.g. MaxCompute, Redis, HDFS)
+- [ ] Support online transformation with feature service
+- [ ] Support integration with Notebook
+- [ ] Support feature metadata exploration (e.g. definition, lineage, metrics) with FeatHub UI
+- [ ] Support feature monitoring
 
 ## Contact Us
 

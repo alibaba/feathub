@@ -1,12 +1,15 @@
 # Feathub Architecture and Concepts
 
-<img src="./figures/architecture_1.png" width="60%" height="auto">
+<img src="./figures/architecture_1.png" width="50%" height="auto">
 
-<img src="./figures/architecture_2.png" width="60%" height="auto">
+The figure above shows the key components and concepts in the FeatHub
+architecture.
 
-The above figures show the Feathub architecture. In the following, we describe
-the key concepts in the architecture and explain how these concepts are
-used to facilitate feature engineering for machine learning application.
+<img src="./figures/architecture_2.png" width="70%" height="auto">
+
+The figure above shows how a developer can use FeatHub to facilitate feature
+engineering for model training and model inference. We describe the key concepts
+in the FeatHub architecture below.
 
 ## TableDescriptor - Declarative Definition of Features
 
