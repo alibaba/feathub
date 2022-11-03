@@ -76,16 +76,16 @@ engine. Here is a list of supported processors and versions:
 
 ### Quickstart
 
-#### Quickstart with local processor
+#### Quickstart using Local Processor
 
 Execute the following command to run the
-[nyc_tax.py](python/feathub/examples/nyc_taxi.py) demo which demonstrates the
+[nyc_taxi.py](python/feathub/examples/nyc_taxi.py) demo which demonstrates the
 capabilities described above.
 ```bash
 $ python python/feathub/examples/nyc_taxi.py
 ```
 
-#### Quickstart with Flink processor
+#### Quickstart using Flink Processor
 
 If you are interested in computing the Feathub features with Flink processor in a local 
 Flink cluster. You can see the following quickstart with different deployment modes:
@@ -93,18 +93,81 @@ Flink cluster. You can see the following quickstart with different deployment mo
 - [Flink Processor Session Mode Quickstart](docs/quickstarts/flink_processor_session_quickstart.md)
 - [Flink Processor Cli Mode Quickstart](docs/quickstarts/flink_processor_cli_quickstart.md)
 
+
+## Highlighted Capabilities
+
+
+### Define Features via Table Joins with Point-in-Time Correctness
+
+```python
+f_price = Feature(
+    name="price",
+    dtype=types.Float32,
+    transform=JoinTransform(
+        table_name="price_update_events",
+        feature_name="price"
+    ),
+    keys=["item_id"],
+)
+```
+
+### Define Over Window Aggregation Features
+
+```python
+f_total_payment_last_two_minutes = Feature(
+    name="total_payment_last_two_minutes",
+    dtype=types.Float32,
+    transform=OverWindowTransform(
+        expr="item_count * price",
+        agg_func="SUM",
+        window_size=timedelta(minutes=2),
+        group_by_keys=["user_id"]
+    )
+)
+```
+
+### Define Sliding Window Aggregation Features
+
+```python
+f_total_payment_last_two_minutes = Feature(
+    name="total_payment_last_two_minutes",
+    dtype=types.Float32,
+    transform=SlidingWindowTransform(
+        expr="item_count * price",
+        agg_func="SUM",
+        window_size=timedelta(minutes=2),
+        step_size=timedelta(minutes=1),
+        group_by_keys=["user_id"]
+    )
+)
+```
+
+### Define Features via Built-in Functions
+
+```python
+f_trip_time_duration = Feature(
+    name="f_trip_time_duration",
+    dtype=types.Int32,
+    transform="UNIX_TIMESTAMP(taxi_dropoff_datetime) - UNIX_TIMESTAMP(taxi_pickup_datetime)",
+)
+```
+
 ## Additional Resources
 
 - This [tutorial](docs/tutorial.md) provides more details on how to define,
   extract and serve features using Feathub.
 - This [document](docs/feathub_expression.md) explains the Feathub expression
   language.
-- This [document](docs/flink_processor.md) introduces the Flink processor that computes
-  the features with Flink.
+- This [document](docs/flink_processor.md) introduces the Flink processor that
+  computes the features with Flink.
+- [feathub-examples](https://github.com/flink-extended/feathub-examples)
+  provides additional FeatHub quickstarts that cover key FeatHub APIs and
+  functionalities.
+
 
 ## Developer Guidelines
 
-### Install development dependencies
+### Install Development Dependencies
 
 ```bash
 $ python -m pip install -r python/dev-requirements.txt
