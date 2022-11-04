@@ -151,7 +151,7 @@ class FlinkTableBuilderOverWindowTransformTest(FlinkTableBuilderTestBase):
             columns=["name", "cost", "distance", "time"],
         )
 
-        source = self._create_file_source(df)
+        source = self._create_file_source(df, timestamp_format="%Y-%m-%d %H:%M:%S.%f")
 
         features = DerivedFeatureView(
             name="feature_view",

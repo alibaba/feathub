@@ -47,7 +47,7 @@ class TableDescriptor(Entity):
         :param timestamp_field: Optional. If it is not None, it is the name of the field
                                 whose values show the time when the corresponding row
                                 is generated.
-        :param timestamp_format: The format of the timestamp field. Default to "epoch".
+        :param timestamp_format: The format of the timestamp field.
         """
         super().__init__()
         self.name = name

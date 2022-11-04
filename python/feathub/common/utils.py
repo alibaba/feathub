@@ -26,7 +26,15 @@ def to_java_date_format(python_format: str) -> str:
 
     # TODO: Currently cannot handle case such as "%Y-%m-%dT%H:%M:%S", which should be
     #  converted to "yyyy-MM-dd'T'HH:mm:ss".
-    mapping = {"Y": "yyyy", "m": "MM", "d": "dd", "H": "HH", "M": "mm", "S": "ss"}
+    mapping = {
+        "Y": "yyyy",
+        "m": "MM",
+        "d": "dd",
+        "H": "HH",
+        "M": "mm",
+        "S": "ss",
+        "f": "SSS",
+    }
     return Template(python_format.replace("%", "$")).substitute(**mapping)
 
 
