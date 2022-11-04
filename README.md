@@ -152,6 +152,16 @@ f_trip_time_duration = Feature(
 )
 ```
 
+### Define Feature via Python UDF
+
+```python
+f_lower_case_name = Feature(
+    name="lower_case_name",
+    dtype=types.String,
+    transform=PythonUdfTransform(lambda row: row["name"].lower()),
+)
+```
+
 ## Additional Resources
 
 - This [tutorial](docs/tutorial.md) provides more details on how to define,

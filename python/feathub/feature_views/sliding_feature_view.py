@@ -19,6 +19,7 @@ from feathub.common.exceptions import FeathubException
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
+from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
 from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
@@ -158,23 +159,26 @@ class SlidingFeatureView(FeatureView):
                 "SlidingWindowTransform."
             )
 
-        # ExpressionTransform features listed before the first SlidingWindowTransform
+        # Per-row transform features listed before the first SlidingWindowTransform
         # feature.
-        expression_feature_names: Set[str] = set()
+        per_row_transform_feature_names: Set[str] = set()
         sliding_window_transforms_group_by_keys: Set[str] = set()
 
         for feature in features:
             if isinstance(feature, str):
                 if len(sliding_window_transforms_group_by_keys) == 0:
-                    expression_feature_names.add(feature)
+                    per_row_transform_feature_names.add(feature)
                 continue
 
             transform = feature.transform
             if isinstance(transform, ExpressionTransform):
                 if len(sliding_window_transforms_group_by_keys) == 0:
-                    expression_feature_names.add(feature.name)
+                    per_row_transform_feature_names.add(feature.name)
             elif isinstance(transform, SlidingWindowTransform):
                 sliding_window_transforms_group_by_keys.update(transform.group_by_keys)
+            elif isinstance(transform, PythonUdfTransform):
+                if len(sliding_window_transforms_group_by_keys) == 0:
+                    per_row_transform_feature_names.add(feature.name)
             else:
                 raise FeathubException(
                     f"Feature '{feature.name}' uses unsupported transform type "
@@ -185,9 +189,12 @@ class SlidingFeatureView(FeatureView):
         #  SlidingWindowTransform feature depends only on SlidingWindowTransform
         #  features and their group-by keys.
         invalid_expression_feature_names = set()
-        for expression_feature_name in expression_feature_names:
-            if expression_feature_name not in sliding_window_transforms_group_by_keys:
-                invalid_expression_feature_names.add(expression_feature_name)
+        for per_row_transform_feature_name in per_row_transform_feature_names:
+            if (
+                per_row_transform_feature_name
+                not in sliding_window_transforms_group_by_keys
+            ):
+                invalid_expression_feature_names.add(per_row_transform_feature_name)
         if len(invalid_expression_feature_names) != 0:
             raise FeathubException(
                 f"{invalid_expression_feature_names} are not used as grouping key of "

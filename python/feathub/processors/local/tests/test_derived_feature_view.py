@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from math import sqrt
 
 import pandas as pd
 from datetime import timedelta
@@ -20,6 +21,7 @@ from feathub.common import types
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
+from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
 
 
 class DerivedFeatureViewTest(LocalProcessorTestCase):
@@ -274,4 +276,59 @@ class DerivedFeatureViewTest(LocalProcessorTestCase):
         self.assertIsNone(feature_view_1.keys)
         self.assertListEqual(["name"], built_feature_view_2.keys)
         self.assertListEqual(["name"], built_feature_view_3.keys)
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_python_udf_transform_on_over_window_transform(self):
+        df = pd.DataFrame(
+            [
+                ["Alex", 100, 100, "2022-01-01 08:00:00.001"],
+                ["Emma", 400, 250, "2022-01-01 08:00:00.002"],
+                ["Alex", 300, 200, "2022-01-01 08:00:00.003"],
+                ["Emma", 200, 250, "2022-01-01 08:00:00.004"],
+                ["Jack", 500, 500, "2022-01-01 08:00:00.005"],
+                ["Alex", 600, 800, "2022-01-01 08:00:00.006"],
+            ],
+            columns=["name", "cost", "distance", "time"],
+        )
+
+        source = self._create_file_source(df, timestamp_format="%Y-%m-%d %H:%M:%S.%f")
+
+        features = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                Feature(
+                    name="lower_name",
+                    dtype=types.String,
+                    transform=PythonUdfTransform(lambda row: row["name"].lower()),
+                ),
+                Feature(
+                    name="cost_sum",
+                    dtype=types.Int64,
+                    transform=OverWindowTransform(
+                        expr="cost",
+                        agg_func="SUM",
+                        group_by_keys=["lower_name"],
+                        window_size=timedelta(milliseconds=3),
+                    ),
+                ),
+                Feature(
+                    name="cost_sum_sqrt",
+                    dtype=types.Float64,
+                    transform=PythonUdfTransform(lambda row: sqrt(row["cost_sum"])),
+                ),
+            ],
+        )
+
+        expected_result_df = df
+        expected_result_df["lower_name"] = expected_result_df["name"].apply(
+            lambda x: x.lower()
+        )
+        expected_result_df["cost_sum"] = pd.Series([100, 400, 400, 600, 500, 900])
+        expected_result_df["cost_sum_sqrt"] = expected_result_df["cost_sum"].apply(
+            lambda x: sqrt(x)
+        )
+        expected_result_df.drop(["name", "cost", "distance"], axis=1, inplace=True)
+
+        result_df = self.processor.get_table(features=features).to_pandas()
         self.assertTrue(expected_result_df.equals(result_df))

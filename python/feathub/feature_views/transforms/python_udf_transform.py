@@ -18,16 +18,20 @@ import pandas as pd
 from feathub.feature_views.transforms.transformation import Transformation
 
 
-# TODO: support python udf.
 class PythonUdfTransform(Transformation):
     """
     Derives feature values by applying a Python UDF on one row of the parent table at a
     time.
     """
 
-    def __init__(self, callable: Callable[[pd.DataFrame], Any]) -> None:
+    def __init__(self, udf: Callable[[pd.Series], Any]) -> None:
+        """
+        :param udf: The udf that will be invoked for each row. The input
+                          of the udf is a Pandas Series object that represent the
+                          row.
+        """
         super().__init__()
-        self.callable = callable
+        self.udf = udf
 
     def to_json(self) -> Dict:
         return {"type": "PythonTransform"}

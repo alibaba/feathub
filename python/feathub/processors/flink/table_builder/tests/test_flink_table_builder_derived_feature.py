@@ -20,6 +20,7 @@ from feathub.common.types import Float64, Int64, String
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
+from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
 from feathub.processors.flink.table_builder.tests.table_builder_test_base import (
     FlinkTableBuilderTestBase,
 )
@@ -362,4 +363,41 @@ class FlinkTableBuilderDerivedFeatureViewTest(FlinkTableBuilderTestBase):
         )
 
         self.assertListEqual(["name"], built_feature_view_2.keys)
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_python_udf_transform(self):
+        df_1 = self.input_data.copy()
+        source = self._create_file_source(df_1)
+
+        def name_to_lower(row: pd.Series) -> str:
+            return row["name"].lower()
+
+        feature_view = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                Feature(
+                    name="lower_name",
+                    dtype=String,
+                    transform=PythonUdfTransform(name_to_lower),
+                    keys=["name"],
+                )
+            ],
+        )
+
+        expected_result_df = df_1
+        expected_result_df["lower_name"] = expected_result_df["name"].apply(
+            lambda name: name.lower()
+        )
+        expected_result_df.drop(["cost", "distance"], axis=1, inplace=True)
+        expected_result_df = expected_result_df.sort_values(
+            by=["name", "time"]
+        ).reset_index(drop=True)
+
+        table = self.flink_table_builder.build(features=feature_view)
+        table.execute().print()
+        result_df = (
+            table.to_pandas().sort_values(by=["name", "time"]).reset_index(drop=True)
+        )
+
         self.assertTrue(expected_result_df.equals(result_df))

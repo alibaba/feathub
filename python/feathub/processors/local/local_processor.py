@@ -22,6 +22,7 @@ from feathub.common.exceptions import FeathubException
 from feathub.common.types import to_numpy_dtype
 from feathub.dsl.expr_parser import ExprParser
 from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
 from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstEvaluator
 from feathub.processors.processor import Processor
 from feathub.registries.registry import Registry
@@ -280,6 +281,10 @@ class LocalProcessor(Processor):
                 source_df[feature.name] = self._evaluate_expression_transform(
                     source_df, feature.transform
                 )
+            elif isinstance(feature.transform, PythonUdfTransform):
+                source_df[feature.name] = self._evaluate_python_udf_transform(
+                    source_df, feature.transform
+                )
             elif isinstance(feature.transform, OverWindowTransform):
                 if (
                     feature_view.timestamp_field is None
@@ -450,3 +455,8 @@ class LocalProcessor(Processor):
             result.append(agg_func(rows_in_group_and_window[temp_column].tolist()))
 
         return result
+
+    def _evaluate_python_udf_transform(
+        self, df: pd.DataFrame, transform: PythonUdfTransform
+    ) -> List:
+        return df.apply(lambda row: transform.udf(row), axis=1).tolist()
