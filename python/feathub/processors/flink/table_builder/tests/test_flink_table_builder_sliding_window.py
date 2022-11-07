@@ -13,6 +13,7 @@
 #  limitations under the License.
 import datetime
 from datetime import timedelta
+from math import sqrt
 
 import pandas as pd
 
@@ -20,6 +21,7 @@ from feathub.common.types import Int64, String, Float64, MapType
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.sliding_feature_view import SlidingFeatureView
+from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
 from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
@@ -764,6 +766,130 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
             .reset_index(drop=True)
         )
 
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_with_python_udf(self):
+        df = self.input_data.copy()
+        source = self._create_file_source(df)
+
+        def name_to_lower(row: pd.Series) -> str:
+            return row["name"].lower()
+
+        f_lower_name = Feature(
+            name="lower_name", dtype=String, transform=PythonUdfTransform(name_to_lower)
+        )
+
+        f_total_cost = Feature(
+            name="total_cost",
+            dtype=Int64,
+            transform=SlidingWindowTransform(
+                expr="cost",
+                agg_func="SUM",
+                window_size=timedelta(days=3),
+                group_by_keys=["lower_name"],
+                step_size=timedelta(days=1),
+            ),
+        )
+
+        f_total_cost_sqrt = Feature(
+            name="total_cost_sqrt",
+            dtype=Float64,
+            transform=PythonUdfTransform(lambda row: sqrt(row["total_cost"])),
+        )
+
+        features = SlidingFeatureView(
+            name="features",
+            source=source,
+            features=[f_lower_name, f_total_cost, f_total_cost_sqrt],
+        )
+
+        expected_result_df = pd.DataFrame(
+            [
+                [
+                    self._to_unix_timestamp("2022-01-01 23:59:59.999"),
+                    "alex",
+                    100,
+                    sqrt(100),
+                ],
+                [
+                    self._to_unix_timestamp("2022-01-02 23:59:59.999"),
+                    "alex",
+                    400,
+                    sqrt(400),
+                ],
+                [
+                    self._to_unix_timestamp("2022-01-03 23:59:59.999"),
+                    "alex",
+                    1000,
+                    sqrt(1000),
+                ],
+                [
+                    self._to_unix_timestamp("2022-01-04 23:59:59.999"),
+                    "alex",
+                    900,
+                    sqrt(900),
+                ],
+                [
+                    self._to_unix_timestamp("2022-01-05 23:59:59.999"),
+                    "alex",
+                    600,
+                    sqrt(600),
+                ],
+                [
+                    self._to_unix_timestamp("2022-01-01 23:59:59.999"),
+                    "emma",
+                    400,
+                    sqrt(400),
+                ],
+                [
+                    self._to_unix_timestamp("2022-01-02 23:59:59.999"),
+                    "emma",
+                    600,
+                    sqrt(600),
+                ],
+                [
+                    self._to_unix_timestamp("2022-01-03 23:59:59.999"),
+                    "emma",
+                    600,
+                    sqrt(600),
+                ],
+                [
+                    self._to_unix_timestamp("2022-01-04 23:59:59.999"),
+                    "emma",
+                    200,
+                    sqrt(200),
+                ],
+                [
+                    self._to_unix_timestamp("2022-01-03 23:59:59.999"),
+                    "jack",
+                    500,
+                    sqrt(500),
+                ],
+                [
+                    self._to_unix_timestamp("2022-01-04 23:59:59.999"),
+                    "jack",
+                    500,
+                    sqrt(500),
+                ],
+                [
+                    self._to_unix_timestamp("2022-01-05 23:59:59.999"),
+                    "jack",
+                    500,
+                    sqrt(500),
+                ],
+            ],
+            columns=["window_time", "lower_name", "total_cost", "total_cost_sqrt"],
+        )
+        expected_result_df = expected_result_df.sort_values(
+            by=["lower_name", "window_time"]
+        ).reset_index(drop=True)
+
+        table = self.flink_table_builder.build(features)
+        result_df = (
+            flink_table_to_pandas(table)
+            .sort_values(by=["lower_name", "window_time"])
+            .reset_index(drop=True)
+        )
         self.assertTrue(expected_result_df.equals(result_df))
 
     @staticmethod

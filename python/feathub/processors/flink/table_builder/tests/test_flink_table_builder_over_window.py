@@ -12,6 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from datetime import timedelta
+from math import sqrt
 
 import pandas as pd
 
@@ -19,6 +20,7 @@ from feathub.common.types import Int64, String, Float64, MapType
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
+from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
 from feathub.processors.flink.flink_table import flink_table_to_pandas
 from feathub.processors.flink.table_builder.tests.table_builder_test_base import (
     FlinkTableBuilderTestBase,
@@ -232,6 +234,69 @@ class FlinkTableBuilderOverWindowTransformTest(FlinkTableBuilderTestBase):
             self.flink_table_builder.build(features=features)
             .to_pandas()
             .sort_values(by=["name", "time"])
+            .reset_index(drop=True)
+        )
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_python_udf_transform_on_over_window_transform(self):
+        df = pd.DataFrame(
+            [
+                ["Alex", 100, 100, "2022-01-01 08:00:00.001"],
+                ["Emma", 400, 250, "2022-01-01 08:00:00.002"],
+                ["Alex", 300, 200, "2022-01-01 08:00:00.003"],
+                ["Emma", 200, 250, "2022-01-01 08:00:00.004"],
+                ["Jack", 500, 500, "2022-01-01 08:00:00.005"],
+                ["Alex", 600, 800, "2022-01-01 08:00:00.006"],
+            ],
+            columns=["name", "cost", "distance", "time"],
+        )
+
+        source = self._create_file_source(df)
+
+        features = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                Feature(
+                    name="lower_name",
+                    dtype=String,
+                    transform=PythonUdfTransform(lambda row: row["name"].lower()),
+                ),
+                Feature(
+                    name="cost_sum",
+                    dtype=Int64,
+                    transform=OverWindowTransform(
+                        expr="cost",
+                        agg_func="SUM",
+                        group_by_keys=["lower_name"],
+                        window_size=timedelta(milliseconds=3),
+                    ),
+                ),
+                Feature(
+                    name="cost_sum_sqrt",
+                    dtype=Float64,
+                    transform=PythonUdfTransform(lambda row: sqrt(row["cost_sum"])),
+                ),
+            ],
+        )
+
+        expected_result_df = df
+        expected_result_df["lower_name"] = expected_result_df["name"].apply(
+            lambda x: x.lower()
+        )
+        expected_result_df["cost_sum"] = pd.Series([100, 400, 400, 600, 500, 900])
+        expected_result_df["cost_sum_sqrt"] = expected_result_df["cost_sum"].apply(
+            lambda x: sqrt(x)
+        )
+        expected_result_df.drop(["name", "cost", "distance"], axis=1, inplace=True)
+        expected_result_df = expected_result_df.sort_values(
+            by=["lower_name", "time"]
+        ).reset_index(drop=True)
+
+        result_df = (
+            self.flink_table_builder.build(features=features)
+            .to_pandas()
+            .sort_values(by=["lower_name", "time"])
             .reset_index(drop=True)
         )
         self.assertTrue(expected_result_df.equals(result_df))

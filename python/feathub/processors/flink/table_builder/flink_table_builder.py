@@ -35,6 +35,7 @@ from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.feature_views.transforms.over_window_transform import (
     OverWindowTransform,
 )
+from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
 from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
@@ -58,6 +59,9 @@ from feathub.processors.flink.table_builder.join_utils import (
 from feathub.processors.flink.table_builder.over_window_utils import (
     evaluate_over_window_transform,
     OverWindowDescriptor,
+)
+from feathub.processors.flink.table_builder.python_udf_utils import (
+    evaluate_python_udf_transform,
 )
 from feathub.processors.flink.table_builder.sliding_window_utils import (
     evaluate_sliding_window_transform,
@@ -234,17 +238,17 @@ class FlinkTableBuilder:
             Tuple[str, Sequence[str]], Dict[str, JoinFieldDescriptor]
         ] = {}
 
-        # This list contains all ExpressionTransform features listed after the first
+        # This list contains all per-row transform features listed after the first
         # JoinTransform or OverWindowTransform feature in the dependent_features.
         # These features are evaluated after all over windows and table join.
-        expression_features_following_first_over_window_or_join = []
+        per_row_transform_features_following_first_over_window_or_join = []
 
         for feature in dependent_features:
             if feature.name in tmp_table.get_schema().get_field_names():
                 continue
             if isinstance(feature.transform, ExpressionTransform):
                 if len(right_tables) > 0 or len(window_agg_map) > 0:
-                    expression_features_following_first_over_window_or_join.append(
+                    per_row_transform_features_following_first_over_window_or_join.append(  # noqa
                         feature
                     )
                 else:
@@ -253,6 +257,15 @@ class FlinkTableBuilder:
                         feature.transform,
                         feature.name,
                         feature.dtype,
+                    )
+            elif isinstance(feature.transform, PythonUdfTransform):
+                if len(right_tables) > 0 or len(window_agg_map) > 0:
+                    per_row_transform_features_following_first_over_window_or_join.append(  # noqa
+                        feature
+                    )
+                else:
+                    tmp_table = evaluate_python_udf_transform(
+                        tmp_table, feature.transform, feature.name, feature.dtype
                     )
             elif isinstance(feature.transform, OverWindowTransform):
                 if feature_view.timestamp_field is None:
@@ -341,15 +354,25 @@ class FlinkTableBuilder:
                 agg_descriptor,
             )
 
-        for feature in expression_features_following_first_over_window_or_join:
-            if not isinstance(feature.transform, ExpressionTransform):
-                raise FeathubTransformationException("Unsupported transformation type")
-            tmp_table = self._evaluate_expression_transform(
-                tmp_table,
-                feature.transform,
-                feature.name,
-                feature.dtype,
-            )
+        for feature in per_row_transform_features_following_first_over_window_or_join:
+            if isinstance(feature.transform, ExpressionTransform):
+                tmp_table = self._evaluate_expression_transform(
+                    tmp_table,
+                    feature.transform,
+                    feature.name,
+                    feature.dtype,
+                )
+            elif isinstance(feature.transform, PythonUdfTransform):
+                tmp_table = evaluate_python_udf_transform(
+                    tmp_table,
+                    feature.transform,
+                    feature.name,
+                    feature.dtype,
+                )
+            else:
+                raise FeathubTransformationException(
+                    f"Unsupported transformation type: {type(feature.transform)}."
+                )
 
         output_fields = self._get_output_fields(feature_view, source_fields)
         return tmp_table.select(
@@ -369,18 +392,32 @@ class FlinkTableBuilder:
             SlidingWindowDescriptor, List[AggregationFieldDescriptor]
         ] = {}
 
-        # This list contains all ExpressionTransform features listed after the first
+        # This list contains all per-row transform features listed after the first
         # SlidingWindowTransform feature in the dependent_features.
-        expression_features_following_first_sliding_feature = []
+        per_row_transform_features_following_first_sliding_feature = []
 
         for feature in dependent_features:
             if feature.name in tmp_table.get_schema().get_field_names():
                 continue
             if isinstance(feature.transform, ExpressionTransform):
                 if len(sliding_window_agg_map) > 0:
-                    expression_features_following_first_sliding_feature.append(feature)
+                    per_row_transform_features_following_first_sliding_feature.append(
+                        feature
+                    )
                 else:
                     tmp_table = self._evaluate_expression_transform(
+                        tmp_table,
+                        feature.transform,
+                        feature.name,
+                        feature.dtype,
+                    )
+            elif isinstance(feature.transform, PythonUdfTransform):
+                if len(sliding_window_agg_map) > 0:
+                    per_row_transform_features_following_first_sliding_feature.append(
+                        feature
+                    )
+                else:
+                    tmp_table = evaluate_python_udf_transform(
                         tmp_table,
                         feature.transform,
                         feature.name,
@@ -455,22 +492,32 @@ class FlinkTableBuilder:
                     ).alias(feature_view.timestamp_field)
                 )
 
-        for feature in expression_features_following_first_sliding_feature:
-            if not isinstance(feature.transform, ExpressionTransform):
-                raise FeathubTransformationException("Unsupported transformation type")
-
-            # This is a temporary solution to ignore the CURRENT_EVENT_TIME function as
-            # the event time (window time) is added above.
-            # TODO: Refactor FlinkAstEvaluator to properly handle CURRENT_EVENT_TIME and
-            #  expose CURRENT_EVENT_TIME as a built-in function of Feathub expression.
-            if feature.transform.expr == "CURRENT_EVENT_TIME()":
-                continue
-            tmp_table = self._evaluate_expression_transform(
-                tmp_table,
-                feature.transform,
-                feature.name,
-                feature.dtype,
-            )
+        for feature in per_row_transform_features_following_first_sliding_feature:
+            if isinstance(feature.transform, ExpressionTransform):
+                # This is a temporary solution to ignore the CURRENT_EVENT_TIME function
+                # as the event time (window time) is added above.
+                # TODO: Refactor FlinkAstEvaluator to properly handle CURRENT_EVENT_TIME
+                #  and expose CURRENT_EVENT_TIME as a built-in function of Feathub
+                #  expression.
+                if feature.transform.expr == "CURRENT_EVENT_TIME()":
+                    continue
+                tmp_table = self._evaluate_expression_transform(
+                    tmp_table,
+                    feature.transform,
+                    feature.name,
+                    feature.dtype,
+                )
+            elif isinstance(feature.transform, PythonUdfTransform):
+                tmp_table = evaluate_python_udf_transform(
+                    tmp_table,
+                    feature.transform,
+                    feature.name,
+                    feature.dtype,
+                )
+            else:
+                raise FeathubTransformationException(
+                    f"Unsupported transformation type: {type(feature.transform)}."
+                )
 
         output_fields = self._get_output_fields(feature_view, source_fields)
         return tmp_table.select(
