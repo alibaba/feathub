@@ -27,7 +27,7 @@ JAVA_DIR=${PROJECT_DIR}/java
 
 # build java dependencies
 cd ${JAVA_DIR}
-mvn clean package
+mvn clean package -DskipTests
 
 # build wheels
 cd ${PYTHON_DIR}

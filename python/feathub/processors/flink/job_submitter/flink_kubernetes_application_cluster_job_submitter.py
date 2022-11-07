@@ -29,7 +29,7 @@ import os
 import pickle
 import tempfile
 import uuid
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, Future, Executor
 from datetime import datetime
 from subprocess import Popen
 from typing import Dict, Optional, List, Union
@@ -48,13 +48,13 @@ from pyflink.find_flink_home import _find_flink_home  # noqa
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_tables.feature_table import FeatureTable
-from feathub.processors.flink.flink_job import FlinkApplicationClusterJob
 from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
     FeathubJobDescriptor,
 )
 from feathub.processors.flink.job_submitter.flink_job_submitter import (
     FlinkJobSubmitter,
 )
+from feathub.processors.processor_job import ProcessorJob
 from feathub.table.table_descriptor import TableDescriptor
 
 FLINK_CONFIG_PREFIX = "flink"
@@ -107,7 +107,7 @@ class FlinkKubernetesApplicationClusterJobSubmitter(FlinkJobSubmitter):
         sink: FeatureTable,
         local_registry_tables: Dict[str, TableDescriptor],
         allow_overwrite: bool,
-    ) -> FlinkApplicationClusterJob:
+    ) -> "FlinkApplicationClusterJob":
         job_descriptor = FeathubJobDescriptor(
             features=features,
             keys=keys,
@@ -132,7 +132,13 @@ class FlinkKubernetesApplicationClusterJobSubmitter(FlinkJobSubmitter):
         future = self._executor.submit(
             self._watch_job_deployment_until_finished, job_id=job_id
         )
-        return FlinkApplicationClusterJob(future)
+        return FlinkApplicationClusterJob(
+            future,
+            self._get_cluster_id(job_id),
+            self.kube_namespace,
+            self.kube_apps_v1_api,
+            self._executor,
+        )
 
     def _watch_job_deployment_until_finished(self, job_id: str) -> None:
         watch = kubernetes.watch.Watch()
@@ -246,3 +252,46 @@ class FlinkKubernetesApplicationClusterJobSubmitter(FlinkJobSubmitter):
             flink_config["kubernetes.config.file"] = self.kube_config_file
 
         return [f"-D{k}={v}" for k, v in flink_config.items()]
+
+
+class FlinkApplicationClusterJob(ProcessorJob):
+    """Represent a Flink job that runs in Application cluster."""
+
+    def __init__(
+        self,
+        job_future: Future,
+        cluster_id: str,
+        kube_namespace: str,
+        kube_apps_v1_api: AppsV1Api,
+        executor: Executor,
+    ):
+        """
+        Instantiate a FlinkApplicationClusterJob.
+
+        :param job_future: A Future object which is done when the application Flink job
+                           reaches global termination state.
+        :param cluster_id: The cluster id of the Flink application cluster where the
+                           Flink job runs.
+        :param kube_namespace: The namespace of the Kubernetes cluster where the
+                               Flink application cluster runs.
+        :param kube_apps_v1_api: The Kubernetes api object.
+        :param executor: The executor to run async task.
+        """
+        super().__init__()
+        self._job_future = job_future
+        self._cluster_id = cluster_id
+        self._kube_namespace = kube_namespace
+        self._kube_apps_v1_api = kube_apps_v1_api
+        self._executor = executor
+
+    def cancel(self) -> Future:
+        return self._executor.submit(self._cancel)
+
+    def _cancel(self) -> None:
+        self._kube_apps_v1_api.delete_namespaced_deployment(
+            name=self._cluster_id, namespace=self._kube_namespace, async_req=True
+        )
+
+    def wait(self, timeout_ms: Optional[int] = None) -> None:
+        timeout_sec = None if timeout_ms is None else timeout_ms / 1000
+        self._job_future.result(timeout=timeout_sec)
