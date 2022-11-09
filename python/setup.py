@@ -102,7 +102,7 @@ try:
     }
 
     install_requires = [
-        "sklearn",
+        "scikit-learn",
         "ply>=3.11",
         "pandas>=1.1.5",
         "numpy>=1.14.3,<1.20",
