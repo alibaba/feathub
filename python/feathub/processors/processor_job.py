@@ -14,7 +14,7 @@
 
 from abc import ABC, abstractmethod
 from concurrent.futures import Future
-from typing import Optional, Any
+from typing import Optional
 
 
 class ProcessorJob(ABC):
@@ -47,9 +47,3 @@ class ProcessorJob(ABC):
         :param timeout_ms: If it is None, waits for the job termination indefinitely.
         """
         pass
-
-    def __enter__(self) -> "ProcessorJob":
-        return self
-
-    def __exit__(self, *args: Any) -> None:
-        self.cancel()
