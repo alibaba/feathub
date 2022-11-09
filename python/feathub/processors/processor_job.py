@@ -13,7 +13,8 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import Optional
+from concurrent.futures import Future
+from typing import Optional, Any
 
 
 class ProcessorJob(ABC):
@@ -25,6 +26,20 @@ class ProcessorJob(ABC):
         pass
 
     @abstractmethod
+    def cancel(self) -> Future:
+        """
+        Cancel the ProcessorJob if the ProcessorJob hasn't reached termination state.
+
+        The cancel call is async and the return Future is completed when the canceling
+        command is acknowledged. User should call `wait` to wait for the job
+        termination if user wants to ensure that the processor job reached termination
+        state.
+
+        :return: The Future that is completed when the canceling command is
+                 acknowledged.
+        """
+
+    @abstractmethod
     def wait(self, timeout_ms: Optional[int] = None) -> None:
         """
         Waits for at most the given time (milliseconds) for the job termination.
@@ -32,3 +47,9 @@ class ProcessorJob(ABC):
         :param timeout_ms: If it is None, waits for the job termination indefinitely.
         """
         pass
+
+    def __enter__(self) -> "ProcessorJob":
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        self.cancel()

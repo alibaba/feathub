@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from concurrent.futures import Future
 
 from feathub.processors.processor_job import ProcessorJob
 
@@ -22,6 +23,11 @@ class LocalJob(ProcessorJob):
 
     def __init__(self) -> None:
         super().__init__()
+
+    def cancel(self) -> Future:
+        f: Future[None] = Future()
+        f.set_result(None)
+        return f
 
     def wait(self, timeout_ms: int = None) -> None:
         pass
