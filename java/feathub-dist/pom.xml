@@ -36,6 +36,12 @@
 
         <dependency>
             <groupId>com.alibaba.feathub</groupId>
+            <artifactId>flink-connector-kafka</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba.feathub</groupId>
             <artifactId>feathub-udf</artifactId>
             <version>${project.version}</version>
         </dependency>
