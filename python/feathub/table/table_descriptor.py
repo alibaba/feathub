@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from feathub.registries.registry import Registry
 
 
+# TODO: Add API to support setting boundedness of the TableDescriptor.
 class TableDescriptor(Entity):
     """
     Provides metadata to access, derive and interpret a table of feature values. Each

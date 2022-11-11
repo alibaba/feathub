@@ -39,6 +39,7 @@ class KafkaSource(FeatureTable):
         startup_mode: str = "group-offsets",
         startup_datetime: Optional[datetime] = None,
         partition_discovery_interval: timedelta = timedelta(minutes=5),
+        is_bounded: bool = False,
     ):
         """
         :param name: The name that uniquely identifies this source in a registry.
@@ -83,6 +84,9 @@ class KafkaSource(FeatureTable):
                                              Default to 5 minutes so that it is
                                              consistent with the 'metadata.max.age.ms'
                                              for Kafka Consumer config.
+        :param is_bounded: Whether the KafkaSource should be bounded. If the KafkaSource
+                           is bounded, it stops at the latest offsets of the partitions
+                           when the KafkaSource starts to run.
         """
         super().__init__(
             name=name,
@@ -111,6 +115,7 @@ class KafkaSource(FeatureTable):
             raise FeathubException(
                 "startup_datetime is required when startup_mode is timestamp."
             )
+        self.is_bounded = is_bounded
 
     def to_json(self) -> Dict:
         return {
@@ -134,4 +139,5 @@ class KafkaSource(FeatureTable):
             else int(self.startup_datetime.timestamp() * 1000),
             "partition_discovery_interval_ms": self.partition_discovery_interval
             / timedelta(milliseconds=1),
+            "is_bounded": self.is_bounded,
         }

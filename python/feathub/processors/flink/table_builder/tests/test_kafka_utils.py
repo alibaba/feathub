@@ -104,7 +104,8 @@ class SourceUtilsTest(unittest.TestCase):
                 expected_options, dict(flink_table_descriptor.get_options())
             )
 
-            get_table_from_source(t_env, source, True)
+            source.is_bounded = True
+            get_table_from_source(t_env, source)
             flink_table_descriptor = create_temporary_table.call_args[0][1]
 
             expected_col_strs = [
@@ -193,37 +194,13 @@ class SourceSinkITTest(unittest.TestCase):
             SourceSinkITTest.kafka_container.get_bootstrap_server()
         )
 
+        self.env = StreamExecutionEnvironment.get_execution_environment()
+        self.t_env = StreamTableEnvironment.create(self.env)
+        self.test_time = datetime.now()
+
+        self.row_data = self._produce_data_to_kafka(self.t_env)
+
     def test_kafka_source_sink(self):
-        # Produce data with kafka sink
-        env = StreamExecutionEnvironment.get_execution_environment()
-        t_env = StreamTableEnvironment.create(env)
-        test_time = datetime.now()
-
-        row_data = [
-            (1, 1, datetime(2022, 1, 1, 0, 0, 0).strftime("%Y-%m-%d %H:%M:%S")),
-            (2, 2, datetime(2022, 1, 1, 0, 0, 1).strftime("%Y-%m-%d %H:%M:%S")),
-            (3, 3, datetime(2022, 1, 1, 0, 0, 2).strftime("%Y-%m-%d %H:%M:%S")),
-        ]
-        table = t_env.from_elements(
-            row_data,
-            DataTypes.ROW(
-                [
-                    DataTypes.FIELD("id", DataTypes.BIGINT()),
-                    DataTypes.FIELD("val", DataTypes.BIGINT()),
-                    DataTypes.FIELD("ts", DataTypes.STRING()),
-                ]
-            ),
-        )
-
-        sink = KafkaSink(
-            bootstrap_server=self.kafka_bootstrap_servers,
-            topic=self.topic_name,
-            key_format="json",
-            value_format="json",
-        )
-
-        insert_into_sink(t_env, table, sink, ("id",)).wait()
-
         # Consume data with kafka source
         source = KafkaSource(
             "kafka_source",
@@ -237,30 +214,53 @@ class SourceSinkITTest(unittest.TestCase):
             timestamp_field="ts",
             timestamp_format="%Y-%m-%d %H:%M:%S",
             startup_mode="timestamp",
-            startup_datetime=test_time,
+            startup_datetime=self.test_time,
         )
 
-        expected_rows = {Row(*data) for data in row_data}
-        table = get_table_from_source(t_env, source)
+        expected_rows = {Row(*data) for data in self.row_data}
+        table = get_table_from_source(self.t_env, source)
         table = table.drop_columns(EVENT_TIME_ATTRIBUTE_NAME)
         table_result = table.execute()
         result_rows = set()
         with table_result.collect() as results:
             for idx, row in enumerate(results):
                 result_rows.add(row)
-                if idx == len(row_data) - 1:
+                if idx == len(self.row_data) - 1:
                     table_result.get_job_client().cancel().result()
                     break
 
         self.assertEquals(expected_rows, result_rows)
 
     def test_bounded_kafka_source(self):
-        # Produce data with kafka sink
-        env = StreamExecutionEnvironment.get_execution_environment()
-        t_env = StreamTableEnvironment.create(env)
-        table_builder = FlinkTableBuilder(t_env, LocalRegistry({}))
-        test_time = datetime.now()
+        table_builder = FlinkTableBuilder(self.t_env, LocalRegistry({}))
+        # Consume data with kafka source
+        source = KafkaSource(
+            "kafka_source",
+            bootstrap_server=self.kafka_bootstrap_servers,
+            topic=self.topic_name,
+            key_format="json",
+            value_format="json",
+            schema=Schema(["id", "val", "ts"], [Int64, Int64, String]),
+            consumer_group="test-group",
+            keys=["id"],
+            timestamp_field="ts",
+            timestamp_format="%Y-%m-%d %H:%M:%S",
+            startup_mode="timestamp",
+            startup_datetime=self.test_time,
+            is_bounded=True,
+        )
 
+        features = DerivedFeatureView(
+            "feature_view", source, features=[], keep_source_fields=True
+        )
+        table = table_builder.build(features)
+        expected_rows = {Row(*data) for data in self.row_data}
+        table_result = table.execute()
+        with table_result.collect() as results:
+            result_rows = set(results)
+        self.assertEquals(expected_rows, result_rows)
+
+    def _produce_data_to_kafka(self, t_env):
         row_data = [
             (1, 1, datetime(2022, 1, 1, 0, 0, 0).strftime("%Y-%m-%d %H:%M:%S")),
             (2, 2, datetime(2022, 1, 1, 0, 0, 1).strftime("%Y-%m-%d %H:%M:%S")),
@@ -276,38 +276,11 @@ class SourceSinkITTest(unittest.TestCase):
                 ]
             ),
         )
-
         sink = KafkaSink(
             bootstrap_server=self.kafka_bootstrap_servers,
             topic=self.topic_name,
             key_format="json",
             value_format="json",
         )
-
         insert_into_sink(t_env, table, sink, ("id",)).wait()
-
-        # Consume data with kafka source
-        source = KafkaSource(
-            "kafka_source",
-            bootstrap_server=self.kafka_bootstrap_servers,
-            topic=self.topic_name,
-            key_format="json",
-            value_format="json",
-            schema=Schema(["id", "val", "ts"], [Int64, Int64, String]),
-            consumer_group="test-group",
-            keys=["id"],
-            timestamp_field="ts",
-            timestamp_format="%Y-%m-%d %H:%M:%S",
-            startup_mode="timestamp",
-            startup_datetime=test_time,
-        )
-
-        features = DerivedFeatureView(
-            "feature_view", source, features=[], keep_source_fields=True
-        )
-        expected_rows = {Row(*data) for data in row_data}
-        table = table_builder.build(features)
-        table_result = table.execute()
-        with table_result.collect() as results:
-            result_rows = set(results)
-        self.assertEquals(expected_rows, result_rows)
+        return row_data

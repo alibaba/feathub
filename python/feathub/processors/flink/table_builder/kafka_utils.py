@@ -43,7 +43,9 @@ def get_table_from_kafka_source(
     kafka_source: KafkaSource,
     keys: Sequence[str],
 ) -> NativeFlinkTable:
-    add_jar_to_t_env(t_env, _get_kafka_connector_jar())
+    add_jar_to_t_env(
+        t_env, _get_kafka_connector_jar(), _get_bounded_kafka_connector_jar()
+    )
     schema = kafka_source.schema
     if schema is None:
         raise FeathubException("Flink processor requires schema for the KafkaSource.")
@@ -62,8 +64,9 @@ def get_table_from_kafka_source(
             schema.get_field_type(kafka_source.timestamp_field),
         )
 
+    connector_type = "bounded-kafka" if kafka_source.is_bounded else "kafka"
     descriptor_builder = (
-        NativeFlinkTableDescriptor.for_connector("kafka")
+        NativeFlinkTableDescriptor.for_connector(connector_type)
         .option("value.format", kafka_source.value_format)
         .option("properties.bootstrap.servers", kafka_source.bootstrap_server)
         .option("topic", kafka_source.topic)
@@ -100,8 +103,9 @@ def get_table_from_kafka_source(
     if kafka_source.key_format == "csv":
         descriptor_builder.option("key.csv.ignore-parse-errors", "true")
 
-    t_env.create_temporary_table(kafka_source.name, descriptor_builder.build())
-    return t_env.from_path(kafka_source.name)
+    table_name = generate_random_table_name(kafka_source.name)
+    t_env.create_temporary_table(table_name, descriptor_builder.build())
+    return t_env.from_path(table_name)
 
 
 def insert_into_kafka_sink(
@@ -110,7 +114,9 @@ def insert_into_kafka_sink(
     sink: KafkaSink,
     keys: Sequence[str],
 ) -> TableResult:
-    add_jar_to_t_env(t_env, _get_kafka_connector_jar())
+    add_jar_to_t_env(
+        t_env, _get_kafka_connector_jar(), _get_bounded_kafka_connector_jar()
+    )
     bootstrap_server = sink.bootstrap_server
     topic = sink.topic
     kafka_sink_descriptor_builder = (
@@ -133,7 +139,7 @@ def insert_into_kafka_sink(
     # have a name in VVR-6.0.2, which should be fixed in next version VVR-6.0.3. As a
     # current workaround, we have to generate a random table name. We should update the
     # code to use anonymous table sink after VVR-6.0.3 is released.
-    random_sink_name = generate_random_table_name()
+    random_sink_name = generate_random_table_name("KafkaSink")
     t_env.create_temporary_table(
         random_sink_name, kafka_sink_descriptor_builder.build()
     )
@@ -143,6 +149,16 @@ def insert_into_kafka_sink(
 def _get_kafka_connector_jar() -> str:
     lib_dir = find_jar_lib()
     jars = glob.glob(os.path.join(lib_dir, "flink-sql-connector-kafka-*.jar"))
+    if len(jars) < 1:
+        raise FeathubException(
+            f"Can not find the Flink Kafka connector jar at {lib_dir}."
+        )
+    return jars[0]
+
+
+def _get_bounded_kafka_connector_jar() -> str:
+    lib_dir = find_jar_lib()
+    jars = glob.glob(os.path.join(lib_dir, "flink-connector-kafka-*.jar"))
     if len(jars) < 1:
         raise FeathubException(
             f"Can not find the Flink Kafka connector jar at {lib_dir}."
