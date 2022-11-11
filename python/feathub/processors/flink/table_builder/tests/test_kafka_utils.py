@@ -11,7 +11,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-import os
 import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch
@@ -23,10 +22,13 @@ from pyflink.table import (
     TableDescriptor as NativeFlinkTableDescriptor,
     DataTypes,
 )
+from testcontainers.kafka import KafkaContainer
 
 from feathub.common.types import Int64, String
 from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sources.kafka_source import KafkaSource
+from feathub.feature_views.derived_feature_view import DerivedFeatureView
+from feathub.processors.flink.table_builder.flink_table_builder import FlinkTableBuilder
 from feathub.processors.flink.table_builder.flink_table_builder_constants import (
     EVENT_TIME_ATTRIBUTE_NAME,
 )
@@ -34,6 +36,7 @@ from feathub.processors.flink.table_builder.source_sink_utils import (
     get_table_from_source,
     insert_into_sink,
 )
+from feathub.registries.local_registry import LocalRegistry
 from feathub.table.schema import Schema
 
 
@@ -101,6 +104,36 @@ class SourceUtilsTest(unittest.TestCase):
                 expected_options, dict(flink_table_descriptor.get_options())
             )
 
+            get_table_from_source(t_env, source, True)
+            flink_table_descriptor = create_temporary_table.call_args[0][1]
+
+            expected_col_strs = [
+                "`id` STRING",
+                "`val` BIGINT",
+                "`ts` BIGINT",
+            ]
+            schema_str = str(flink_table_descriptor.get_schema())
+            for col_str in expected_col_strs:
+                self.assertIn(col_str, schema_str)
+
+            expected_options = {
+                "connector": "bounded-kafka",
+                "topic": "test-topic",
+                "properties.bootstrap.servers": "localhost:9092",
+                "properties.group.id": "test-group",
+                "properties.consumer.key": "value",
+                "value.format": "json",
+                "scan.startup.mode": "timestamp",
+                "scan.startup.timestamp-millis": "1640995200000",
+                "scan.topic-partition-discovery.interval": "300000 ms",
+                "key.format": "json",
+                "key.fields": "id1;id2",
+                "value.fields-include": "EXCEPT_KEY",
+            }
+            self.assertEquals(
+                expected_options, dict(flink_table_descriptor.get_options())
+            )
+
 
 class SinkUtilTest(unittest.TestCase):
     def test_kafka_sink(self):
@@ -138,16 +171,28 @@ class SinkUtilTest(unittest.TestCase):
             )
 
 
-# TODO: Start a Kafka in memory with Kafka test suite for testing.
 class SourceSinkITTest(unittest.TestCase):
-    kafka_bootstrap_servers = os.environ.get("IT_KAFKA_BOOTSTRAP_SERVERS", None)
-    kafka_topic = os.environ.get("IT_KAFKA_TOPIC", None)
+    kafka_container: KafkaContainer = None
 
-    @unittest.skipUnless(
-        kafka_bootstrap_servers is not None and kafka_topic is not None,
-        "Skip the test unless environment variable IT_KAFKA_BOOTSTRAP_SERVERS and "
-        "IT_KAFKA_TOPIC are set.",
-    )
+    def __init__(self, methodName: str):
+        super().__init__(methodName)
+        self.kafka_bootstrap_servers = None
+        self.topic_name = methodName
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.kafka_container = KafkaContainer()
+        cls.kafka_container.start()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.kafka_container.stop()
+
+    def setUp(self) -> None:
+        self.kafka_bootstrap_servers = (
+            SourceSinkITTest.kafka_container.get_bootstrap_server()
+        )
+
     def test_kafka_source_sink(self):
         # Produce data with kafka sink
         env = StreamExecutionEnvironment.get_execution_environment()
@@ -172,7 +217,7 @@ class SourceSinkITTest(unittest.TestCase):
 
         sink = KafkaSink(
             bootstrap_server=self.kafka_bootstrap_servers,
-            topic=self.kafka_topic,
+            topic=self.topic_name,
             key_format="json",
             value_format="json",
         )
@@ -183,7 +228,7 @@ class SourceSinkITTest(unittest.TestCase):
         source = KafkaSource(
             "kafka_source",
             bootstrap_server=self.kafka_bootstrap_servers,
-            topic=self.kafka_topic,
+            topic=self.topic_name,
             key_format="json",
             value_format="json",
             schema=Schema(["id", "val", "ts"], [Int64, Int64, String]),
@@ -207,4 +252,62 @@ class SourceSinkITTest(unittest.TestCase):
                     table_result.get_job_client().cancel().result()
                     break
 
+        self.assertEquals(expected_rows, result_rows)
+
+    def test_bounded_kafka_source(self):
+        # Produce data with kafka sink
+        env = StreamExecutionEnvironment.get_execution_environment()
+        t_env = StreamTableEnvironment.create(env)
+        table_builder = FlinkTableBuilder(t_env, LocalRegistry({}))
+        test_time = datetime.now()
+
+        row_data = [
+            (1, 1, datetime(2022, 1, 1, 0, 0, 0).strftime("%Y-%m-%d %H:%M:%S")),
+            (2, 2, datetime(2022, 1, 1, 0, 0, 1).strftime("%Y-%m-%d %H:%M:%S")),
+            (3, 3, datetime(2022, 1, 1, 0, 0, 2).strftime("%Y-%m-%d %H:%M:%S")),
+        ]
+        table = t_env.from_elements(
+            row_data,
+            DataTypes.ROW(
+                [
+                    DataTypes.FIELD("id", DataTypes.BIGINT()),
+                    DataTypes.FIELD("val", DataTypes.BIGINT()),
+                    DataTypes.FIELD("ts", DataTypes.STRING()),
+                ]
+            ),
+        )
+
+        sink = KafkaSink(
+            bootstrap_server=self.kafka_bootstrap_servers,
+            topic=self.topic_name,
+            key_format="json",
+            value_format="json",
+        )
+
+        insert_into_sink(t_env, table, sink, ("id",)).wait()
+
+        # Consume data with kafka source
+        source = KafkaSource(
+            "kafka_source",
+            bootstrap_server=self.kafka_bootstrap_servers,
+            topic=self.topic_name,
+            key_format="json",
+            value_format="json",
+            schema=Schema(["id", "val", "ts"], [Int64, Int64, String]),
+            consumer_group="test-group",
+            keys=["id"],
+            timestamp_field="ts",
+            timestamp_format="%Y-%m-%d %H:%M:%S",
+            startup_mode="timestamp",
+            startup_datetime=test_time,
+        )
+
+        features = DerivedFeatureView(
+            "feature_view", source, features=[], keep_source_fields=True
+        )
+        expected_rows = {Row(*data) for data in row_data}
+        table = table_builder.build(features)
+        table_result = table.execute()
+        with table_result.collect() as results:
+            result_rows = set(results)
         self.assertEquals(expected_rows, result_rows)

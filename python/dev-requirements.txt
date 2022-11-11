@@ -19,3 +19,4 @@ autopep8>=1.6.0
 pytest==4.4.1
 flake8==4.0.1
 mypy==0.971
+testcontainers[kafka]~=3.7.0
