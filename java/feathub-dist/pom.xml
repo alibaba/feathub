@@ -42,7 +42,7 @@
 
         <dependency>
             <groupId>com.alibaba.feathub</groupId>
-            <artifactId>feathub-udf</artifactId>
+            <artifactId>flink-udf</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

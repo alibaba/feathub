@@ -45,7 +45,7 @@ def get_feathub_udf_jar_path() -> str:
     Return the path to the Feathub java udf jar.
     """
     lib_dir = find_jar_lib()
-    jars = glob.glob(os.path.join(lib_dir, "feathub-udf-*.jar"))
+    jars = glob.glob(os.path.join(lib_dir, "flink-udf-*.jar"))
     if len(jars) < 1:
         raise FeathubException(f"Can not find the Feathub udf jar at {lib_dir}.")
     return jars[0]
@@ -63,38 +63,38 @@ def _is_row_and_time_based_over_window(
 
 JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
     AggFunc.VALUE_COUNTS: JavaUDFDescriptor(
-        "value_counts", "com.alibaba.feathub.udf.ValueCountsAggFunc"
+        "value_counts", "com.alibaba.feathub.flink.udf.ValueCountsAggFunc"
     )
 }
 
 ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
     AggFunc.AVG: JavaUDFDescriptor(
-        "time_windowed_avg", "com.alibaba.feathub.udf.TimeWindowedAvgAggFunc"
+        "time_windowed_avg", "com.alibaba.feathub.flink.udf.TimeWindowedAvgAggFunc"
     ),
     AggFunc.SUM: JavaUDFDescriptor(
-        "time_windowed_sum", "com.alibaba.feathub.udf.TimeWindowedSumAggFunc"
+        "time_windowed_sum", "com.alibaba.feathub.flink.udf.TimeWindowedSumAggFunc"
     ),
     AggFunc.MIN: JavaUDFDescriptor(
-        "time_windowed_min", "com.alibaba.feathub.udf.TimeWindowedMinAggFunc"
+        "time_windowed_min", "com.alibaba.feathub.flink.udf.TimeWindowedMinAggFunc"
     ),
     AggFunc.MAX: JavaUDFDescriptor(
-        "time_windowed_max", "com.alibaba.feathub.udf.TimeWindowedMaxAggFunc"
+        "time_windowed_max", "com.alibaba.feathub.flink.udf.TimeWindowedMaxAggFunc"
     ),
     AggFunc.FIRST_VALUE: JavaUDFDescriptor(
         "time_windowed_first_value",
-        "com.alibaba.feathub.udf.TimeWindowedFirstValueAggFunc",
+        "com.alibaba.feathub.flink.udf.TimeWindowedFirstValueAggFunc",
     ),
     AggFunc.LAST_VALUE: JavaUDFDescriptor(
         "time_windowed_last_value",
-        "com.alibaba.feathub.udf.TimeWindowedLastValueAggFunc",
+        "com.alibaba.feathub.flink.udf.TimeWindowedLastValueAggFunc",
     ),
     AggFunc.ROW_NUMBER: JavaUDFDescriptor(
         "time_windowed_row_number",
-        "com.alibaba.feathub.udf.TimeWindowedRowNumberAggFunc",
+        "com.alibaba.feathub.flink.udf.TimeWindowedRowNumberAggFunc",
     ),
     AggFunc.VALUE_COUNTS: JavaUDFDescriptor(
         "time_windowed_value_counts",
-        "com.alibaba.feathub.udf.TimeWindowedValueCountsAggFunc",
+        "com.alibaba.feathub.flink.udf.TimeWindowedValueCountsAggFunc",
     ),
 }
 
