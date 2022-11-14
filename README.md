@@ -42,6 +42,7 @@ architecture and concepts](docs/architecture.md) for more details.
 
 Prerequisites for building python packages:
 - Unix-like operating system (e.g. Linux, Mac OS X)
+- x86_64 architecture
 - Python 3.7
 - Java 8
 - Maven >= 3.1.1
