@@ -55,7 +55,7 @@ class SlidingFeatureView(FeatureView):
         source: Union[str, TableDescriptor],
         features: Sequence[Union[str, Feature]],
         timestamp_field: str = "window_time",
-        timestamp_format: str = "epoch",
+        timestamp_format: str = "epoch_millis",
     ):
         """
         :param name: The unique identifier of this feature view in the registry.
@@ -96,7 +96,7 @@ class SlidingFeatureView(FeatureView):
     def _get_window_time_feature(
         timestamp_field: str, timestamp_format: str
     ) -> Feature:
-        if timestamp_format == "epoch":
+        if timestamp_format == "epoch" or timestamp_format == "epoch_millis":
             timestamp_dtype = types.Int64
         else:
             timestamp_dtype = types.String

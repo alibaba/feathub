@@ -43,6 +43,7 @@ def get_table_from_data_gen_source(
     # Define watermark if the kafka_source has timestamp field
     if data_gen_source.timestamp_field is not None:
         flink_schema = define_watermark(
+            t_env,
             flink_schema,
             timedelta_to_flink_sql_interval(
                 data_gen_source.max_out_of_orderness, day_precision=3

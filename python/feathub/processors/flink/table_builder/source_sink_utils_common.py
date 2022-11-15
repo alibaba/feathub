@@ -16,6 +16,7 @@ import uuid
 from pyflink.table import (
     Table as NativeFlinkTable,
     Schema as NativeFlinkSchema,
+    StreamTableEnvironment,
 )
 
 from feathub.common import types
@@ -43,6 +44,7 @@ def get_schema_from_table(table: NativeFlinkTable) -> NativeFlinkSchema:
 
 
 def define_watermark(
+    t_env: StreamTableEnvironment,
     flink_schema: NativeFlinkSchema,
     max_out_of_orderness_interval: str,
     timestamp_field: str,
@@ -54,6 +56,8 @@ def define_watermark(
 
     if timestamp_field_dtype == types.Timestamp:
         builder.column_by_expression(EVENT_TIME_ATTRIBUTE_NAME, f"`{timestamp_field}`")
+
+    # TODO: Properly handle timestamp with or without timezone.
     elif timestamp_format == "epoch":
         if (
             timestamp_field_dtype != types.Int32
@@ -68,6 +72,17 @@ def define_watermark(
             f"CAST("
             f"  FROM_UNIXTIME(CAST(`{timestamp_field}` AS INTEGER)) "
             f"AS TIMESTAMP(3))",
+        )
+    elif timestamp_format == "epoch_millis":
+        if timestamp_field_dtype != types.Int64:
+            raise FeathubException(
+                "Timestamp field with epoch format only supports data type of Int64."
+            )
+
+        builder.column_by_expression(
+            EVENT_TIME_ATTRIBUTE_NAME,
+            f"FROM_UNIXTIME_MILLIS(CAST(`{timestamp_field}` AS BIGINT), "
+            f"'{t_env.get_config().get_local_timezone()}')",
         )
     else:
         if timestamp_field_dtype != types.String:

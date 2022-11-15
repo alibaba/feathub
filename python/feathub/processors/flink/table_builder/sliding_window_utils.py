@@ -39,9 +39,7 @@ from feathub.processors.flink.table_builder.time_utils import (
     timedelta_to_flink_sql_interval,
 )
 from feathub.processors.flink.table_builder.udf import (
-    register_feathub_java_udf,
-    unregister_feathub_java_udf,
-    JAVA_UDF,
+    AGG_JAVA_UDF,
 )
 
 
@@ -120,7 +118,6 @@ def evaluate_sliding_window_transform(
                             perform.
     :return: The result table.
     """
-    register_feathub_java_udf(t_env, agg_descriptors)
 
     step_interval = timedelta_to_flink_sql_interval(window_descriptor.step_size)
     window_size_interval = timedelta_to_flink_sql_interval(
@@ -202,8 +199,6 @@ def evaluate_sliding_window_transform(
             ],
         )
 
-    unregister_feathub_java_udf(t_env, agg_descriptors)
-
     return result
 
 
@@ -276,7 +271,7 @@ def _get_sliding_window_agg_select_expr(
         result = expr.count
         result_type = result_type.not_null()
     elif agg_func == AggFunc.VALUE_COUNTS:
-        result = native_flink_expr.call(JAVA_UDF.get(agg_func).udf_name, expr)
+        result = native_flink_expr.call(AGG_JAVA_UDF.get(agg_func).udf_name, expr)
     else:
         raise FeathubTransformationException(
             f"Unsupported aggregation for FlinkProcessor {agg_func}."
