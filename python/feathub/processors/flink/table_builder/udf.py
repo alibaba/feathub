@@ -58,40 +58,50 @@ def _is_row_and_time_based_over_window(
     )
 
 
-JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
+AGG_JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
     AggFunc.VALUE_COUNTS: JavaUDFDescriptor(
-        "value_counts", "com.alibaba.feathub.flink.udf.ValueCountsAggFunc"
+        "VALUE_COUNTS", "com.alibaba.feathub.flink.udf.ValueCountsAggFunc"
     )
 }
 
 ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
     AggFunc.AVG: JavaUDFDescriptor(
-        "time_windowed_avg", "com.alibaba.feathub.flink.udf.TimeWindowedAvgAggFunc"
+        "TIME_WINDOWED_AVG", "com.alibaba.feathub.flink.udf.TimeWindowedAvgAggFunc"
     ),
     AggFunc.SUM: JavaUDFDescriptor(
-        "time_windowed_sum", "com.alibaba.feathub.flink.udf.TimeWindowedSumAggFunc"
+        "TIME_WINDOWED_SUM", "com.alibaba.feathub.flink.udf.TimeWindowedSumAggFunc"
     ),
     AggFunc.MIN: JavaUDFDescriptor(
-        "time_windowed_min", "com.alibaba.feathub.flink.udf.TimeWindowedMinAggFunc"
+        "TIME_WINDOWED_MIN", "com.alibaba.feathub.flink.udf.TimeWindowedMinAggFunc"
     ),
     AggFunc.MAX: JavaUDFDescriptor(
-        "time_windowed_max", "com.alibaba.feathub.flink.udf.TimeWindowedMaxAggFunc"
+        "TIME_WINDOWED_MAX", "com.alibaba.feathub.flink.udf.TimeWindowedMaxAggFunc"
     ),
     AggFunc.FIRST_VALUE: JavaUDFDescriptor(
-        "time_windowed_first_value",
+        "TIME_WINDOWED_FIRST_VALUE",
         "com.alibaba.feathub.flink.udf.TimeWindowedFirstValueAggFunc",
     ),
     AggFunc.LAST_VALUE: JavaUDFDescriptor(
-        "time_windowed_last_value",
+        "TIME_WINDOWED_LAST_VALUE",
         "com.alibaba.feathub.flink.udf.TimeWindowedLastValueAggFunc",
     ),
     AggFunc.ROW_NUMBER: JavaUDFDescriptor(
-        "time_windowed_row_number",
+        "TIME_WINDOWED_ROW_NUMBER",
         "com.alibaba.feathub.flink.udf.TimeWindowedRowNumberAggFunc",
     ),
     AggFunc.VALUE_COUNTS: JavaUDFDescriptor(
-        "time_windowed_value_counts",
+        "TIME_WINDOWED_VALUE_COUNTS",
         "com.alibaba.feathub.flink.udf.TimeWindowedValueCountsAggFunc",
+    ),
+}
+
+SCALAR_JAVA_UDF: Dict[str, JavaUDFDescriptor] = {
+    "UNIX_TIMESTAMP_MILLIS": JavaUDFDescriptor(
+        "UNIX_TIMESTAMP_MILLIS", "com.alibaba.feathub.flink.udf.UnixTimestampMillis"
+    ),
+    "FROM_UNIXTIME_MILLIS": JavaUDFDescriptor(
+        "FROM_UNIXTIME_MILLIS",
+        "com.alibaba.feathub.flink.udf.FromUnixTimestampMillis",
     ),
 }
 
@@ -99,8 +109,9 @@ ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
 def register_all_feathub_udf(t_env: StreamTableEnvironment) -> None:
     add_jar_to_t_env(t_env, get_feathub_udf_jar_path())
     for udf_descriptor in {
-        *JAVA_UDF.values(),
+        *AGG_JAVA_UDF.values(),
         *ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF.values(),
+        *SCALAR_JAVA_UDF.values(),
     }:
         t_env.create_java_temporary_function(
             udf_descriptor.udf_name, udf_descriptor.java_class_name

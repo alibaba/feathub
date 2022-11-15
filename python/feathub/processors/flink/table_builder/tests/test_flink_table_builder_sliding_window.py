@@ -56,10 +56,10 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
         expected_result_df = pd.DataFrame(
             [
-                [self._to_unix_timestamp("2022-01-01 23:59:59.999"), 500],
-                [self._to_unix_timestamp("2022-01-02 23:59:59.999"), 1000],
-                [self._to_unix_timestamp("2022-01-03 23:59:59.999"), 1600],
-                [self._to_unix_timestamp("2022-01-04 23:59:59.999"), 1100],
+                [self._to_epoch_millis("2022-01-01 23:59:59.999"), 500],
+                [self._to_epoch_millis("2022-01-02 23:59:59.999"), 1000],
+                [self._to_epoch_millis("2022-01-03 23:59:59.999"), 1600],
+                [self._to_epoch_millis("2022-01-04 23:59:59.999"), 1100],
             ],
             columns=["window_time", "total_cost"],
         )
@@ -98,18 +98,18 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
         expected_result_df = pd.DataFrame(
             [
-                ["Alex", self._to_unix_timestamp("2022-01-01 23:59:59.999"), 100],
-                ["Alex", self._to_unix_timestamp("2022-01-02 23:59:59.999"), 400],
-                ["Alex", self._to_unix_timestamp("2022-01-03 23:59:59.999"), 900],
-                ["Alex", self._to_unix_timestamp("2022-01-04 23:59:59.999"), 900],
-                ["Alex", self._to_unix_timestamp("2022-01-05 23:59:59.999"), 600],
-                ["Emma", self._to_unix_timestamp("2022-01-01 23:59:59.999"), 400],
-                ["Emma", self._to_unix_timestamp("2022-01-02 23:59:59.999"), 600],
-                ["Emma", self._to_unix_timestamp("2022-01-03 23:59:59.999"), 600],
-                ["Emma", self._to_unix_timestamp("2022-01-04 23:59:59.999"), 200],
-                ["Jack", self._to_unix_timestamp("2022-01-03 23:59:59.999"), 500],
-                ["Jack", self._to_unix_timestamp("2022-01-04 23:59:59.999"), 500],
-                ["Jack", self._to_unix_timestamp("2022-01-05 23:59:59.999"), 500],
+                ["Alex", self._to_epoch_millis("2022-01-01 23:59:59.999"), 100],
+                ["Alex", self._to_epoch_millis("2022-01-02 23:59:59.999"), 400],
+                ["Alex", self._to_epoch_millis("2022-01-03 23:59:59.999"), 900],
+                ["Alex", self._to_epoch_millis("2022-01-04 23:59:59.999"), 900],
+                ["Alex", self._to_epoch_millis("2022-01-05 23:59:59.999"), 600],
+                ["Emma", self._to_epoch_millis("2022-01-01 23:59:59.999"), 400],
+                ["Emma", self._to_epoch_millis("2022-01-02 23:59:59.999"), 600],
+                ["Emma", self._to_epoch_millis("2022-01-03 23:59:59.999"), 600],
+                ["Emma", self._to_epoch_millis("2022-01-04 23:59:59.999"), 200],
+                ["Jack", self._to_epoch_millis("2022-01-03 23:59:59.999"), 500],
+                ["Jack", self._to_epoch_millis("2022-01-04 23:59:59.999"), 500],
+                ["Jack", self._to_epoch_millis("2022-01-05 23:59:59.999"), 500],
             ],
             columns=["name", "window_time", "total_cost"],
         )
@@ -155,18 +155,18 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
         expected_result_df = pd.DataFrame(
             [
-                [self._to_unix_timestamp("2022-01-01 23:59:59.999"), "Alex_Alex", 100],
-                [self._to_unix_timestamp("2022-01-02 23:59:59.999"), "Alex_Alex", 400],
-                [self._to_unix_timestamp("2022-01-03 23:59:59.999"), "Alex_Alex", 900],
-                [self._to_unix_timestamp("2022-01-04 23:59:59.999"), "Alex_Alex", 900],
-                [self._to_unix_timestamp("2022-01-05 23:59:59.999"), "Alex_Alex", 600],
-                [self._to_unix_timestamp("2022-01-01 23:59:59.999"), "Emma_Emma", 400],
-                [self._to_unix_timestamp("2022-01-02 23:59:59.999"), "Emma_Emma", 600],
-                [self._to_unix_timestamp("2022-01-03 23:59:59.999"), "Emma_Emma", 600],
-                [self._to_unix_timestamp("2022-01-04 23:59:59.999"), "Emma_Emma", 200],
-                [self._to_unix_timestamp("2022-01-03 23:59:59.999"), "Jack_Jack", 500],
-                [self._to_unix_timestamp("2022-01-04 23:59:59.999"), "Jack_Jack", 500],
-                [self._to_unix_timestamp("2022-01-05 23:59:59.999"), "Jack_Jack", 500],
+                [self._to_epoch_millis("2022-01-01 23:59:59.999"), "Alex_Alex", 100],
+                [self._to_epoch_millis("2022-01-02 23:59:59.999"), "Alex_Alex", 400],
+                [self._to_epoch_millis("2022-01-03 23:59:59.999"), "Alex_Alex", 900],
+                [self._to_epoch_millis("2022-01-04 23:59:59.999"), "Alex_Alex", 900],
+                [self._to_epoch_millis("2022-01-05 23:59:59.999"), "Alex_Alex", 600],
+                [self._to_epoch_millis("2022-01-01 23:59:59.999"), "Emma_Emma", 400],
+                [self._to_epoch_millis("2022-01-02 23:59:59.999"), "Emma_Emma", 600],
+                [self._to_epoch_millis("2022-01-03 23:59:59.999"), "Emma_Emma", 600],
+                [self._to_epoch_millis("2022-01-04 23:59:59.999"), "Emma_Emma", 200],
+                [self._to_epoch_millis("2022-01-03 23:59:59.999"), "Jack_Jack", 500],
+                [self._to_epoch_millis("2022-01-04 23:59:59.999"), "Jack_Jack", 500],
+                [self._to_epoch_millis("2022-01-05 23:59:59.999"), "Jack_Jack", 500],
             ],
             columns=["window_time", "name_name", "total_cost"],
         )
@@ -251,84 +251,84 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
             [
                 [
                     "Alex",
-                    self._to_unix_timestamp("2022-01-01 09:01:59.999"),
+                    self._to_epoch_millis("2022-01-01 09:01:59.999"),
                     300.0,
                     300.0,
                     2,
                 ],
                 [
                     "Alex",
-                    self._to_unix_timestamp("2022-01-01 09:02:59.999"),
+                    self._to_epoch_millis("2022-01-01 09:02:59.999"),
                     300.0,
                     300.0,
                     2,
                 ],
                 [
                     "Alex",
-                    self._to_unix_timestamp("2022-01-01 09:03:59.999"),
+                    self._to_epoch_millis("2022-01-01 09:03:59.999"),
                     0.0,
                     200.0,
                     0,
                 ],
                 [
                     "Alex",
-                    self._to_unix_timestamp("2022-01-01 09:04:59.999"),
+                    self._to_epoch_millis("2022-01-01 09:04:59.999"),
                     0.0,
                     200.0,
                     0,
                 ],
                 [
                     "Alex",
-                    self._to_unix_timestamp("2022-01-01 09:06:59.999"),
+                    self._to_epoch_millis("2022-01-01 09:06:59.999"),
                     450.0,
                     0.0,
                     1,
                 ],
                 [
                     "Alex",
-                    self._to_unix_timestamp("2022-01-01 09:07:59.999"),
+                    self._to_epoch_millis("2022-01-01 09:07:59.999"),
                     450.0,
                     0.0,
                     1,
                 ],
                 [
                     "Emma",
-                    self._to_unix_timestamp("2022-01-01 09:02:59.999"),
+                    self._to_epoch_millis("2022-01-01 09:02:59.999"),
                     400.0,
                     500.0,
                     1,
                 ],
                 [
                     "Emma",
-                    self._to_unix_timestamp("2022-01-01 09:03:59.999"),
+                    self._to_epoch_millis("2022-01-01 09:03:59.999"),
                     400.0,
                     500.0,
                     1,
                 ],
                 [
                     "Emma",
-                    self._to_unix_timestamp("2022-01-01 09:04:59.999"),
+                    self._to_epoch_millis("2022-01-01 09:04:59.999"),
                     300.0,
                     0.0,
                     1,
                 ],
                 [
                     "Emma",
-                    self._to_unix_timestamp("2022-01-01 09:05:59.999"),
+                    self._to_epoch_millis("2022-01-01 09:05:59.999"),
                     300.0,
                     0.0,
                     1,
                 ],
                 [
                     "Jack",
-                    self._to_unix_timestamp("2022-01-01 09:05:59.999"),
+                    self._to_epoch_millis("2022-01-01 09:05:59.999"),
                     0.0,
                     500.0,
                     0,
                 ],
                 [
                     "Jack",
-                    self._to_unix_timestamp("2022-01-01 09:06:59.999"),
+                    self._to_epoch_millis("2022-01-01 09:06:59.999"),
                     0.0,
                     500.0,
                     0,
@@ -418,7 +418,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
             [
                 [
                     "Alex",
-                    self._to_unix_timestamp("2022-01-01 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-01 23:59:59.999"),
                     "2022-01-01 08:01:00",
                     "2022-01-01 08:01:00",
                     0.0,
@@ -427,7 +427,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Alex",
-                    self._to_unix_timestamp("2022-01-02 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-02 23:59:59.999"),
                     "2022-01-01 08:01:00",
                     "2022-01-02 08:03:00",
                     86520.0,
@@ -436,7 +436,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Alex",
-                    self._to_unix_timestamp("2022-01-03 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-03 23:59:59.999"),
                     "2022-01-02 08:03:00",
                     "2022-01-03 08:06:00",
                     86580.0,
@@ -445,7 +445,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Alex",
-                    self._to_unix_timestamp("2022-01-04 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-04 23:59:59.999"),
                     "2022-01-03 08:06:00",
                     "2022-01-03 08:06:00",
                     0.0,
@@ -454,7 +454,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Emma",
-                    self._to_unix_timestamp("2022-01-01 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-01 23:59:59.999"),
                     "2022-01-01 08:02:00",
                     "2022-01-01 08:02:00",
                     0.0,
@@ -463,7 +463,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Emma",
-                    self._to_unix_timestamp("2022-01-02 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-02 23:59:59.999"),
                     "2022-01-01 08:02:00",
                     "2022-01-02 08:04:00",
                     86520.0,
@@ -472,7 +472,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Emma",
-                    self._to_unix_timestamp("2022-01-03 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-03 23:59:59.999"),
                     "2022-01-02 08:04:00",
                     "2022-01-02 08:04:00",
                     0.0,
@@ -481,7 +481,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Jack",
-                    self._to_unix_timestamp("2022-01-03 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-03 23:59:59.999"),
                     "2022-01-03 08:05:00",
                     "2022-01-03 08:05:00",
                     0.0,
@@ -490,7 +490,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ],
                 [
                     "Jack",
-                    self._to_unix_timestamp("2022-01-04 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-04 23:59:59.999"),
                     "2022-01-03 08:05:00",
                     "2022-01-03 08:05:00",
                     0.0,
@@ -658,19 +658,19 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
             [
                 [
                     "Alex",
-                    self._to_unix_timestamp("2022-01-01 09:01:59.999"),
+                    self._to_epoch_millis("2022-01-01 09:01:59.999"),
                     {"100.0": 2},
                     2,
                 ],
                 [
                     "Alex",
-                    self._to_unix_timestamp("2022-01-01 09:02:59.999"),
+                    self._to_epoch_millis("2022-01-01 09:02:59.999"),
                     {"200.0": 2, "100.0": 1},
                     3,
                 ],
                 [
                     "Alex",
-                    self._to_unix_timestamp("2022-01-01 09:03:59.999"),
+                    self._to_epoch_millis("2022-01-01 09:03:59.999"),
                     {"200.0": 2},
                     2,
                 ],
@@ -738,19 +738,19 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                     "Alex",
                     "2022-01-01 09:01:59.999",
                     2,
-                    self._to_unix_timestamp("2022-01-01 09:01:59.999"),
+                    self._to_epoch("2022-01-01 09:01:59.999"),
                 ],
                 [
                     "Alex",
                     "2022-01-01 09:02:59.999",
                     3,
-                    self._to_unix_timestamp("2022-01-01 09:02:59.999"),
+                    self._to_epoch("2022-01-01 09:02:59.999"),
                 ],
                 [
                     "Alex",
                     "2022-01-01 09:03:59.999",
                     2,
-                    self._to_unix_timestamp("2022-01-01 09:03:59.999"),
+                    self._to_epoch("2022-01-01 09:03:59.999"),
                 ],
             ],
             columns=["name", "sliding_window_timestamp", "cnt", "epoch_window_time"],
@@ -806,73 +806,73 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
         expected_result_df = pd.DataFrame(
             [
                 [
-                    self._to_unix_timestamp("2022-01-01 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-01 23:59:59.999"),
                     "alex",
                     100,
                     sqrt(100),
                 ],
                 [
-                    self._to_unix_timestamp("2022-01-02 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-02 23:59:59.999"),
                     "alex",
                     400,
                     sqrt(400),
                 ],
                 [
-                    self._to_unix_timestamp("2022-01-03 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-03 23:59:59.999"),
                     "alex",
                     1000,
                     sqrt(1000),
                 ],
                 [
-                    self._to_unix_timestamp("2022-01-04 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-04 23:59:59.999"),
                     "alex",
                     900,
                     sqrt(900),
                 ],
                 [
-                    self._to_unix_timestamp("2022-01-05 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-05 23:59:59.999"),
                     "alex",
                     600,
                     sqrt(600),
                 ],
                 [
-                    self._to_unix_timestamp("2022-01-01 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-01 23:59:59.999"),
                     "emma",
                     400,
                     sqrt(400),
                 ],
                 [
-                    self._to_unix_timestamp("2022-01-02 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-02 23:59:59.999"),
                     "emma",
                     600,
                     sqrt(600),
                 ],
                 [
-                    self._to_unix_timestamp("2022-01-03 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-03 23:59:59.999"),
                     "emma",
                     600,
                     sqrt(600),
                 ],
                 [
-                    self._to_unix_timestamp("2022-01-04 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-04 23:59:59.999"),
                     "emma",
                     200,
                     sqrt(200),
                 ],
                 [
-                    self._to_unix_timestamp("2022-01-03 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-03 23:59:59.999"),
                     "jack",
                     500,
                     sqrt(500),
                 ],
                 [
-                    self._to_unix_timestamp("2022-01-04 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-04 23:59:59.999"),
                     "jack",
                     500,
                     sqrt(500),
                 ],
                 [
-                    self._to_unix_timestamp("2022-01-05 23:59:59.999"),
+                    self._to_epoch_millis("2022-01-05 23:59:59.999"),
                     "jack",
                     500,
                     sqrt(500),
@@ -893,7 +893,16 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
         self.assertTrue(expected_result_df.equals(result_df))
 
     @staticmethod
-    def _to_unix_timestamp(
+    def _to_epoch_millis(
+        timestamp_str: str, timestamp_format: str = "%Y-%m-%d %H:%M:%S.%f"
+    ) -> int:
+        return int(
+            datetime.datetime.strptime(timestamp_str, timestamp_format).timestamp()
+            * 1000
+        )
+
+    @staticmethod
+    def _to_epoch(
         timestamp_str: str, timestamp_format: str = "%Y-%m-%d %H:%M:%S.%f"
     ) -> int:
         return int(

@@ -326,3 +326,24 @@ class SlidingFeatureViewTest(unittest.TestCase):
         self.assertEqual(
             expected_timestamp_feature, feature_view.get_feature("my_window_time_field")
         )
+
+        feature_view = SlidingFeatureView(
+            name="feature_view_1",
+            source=self.source,
+            features=[
+                feature,
+            ],
+            timestamp_field="my_window_time_field",
+        )
+
+        expected_timestamp_feature = Feature(
+            name="my_window_time_field",
+            dtype=types.Int64,
+            transform="CURRENT_EVENT_TIME()",
+            keys=["id"],
+        )
+
+        self.assertEqual("epoch_millis", feature_view.timestamp_format)
+        self.assertEqual(
+            expected_timestamp_feature, feature_view.get_feature("my_window_time_field")
+        )

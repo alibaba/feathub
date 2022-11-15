@@ -482,6 +482,13 @@ class FlinkTableBuilder:
                         f"AS STRING))"
                     ).alias(feature_view.timestamp_field)
                 )
+            elif feature_view.timestamp_format == "epoch_millis":
+                tmp_table = tmp_table.add_columns(
+                    native_flink_expr.call_sql(
+                        f"UNIX_TIMESTAMP_MILLIS(CAST(`{EVENT_TIME_ATTRIBUTE_NAME}` "
+                        f"AS STRING), '{self.t_env.get_config().get_local_timezone()}')"
+                    ).alias(feature_view.timestamp_field)
+                )
             else:
                 java_datetime_format = to_java_date_format(
                     feature_view.timestamp_format
