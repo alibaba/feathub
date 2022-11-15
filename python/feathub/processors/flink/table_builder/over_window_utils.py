@@ -37,8 +37,6 @@ from feathub.processors.flink.table_builder.time_utils import (
     timedelta_to_flink_sql_interval,
 )
 from feathub.processors.flink.table_builder.udf import (
-    register_feathub_java_udf,
-    unregister_feathub_java_udf,
     ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF,
 )
 
@@ -108,7 +106,6 @@ def evaluate_over_window_transform(
                             perform.
     :return:
     """
-    register_feathub_java_udf(t_env, agg_descriptors, window_descriptor)
     window = _get_flink_over_window(window_descriptor)
     if window_descriptor.filter_expr is not None:
         agg_table = (
@@ -147,7 +144,6 @@ def evaluate_over_window_transform(
             *_get_over_window_agg_column_list(window_descriptor, agg_descriptors),
         )
 
-    unregister_feathub_java_udf(t_env, agg_descriptors, window_descriptor)
     return result_table
 
 

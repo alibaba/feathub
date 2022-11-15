@@ -70,6 +70,7 @@ from feathub.processors.flink.table_builder.sliding_window_utils import (
 from feathub.processors.flink.table_builder.source_sink_utils import (
     get_table_from_source,
 )
+from feathub.processors.flink.table_builder.udf import register_all_feathub_udf
 from feathub.registries.registry import Registry
 from feathub.table.table_descriptor import TableDescriptor
 
@@ -96,6 +97,8 @@ class FlinkTableBuilder:
         # NativeFlinkTable. This is used as a cache to avoid re-computing the native
         # flink table from the same TableDescriptor.
         self._built_tables: Dict[str, Tuple[TableDescriptor, NativeFlinkTable]] = {}
+
+        register_all_feathub_udf(self.t_env)
 
     def build(
         self,

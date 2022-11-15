@@ -13,16 +13,13 @@
 #  limitations under the License.
 import glob
 import os
-from typing import Optional, List, TYPE_CHECKING, Dict
+from typing import Optional, TYPE_CHECKING, Dict
 
 from pyflink.table import StreamTableEnvironment
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_env
-from feathub.processors.flink.table_builder.aggregation_utils import (
-    AggregationFieldDescriptor,
-)
 
 if TYPE_CHECKING:
     from feathub.processors.flink.table_builder.over_window_utils import (
@@ -99,43 +96,12 @@ ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
 }
 
 
-def register_feathub_java_udf(
-    t_env: StreamTableEnvironment,
-    agg_descriptors: List[AggregationFieldDescriptor],
-    over_window_descriptor: Optional["OverWindowDescriptor"] = None,
-) -> None:
-    """
-    Register the Feathub java udf to the StreamTableEnvironment.
-    """
-    agg_funcs = set(descriptor.agg_func for descriptor in agg_descriptors)
-    for agg_func in agg_funcs:
-
-        if _is_row_and_time_based_over_window(over_window_descriptor):
-            udf_descriptor = ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF.get(agg_func, None)
-        else:
-            udf_descriptor = JAVA_UDF.get(agg_func, None)
-
-        if udf_descriptor is not None:
-            add_jar_to_t_env(t_env, get_feathub_udf_jar_path())
-            t_env.create_java_temporary_function(
-                udf_descriptor.udf_name, udf_descriptor.java_class_name
-            )
-
-
-def unregister_feathub_java_udf(
-    t_env: StreamTableEnvironment,
-    agg_descriptors: List[AggregationFieldDescriptor],
-    over_window_descriptor: Optional["OverWindowDescriptor"] = None,
-) -> None:
-    """
-    Unregister the Feathub java udf to the StreamTableEnvironment.
-    """
-    agg_funcs = set(descriptor.agg_func for descriptor in agg_descriptors)
-    for agg_func in agg_funcs:
-        if _is_row_and_time_based_over_window(over_window_descriptor):
-            udf_descriptor = ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF.get(agg_func, None)
-        else:
-            udf_descriptor = JAVA_UDF.get(agg_func, None)
-
-        if udf_descriptor is not None:
-            t_env.drop_temporary_function(udf_descriptor.udf_name)
+def register_all_feathub_udf(t_env: StreamTableEnvironment) -> None:
+    add_jar_to_t_env(t_env, get_feathub_udf_jar_path())
+    for udf_descriptor in {
+        *JAVA_UDF.values(),
+        *ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF.values(),
+    }:
+        t_env.create_java_temporary_function(
+            udf_descriptor.udf_name, udf_descriptor.java_class_name
+        )

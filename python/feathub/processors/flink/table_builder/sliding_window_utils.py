@@ -39,8 +39,6 @@ from feathub.processors.flink.table_builder.time_utils import (
     timedelta_to_flink_sql_interval,
 )
 from feathub.processors.flink.table_builder.udf import (
-    register_feathub_java_udf,
-    unregister_feathub_java_udf,
     JAVA_UDF,
 )
 
@@ -120,7 +118,6 @@ def evaluate_sliding_window_transform(
                             perform.
     :return: The result table.
     """
-    register_feathub_java_udf(t_env, agg_descriptors)
 
     step_interval = timedelta_to_flink_sql_interval(window_descriptor.step_size)
     window_size_interval = timedelta_to_flink_sql_interval(
@@ -201,8 +198,6 @@ def evaluate_sliding_window_transform(
                 EVENT_TIME_ATTRIBUTE_NAME,
             ],
         )
-
-    unregister_feathub_java_udf(t_env, agg_descriptors)
 
     return result
 
