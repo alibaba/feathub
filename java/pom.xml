@@ -27,6 +27,7 @@
     <modules>
         <module>feathub-dist</module>
         <module>feathub-udf</module>
+        <module>feathub-connectors</module>
     </modules>
 
     <properties>

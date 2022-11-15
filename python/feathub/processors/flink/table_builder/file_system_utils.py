@@ -80,7 +80,7 @@ def insert_into_file_sink(
     # have a name in VVR-6.0.2, which should be fixed in next version VVR-6.0.3. As a
     # current workaround, we have to generate a random table name. We should update the
     # code to use anonymous table sink after VVR-6.0.3 is released.
-    random_sink_name = generate_random_table_name()
+    random_sink_name = generate_random_table_name("FileSink")
     t_env.create_temporary_table(
         random_sink_name,
         NativeFlinkTableDescriptor.for_connector("filesystem")
