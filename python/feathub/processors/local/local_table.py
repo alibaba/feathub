@@ -57,7 +57,7 @@ class LocalTable(Table):
             field_types.append(types.from_numpy_dtype(self.df.dtypes[i]))
         return Schema(field_names=field_names, field_types=field_types)
 
-    def to_pandas(self) -> pd.DataFrame:
+    def to_pandas(self, force_bounded: bool = False) -> pd.DataFrame:
         return self.df
 
     def execute_insert(

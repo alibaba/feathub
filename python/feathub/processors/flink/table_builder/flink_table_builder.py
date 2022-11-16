@@ -150,6 +150,8 @@ class FlinkTableBuilder:
         if EVENT_TIME_ATTRIBUTE_NAME in table.get_schema().get_field_names():
             table = table.drop_columns(EVENT_TIME_ATTRIBUTE_NAME)
 
+        self._built_tables.clear()
+
         return table
 
     def _filter_table_by_keys(

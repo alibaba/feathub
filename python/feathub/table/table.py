@@ -49,9 +49,11 @@ class Table(ABC):
         pass
 
     @abstractmethod
-    def to_pandas(self) -> pd.DataFrame:
+    def to_pandas(self, force_bounded: bool = False) -> pd.DataFrame:
         """
         Returns a Pandas DataFrame containing values of this table.
+
+        :param force_bounded: Whether to force the table to be bounded.
         """
         pass
 
