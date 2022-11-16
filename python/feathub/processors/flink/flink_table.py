@@ -118,17 +118,24 @@ class FlinkTable(Table):
         self.start_datetime = start_datetime
         self.end_datetime = end_datetime
 
-        self._native_flink_table = None
-
     def get_schema(self) -> Schema:
-        schema = self._flink_table.get_schema()
+        schema = self._get_flink_table(self.feature).get_schema()
         return to_feathub_schema(schema)
 
-    def to_pandas(self) -> pd.DataFrame:
+    def to_pandas(self, force_bounded: bool = False) -> pd.DataFrame:
         if self.flink_processor.deployment_mode != DeploymentMode.SESSION:
             raise FeathubException("Table.to_pandas is only supported in session mode.")
 
-        return flink_table_to_pandas(self._flink_table)
+        feature = self.feature
+        if not feature.is_bounded():
+            if not force_bounded:
+                raise FeathubException(
+                    "Unbounded table cannot be converted to Pandas DataFrame. You can "
+                    "set force_bounded to True to convert the Table to DataFrame."
+                )
+            feature = feature.get_bounded_view()
+
+        return flink_table_to_pandas(self._get_flink_table(feature))
 
     def execute_insert(
         self,
@@ -145,17 +152,13 @@ class FlinkTable(Table):
             allow_overwrite=allow_overwrite,
         )
 
-    @property
-    def _flink_table(self) -> NativeFlinkTable:
-        if self._native_flink_table is None:
-            self._native_flink_table = self.flink_processor.flink_table_builder.build(
-                features=self.feature,
-                keys=self.keys,
-                start_datetime=self.start_datetime,
-                end_datetime=self.end_datetime,
-            )
-
-        return self._native_flink_table
+    def _get_flink_table(self, feature: TableDescriptor) -> NativeFlinkTable:
+        return self.flink_processor.flink_table_builder.build(
+            features=feature,
+            keys=self.keys,
+            start_datetime=self.start_datetime,
+            end_datetime=self.end_datetime,
+        )
 
     def __eq__(self, other: Any) -> bool:
         return (
