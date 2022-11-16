@@ -103,7 +103,7 @@ def get_table_from_kafka_source(
             )
             flink_schema = builder.build()
 
-    connector_type = "bounded-kafka" if kafka_source.is_bounded else "kafka"
+    connector_type = "bounded-kafka" if kafka_source.is_bounded() else "kafka"
     descriptor_builder = (
         NativeFlinkTableDescriptor.for_connector(connector_type)
         .option("value.format", kafka_source.value_format)

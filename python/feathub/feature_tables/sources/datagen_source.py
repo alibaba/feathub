@@ -11,12 +11,16 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from copy import deepcopy
 from datetime import timedelta
 from typing import Dict, Optional, List, Union, Any
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.table.schema import Schema
+from feathub.table.table_descriptor import TableDescriptor
+
+DEFAULT_BOUNDED_NUMBER_OF_ROWS = 100
 
 
 class RandomField:
@@ -75,53 +79,18 @@ class SequenceField:
         return {"type": "sequence", "start": self.start, "end": self.end}
 
 
-default_field_config = RandomField()
-
-
-class DataGenConfig:
-    """
-    DataGenConfig specifies how the data are generated.
-    """
-
-    def __init__(
-        self,
-        rows_per_second: int = 10000,
-        number_of_rows: Optional[int] = None,
-        field_configs: Optional[Dict[str, Union[RandomField, SequenceField]]] = None,
-    ) -> None:
-        """
-        :param rows_per_second: Rows per second to control the emit rate.
-        :param number_of_rows: Optional. If it is None, unlimited number of rows will be
-                               generated. If it is not None, it specifies the total
-                               number of rows to emit.
-        :param field_configs: A Map of field to the config of the field. The config
-                              can be either RandomField or SequenceField. Every field
-                              should be in the schema of the DataGenSource. If a field
-                              in the schema doesn't have a config, it is set to
-                              `default_field_config`.
-        """
-        self.rows_per_second = rows_per_second
-        self.number_of_rows = number_of_rows
-        self.field_configs = field_configs
-
-    def to_json(self) -> Dict:
-        return {
-            "rows_per_second": self.rows_per_second,
-            "number_of_rows": self.number_of_rows,
-            "field_configs": {k: v.to_json() for k, v in self.field_configs.items()},
-        }
-
-
 class DataGenSource(FeatureTable):
     """
-    DataGenSource generate table with random data or sequential data.
+    DataGenSource generates table with random data or sequential data.
     """
 
     def __init__(
         self,
         name: str,
         schema: Schema,
-        data_gen_config: DataGenConfig = DataGenConfig(),
+        rows_per_second: int = 10000,
+        number_of_rows: Optional[int] = None,
+        field_configs: Optional[Dict[str, Union[RandomField, SequenceField]]] = None,
         keys: Optional[List[str]] = None,
         timestamp_field: Optional[str] = None,
         timestamp_format: str = "epoch",
@@ -130,8 +99,15 @@ class DataGenSource(FeatureTable):
         """
         :param name: The name that uniquely identifies this source in a registry.
         :param schema: The schema of the data.
-        :param data_gen_config: The DataGenConfig that specify how the data are
-                                generated.
+        :param rows_per_second: Rows per second to control the emit rate.
+        :param number_of_rows: Optional. If it is None, unlimited number of rows will be
+                               generated. If it is not None, it specifies the total
+                               number of rows to emit.
+        :param field_configs: A Map of field to the config of the field. The config
+                              can be either RandomField or SequenceField. Every field
+                              should be in the schema of the DataGenSource. If a field
+                              in the schema doesn't have a config, it is set to
+                              RandomField.
         :param keys: Optional. The names of fields in this feature view that are
                      necessary to interpret a row of this table. If it is not None, it
                      must be a superset of keys of any feature in this table.
@@ -144,33 +120,55 @@ class DataGenSource(FeatureTable):
                                      should be ordered by `timestamp_field`.
         """
         super().__init__(
-            name,
-            "datagen",
-            {},
+            name=name,
+            system_name="datagen",
+            properties={},
             keys=keys,
             timestamp_field=timestamp_field,
             timestamp_format=timestamp_format,
             schema=schema,
         )
 
-        self.data_gen_config = data_gen_config
+        self.number_of_rows = number_of_rows
+        self.rows_per_second = rows_per_second
+        self.field_configs = field_configs if field_configs is not None else {}
         self.max_out_of_orderness = max_out_of_orderness
 
         # TODO: Add validation of field type and field config.
-        for field, _ in data_gen_config.field_configs.items():
+        for field, _ in self.field_configs.items():
             if field not in schema.field_names:
                 raise FeathubException(f"Field {field} is not in the schema.")
 
         for field in schema.field_names:
-            if field not in data_gen_config.field_configs:
-                data_gen_config.field_configs[field] = default_field_config
+            if field not in self.field_configs:
+                self.field_configs[field] = RandomField()
+
+    def is_bounded(self) -> bool:
+        if self.number_of_rows is not None:
+            return True
+
+        for field_config in self.field_configs.values():
+            if isinstance(field_config, SequenceField):
+                return True
+
+        return False
+
+    def get_bounded_view(self) -> TableDescriptor:
+        if self.is_bounded():
+            return self
+
+        data_gen_source = deepcopy(self)
+        data_gen_source.number_of_rows = DEFAULT_BOUNDED_NUMBER_OF_ROWS
+        return data_gen_source
 
     def to_json(self) -> Dict:
         return {
             "type": "DataGenSource",
             "name": self.name,
             "schema": self.schema,
-            "data_gen_config": self.data_gen_config.to_json(),
+            "rows_per_second": self.rows_per_second,
+            "number_of_rows": self.number_of_rows,
+            "field_configs": {k: v.to_json() for k, v in self.field_configs.items()},
             "keys": self.keys,
             "timestamp_field": self.timestamp_field,
             "timestamp_format": self.timestamp_format,

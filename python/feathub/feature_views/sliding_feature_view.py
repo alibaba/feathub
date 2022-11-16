@@ -48,7 +48,6 @@ class SlidingFeatureView(FeatureView):
     "epoch". Other fields in the source table will not be included.
     """
 
-    # TODO: support epoch format with millisecond precision.
     def __init__(
         self,
         name: str,

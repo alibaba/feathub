@@ -19,7 +19,6 @@ from pyflink.table import StreamTableEnvironment
 from feathub.common.types import Int32, Timestamp
 from feathub.feature_tables.sources.datagen_source import (
     DataGenSource,
-    DataGenConfig,
     RandomField,
     SequenceField,
 )
@@ -37,13 +36,11 @@ class DataGenUtilsTest(unittest.TestCase):
 
         source = DataGenSource(
             name="datagen_src",
-            data_gen_config=DataGenConfig(
-                rows_per_second=10,
-                field_configs={
-                    "id": SequenceField(start=0, end=9),
-                    "val": RandomField(minimum=0, maximum=100),
-                },
-            ),
+            rows_per_second=10,
+            field_configs={
+                "id": SequenceField(start=0, end=9),
+                "val": RandomField(minimum=0, maximum=100),
+            },
             schema=Schema(["id", "val", "ts"], [Int32, Int32, Timestamp]),
             timestamp_field="ts",
             timestamp_format="%Y-%m-%d %H:%M:%S",

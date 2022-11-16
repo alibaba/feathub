@@ -13,10 +13,10 @@
 #  limitations under the License.
 from typing import Dict, Optional
 
-from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sinks.sink import Sink
 
 
-class KafkaSink(FeatureTable):
+class KafkaSink(Sink):
     def __init__(
         self,
         bootstrap_server: str,

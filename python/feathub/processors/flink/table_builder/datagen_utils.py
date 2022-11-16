@@ -57,17 +57,16 @@ def get_table_from_data_gen_source(
         "datagen"
     ).schema(flink_schema)
 
-    data_gen_config = data_gen_source.data_gen_config
     table_descriptor_builder.option(
-        "rows-per-second", str(data_gen_config.rows_per_second)
+        "rows-per-second", str(data_gen_source.rows_per_second)
     )
 
-    if data_gen_config.number_of_rows is not None:
+    if data_gen_source.number_of_rows is not None:
         table_descriptor_builder.option(
-            "number-of-rows", str(data_gen_source.data_gen_config.number_of_rows)
+            "number-of-rows", str(data_gen_source.number_of_rows)
         )
 
-    for field, field_config in data_gen_source.data_gen_config.field_configs.items():
+    for field, field_config in data_gen_source.field_configs.items():
         if isinstance(field_config, RandomField):
             table_descriptor_builder.option(f"fields.{field}.kind", "random")
             if field_config.minimum is not None:

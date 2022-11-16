@@ -16,8 +16,8 @@ from typing import List, Optional, Dict, Any
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_views.feature import Feature
-from feathub.table.table_descriptor import TableDescriptor
 from feathub.table.schema import Schema
+from feathub.table.table_descriptor import TableDescriptor
 
 
 # TODO: Update Sink implementation of FeatureTable to support rename timestamp field
@@ -92,4 +92,16 @@ class FeatureTable(TableDescriptor, ABC):
             dtype=self.schema.get_field_type(feature_name),
             transform=feature_name,
             keys=self.keys,
+        )
+
+    def is_bounded(self) -> bool:
+        # FeatureTable is bounded by default unless subclass overwrite the method.
+        return True
+
+    def get_bounded_view(self) -> TableDescriptor:
+        if self.is_bounded():
+            return self
+
+        raise FeathubException(
+            f"{type(self)} is unbounded and it doesn't support getting bounded view."
         )

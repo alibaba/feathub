@@ -13,10 +13,10 @@
 #  limitations under the License.
 from typing import Dict
 
-from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sinks.sink import Sink
 
 
-class FileSystemSink(FeatureTable):
+class FileSystemSink(Sink):
     """A Sink which writes data to files."""
 
     def __init__(self, path: str, data_format: str) -> None:
@@ -25,7 +25,10 @@ class FileSystemSink(FeatureTable):
         :param data_format: The format of the data that are written to the file.
         """
         super().__init__(
-            "", "filesystem", properties={"path": path}, data_format=data_format
+            name="",
+            system_name="filesystem",
+            properties={"path": path},
+            data_format=data_format,
         )
         self.path = path
 

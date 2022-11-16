@@ -14,6 +14,9 @@
 
 import unittest
 
+from feathub.common.exceptions import FeathubException
+from feathub.common.types import Int64
+from feathub.feature_tables.sources.datagen_source import DataGenSource
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
@@ -97,3 +100,103 @@ class FeatureViewTest(unittest.TestCase):
 
         self.assertTrue(feature_view_1.is_unresolved())
         self.assertIsNone(feature_view_1.timestamp_field)
+
+    def test_feature_view_boundedness(self):
+        source = DataGenSource(
+            name="source_1",
+            schema=Schema(["id", "val1"], [Int64, Int64]),
+            timestamp_field="lpep_dropoff_datetime",
+            timestamp_format="%Y-%m-%d %H:%M:%S",
+            keys=["id"],
+        )
+
+        source_2 = DataGenSource(
+            name="source_2",
+            schema=Schema(["id", "val2"], [Int64, Int64]),
+            timestamp_field="lpep_dropoff_datetime",
+            timestamp_format="%Y-%m-%d %H:%M:%S",
+            keys=["id"],
+        )
+
+        feature_view_1 = DerivedFeatureView(
+            name="feature_view_1",
+            source=source,
+            features=["source_2.val2"],
+            keep_source_fields=True,
+        )
+
+        built_feature_view_1 = self.registry.build_features([source_2, feature_view_1])[
+            1
+        ]
+        self.assertFalse(built_feature_view_1.is_bounded())
+
+        with self.assertRaises(RuntimeError) as cm:
+            feature_view_1.get_bounded_view()
+        self.assertIn("This feature view is unresolved.", cm.exception.args[0])
+
+        bounded_feature_view_1 = built_feature_view_1.get_bounded_view()
+        self.assertTrue(bounded_feature_view_1.is_bounded())
+
+        bounded_source = FileSystemSource(
+            name="bounded_source",
+            path="dummy_source_file",
+            data_format="csv",
+            schema=Schema(["id", "val1"], [Int64, Int64]),
+            timestamp_field="lpep_dropoff_datetime",
+            timestamp_format="%Y-%m-%d %H:%M:%S",
+            keys=["id"],
+        )
+        bounded_source_2 = FileSystemSource(
+            name="bounded_source_2",
+            path="dummy_source_file",
+            data_format="csv",
+            schema=Schema(["id", "val2"], [Int64, Int64]),
+            timestamp_field="lpep_dropoff_datetime",
+            timestamp_format="%Y-%m-%d %H:%M:%S",
+            keys=["id"],
+        )
+
+        feature_view_2 = DerivedFeatureView(
+            name="feature_view_2",
+            source=bounded_source,
+            features=["bounded_source_2.val2"],
+            keep_source_fields=True,
+        )
+        built_feature_view_2 = self.registry.build_features(
+            [bounded_source_2, feature_view_2]
+        )[1]
+        self.assertTrue(built_feature_view_2.is_bounded())
+
+    def test_bounded_left_table_join_unbounded_right_table(self):
+        source = DataGenSource(
+            name="source_1",
+            schema=Schema(["id", "val1"], [Int64, Int64]),
+            timestamp_field="lpep_dropoff_datetime",
+            timestamp_format="%Y-%m-%d %H:%M:%S",
+            keys=["id"],
+            number_of_rows=1,
+        )
+
+        source_2 = DataGenSource(
+            name="source_2",
+            schema=Schema(["id", "val2"], [Int64, Int64]),
+            timestamp_field="lpep_dropoff_datetime",
+            timestamp_format="%Y-%m-%d %H:%M:%S",
+            keys=["id"],
+        )
+
+        feature_view_1 = DerivedFeatureView(
+            name="feature_view_1",
+            source=source,
+            features=["source_2.val2"],
+            keep_source_fields=True,
+        )
+
+        with self.assertRaises(FeathubException) as cm:
+            _ = self.registry.build_features([source_2, feature_view_1])[1]
+
+        self.assertIn(
+            "Joining a bounded left table with an unbounded right table is currently "
+            "not supported.",
+            cm.exception.args[0],
+        )

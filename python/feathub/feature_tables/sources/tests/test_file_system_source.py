@@ -11,18 +11,19 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Dict
+import unittest
 
-from feathub.feature_tables.sinks.sink import Sink
+from feathub.common.types import Int64
+from feathub.feature_tables.sources.file_system_source import FileSystemSource
+from feathub.table.schema import Schema
 
 
-class PrintSink(Sink):
-    """
-    PrintSink prints the table row by row to stdout.
-    """
-
-    def __init__(self) -> None:
-        super().__init__(name="", system_name="print", properties={})
-
-    def to_json(self) -> Dict:
-        return {"type": "PrintSink"}
+class FileSystemSourceTest(unittest.TestCase):
+    def test_get_bounded_feature_table(self):
+        source = FileSystemSource(
+            "source",
+            "./path",
+            "csv",
+            Schema.new_builder().column("x", Int64).column("y", Int64).build(),
+        )
+        self.assertTrue(source.is_bounded())

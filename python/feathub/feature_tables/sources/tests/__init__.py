@@ -11,18 +11,3 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Dict
-
-from feathub.feature_tables.sinks.sink import Sink
-
-
-class PrintSink(Sink):
-    """
-    PrintSink prints the table row by row to stdout.
-    """
-
-    def __init__(self) -> None:
-        super().__init__(name="", system_name="print", properties={})
-
-    def to_json(self) -> Dict:
-        return {"type": "PrintSink"}

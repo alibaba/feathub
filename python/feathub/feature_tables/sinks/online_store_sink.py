@@ -13,10 +13,10 @@
 # limitations under the License.
 from typing import Dict
 
-from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sinks.sink import Sink
 
 
-class OnlineStoreSink(FeatureTable):
+class OnlineStoreSink(Sink):
     """
     A sink corresponding to a table in an online feature store.
     """

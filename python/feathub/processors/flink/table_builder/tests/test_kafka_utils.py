@@ -13,6 +13,7 @@
 #  limitations under the License.
 import unittest
 from datetime import datetime, timezone
+from typing import cast
 from unittest.mock import patch
 
 from pyflink.common import Row
@@ -25,6 +26,7 @@ from pyflink.table import (
 from testcontainers.kafka import KafkaContainer
 
 from feathub.common.types import Int64, String
+from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sources.kafka_source import KafkaSource
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
@@ -101,8 +103,8 @@ class SourceUtilsTest(unittest.TestCase):
                 expected_options, dict(flink_table_descriptor.get_options())
             )
 
-            source.is_bounded = True
-            get_table_from_source(t_env, source)
+            bounded_source = source.get_bounded_view()
+            get_table_from_source(t_env, cast(FeatureTable, bounded_source))
             flink_table_descriptor = create_temporary_table.call_args[0][1]
 
             expected_col_strs = [

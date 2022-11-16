@@ -38,6 +38,7 @@ class ProcessorJob(ABC):
         :return: The Future that is completed when the canceling command is
                  acknowledged.
         """
+        pass
 
     @abstractmethod
     def wait(self, timeout_ms: Optional[int] = None) -> None:

@@ -11,12 +11,14 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from copy import deepcopy
 from datetime import timedelta, datetime
 from typing import Dict, Optional, List
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.table.schema import Schema
+from feathub.table.table_descriptor import TableDescriptor
 
 
 class KafkaSource(FeatureTable):
@@ -110,12 +112,22 @@ class KafkaSource(FeatureTable):
         self.startup_mode = startup_mode
         self.startup_datetime = startup_datetime
         self.partition_discovery_interval = partition_discovery_interval
+        self._is_bounded = is_bounded
 
         if startup_mode == "timestamp" and startup_datetime is None:
             raise FeathubException(
                 "startup_datetime is required when startup_mode is timestamp."
             )
-        self.is_bounded = is_bounded
+
+    def is_bounded(self) -> bool:
+        return self._is_bounded
+
+    def get_bounded_view(self) -> TableDescriptor:
+        if self.is_bounded():
+            return self
+        kafka_source = deepcopy(self)
+        kafka_source._is_bounded = True
+        return kafka_source
 
     def to_json(self) -> Dict:
         return {
@@ -139,5 +151,5 @@ class KafkaSource(FeatureTable):
             else int(self.startup_datetime.timestamp() * 1000),
             "partition_discovery_interval_ms": self.partition_discovery_interval
             / timedelta(milliseconds=1),
-            "is_bounded": self.is_bounded,
+            "is_bounded": self.is_bounded(),
         }

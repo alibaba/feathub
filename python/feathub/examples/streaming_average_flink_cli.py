@@ -18,7 +18,6 @@ from feathub.feathub_client import FeathubClient
 from feathub.feature_tables.sinks.print_sink import PrintSink
 from feathub.feature_tables.sources.datagen_source import (
     DataGenSource,
-    DataGenConfig,
     RandomField,
 )
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
@@ -52,13 +51,11 @@ def main() -> None:
 
     source = DataGenSource(
         name="datagen_src",
-        data_gen_config=DataGenConfig(
-            rows_per_second=1,
-            field_configs={
-                "id": RandomField(minimum=0, maximum=9),
-                "val": RandomField(minimum=0, maximum=100),
-            },
-        ),
+        rows_per_second=1,
+        field_configs={
+            "id": RandomField(minimum=0, maximum=9),
+            "val": RandomField(minimum=0, maximum=100),
+        },
         schema=Schema.new_builder()
         .column("id", Int32)
         .column("val", Int32)

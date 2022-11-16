@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from abc import ABC
-from typing import Optional, List, Union, cast, Sequence
 from collections import OrderedDict
+from copy import deepcopy
+from typing import Optional, List, Union, cast, Sequence
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_views.feature import Feature
@@ -169,3 +170,14 @@ class FeatureView(TableDescriptor, ABC):
                 key_fields.extend(keys)
 
         return list(OrderedDict.fromkeys(key_fields))
+
+    def is_bounded(self) -> bool:
+        return self.get_resolved_source().is_bounded()
+
+    def get_bounded_view(self) -> TableDescriptor:
+        if self.is_bounded():
+            return self
+
+        feature_view = deepcopy(self)
+        feature_view.source = self.get_resolved_source().get_bounded_view()
+        return feature_view

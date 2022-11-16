@@ -53,7 +53,7 @@ class Table(ABC):
         """
         Returns a Pandas DataFrame containing values of this table.
         """
-        return pd.DataFrame()
+        pass
 
     @abstractmethod
     def execute_insert(

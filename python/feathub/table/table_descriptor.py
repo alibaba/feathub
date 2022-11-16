@@ -79,3 +79,20 @@ class TableDescriptor(Entity):
         :return: The feature with the given name.
         """
         pass
+
+    @abstractmethod
+    def get_bounded_view(self) -> TableDescriptor:
+        """
+        If the Table is bounded, returns self. Otherwise, return a copy of self that is
+        bounded.
+
+        :return: A bounded table descriptor.
+        """
+        pass
+
+    @abstractmethod
+    def is_bounded(self) -> bool:
+        """
+        Whether the Table is bounded.
+        """
+        pass
