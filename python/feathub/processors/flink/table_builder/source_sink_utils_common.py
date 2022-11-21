@@ -55,7 +55,9 @@ def define_watermark(
     builder.from_schema(flink_schema)
 
     if timestamp_field_dtype == types.Timestamp:
-        builder.column_by_expression(EVENT_TIME_ATTRIBUTE_NAME, f"`{timestamp_field}`")
+        builder.column_by_expression(
+            EVENT_TIME_ATTRIBUTE_NAME, f"CAST(`{timestamp_field}` AS TIMESTAMP_LTZ(3))"
+        )
 
     # TODO: Properly handle timestamp with or without timezone.
     elif timestamp_format == "epoch":
@@ -69,9 +71,7 @@ def define_watermark(
             )
         builder.column_by_expression(
             EVENT_TIME_ATTRIBUTE_NAME,
-            f"CAST("
-            f"  FROM_UNIXTIME(CAST(`{timestamp_field}` AS INTEGER)) "
-            f"AS TIMESTAMP(3))",
+            f"TO_TIMESTAMP_LTZ(`{timestamp_field}`, 0)",
         )
     elif timestamp_format == "epoch_millis":
         if timestamp_field_dtype != types.Int64:
@@ -81,8 +81,7 @@ def define_watermark(
 
         builder.column_by_expression(
             EVENT_TIME_ATTRIBUTE_NAME,
-            f"FROM_UNIXTIME_MILLIS(CAST(`{timestamp_field}` AS BIGINT), "
-            f"'{t_env.get_config().get_local_timezone()}')",
+            f"TO_TIMESTAMP_LTZ(`{timestamp_field}`, 3)",
         )
     else:
         if timestamp_field_dtype != types.String:
@@ -95,7 +94,9 @@ def define_watermark(
         )
         builder.column_by_expression(
             EVENT_TIME_ATTRIBUTE_NAME,
-            f"TO_TIMESTAMP(`{timestamp_field}`, '{java_datetime_format}')",
+            f"TO_TIMESTAMP_LTZ(UNIX_TIMESTAMP_MILLIS(`{timestamp_field}`, "
+            f"'{java_datetime_format}', '{t_env.get_config().get_local_timezone()}'), "
+            f"3)",
         )
 
     builder.watermark(

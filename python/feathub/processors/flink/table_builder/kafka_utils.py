@@ -21,13 +21,20 @@ from pyflink.table import (
     Table as NativeFlinkTable,
     TableDescriptor as NativeFlinkTableDescriptor,
     TableResult,
+    Schema,
+    DataTypes,
 )
 
+from feathub.common import types
 from feathub.common.exceptions import FeathubException
+from feathub.common.utils import to_java_date_format
 from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sources.kafka_source import KafkaSource
 from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_env
 from feathub.processors.flink.flink_types_utils import to_flink_schema
+from feathub.processors.flink.table_builder.flink_table_builder_constants import (
+    EVENT_TIME_ATTRIBUTE_NAME,
+)
 from feathub.processors.flink.table_builder.source_sink_utils_common import (
     define_watermark,
     generate_random_table_name,
@@ -54,16 +61,47 @@ def get_table_from_kafka_source(
 
     # Define watermark if the kafka_source has timestamp field
     if kafka_source.timestamp_field is not None:
-        flink_schema = define_watermark(
-            t_env,
-            flink_schema,
-            timedelta_to_flink_sql_interval(
-                kafka_source.max_out_of_orderness, day_precision=3
-            ),
-            kafka_source.timestamp_field,
-            kafka_source.timestamp_format,
-            schema.get_field_type(kafka_source.timestamp_field),
-        )
+        if (
+            kafka_source.timestamp_format == "epoch"
+            or kafka_source.timestamp_format == "epoch_millis"
+        ):
+            flink_schema = define_watermark(
+                t_env,
+                flink_schema,
+                timedelta_to_flink_sql_interval(
+                    kafka_source.max_out_of_orderness, day_precision=3
+                ),
+                kafka_source.timestamp_field,
+                kafka_source.timestamp_format,
+                schema.get_field_type(kafka_source.timestamp_field),
+            )
+        else:
+            # TODO: Kafka Source throw exception when define a UDF computed column as
+            #  row time attribute. We only compute the timestamp here without defining
+            #  the row time attribute. The table will then be converted to DataStream
+            #  and back to Table. Its row time attribute is defined when it is
+            #  converted back to Table. This logical can be remove after UNIX_TIMESTAMP
+            #  support return millisecond epoch.
+            #  https://issues.apache.org/jira/browse/FLINK-19200
+            builder = Schema.new_builder().from_schema(flink_schema)
+            if schema.get_field_type(kafka_source.timestamp_field) != types.String:
+                raise FeathubException(
+                    "Timestamp field with non epoch format only "
+                    "supports data type of String."
+                )
+            java_datetime_format = to_java_date_format(
+                kafka_source.timestamp_format
+            ).replace(
+                "'", "''"  # Escape single quote for sql
+            )
+            builder.column_by_expression(
+                EVENT_TIME_ATTRIBUTE_NAME,
+                f"TO_TIMESTAMP_LTZ("
+                f"UNIX_TIMESTAMP_MILLIS(`{kafka_source.timestamp_field}`, "
+                f"'{java_datetime_format}', "
+                f"'{t_env.get_config().get_local_timezone()}'), 3)",
+            )
+            flink_schema = builder.build()
 
     connector_type = "bounded-kafka" if kafka_source.is_bounded else "kafka"
     descriptor_builder = (
@@ -106,7 +144,34 @@ def get_table_from_kafka_source(
 
     table_name = generate_random_table_name(kafka_source.name)
     t_env.create_temporary_table(table_name, descriptor_builder.build())
-    return t_env.from_path(table_name)
+    table = t_env.from_path(table_name)
+
+    if (
+        kafka_source.timestamp_format != "epoch"
+        and kafka_source.timestamp_format != "epoch_millis"
+    ):
+        # TODO: Define row time attribute when converted from DataStream. This logical
+        #  can be remove after UNIX_TIMESTAMP support return
+        #  millisecond epoch.
+        #  https://issues.apache.org/jira/browse/FLINK-19200
+        schema = to_flink_schema(schema)
+        max_out_of_orderness_interval = timedelta_to_flink_sql_interval(
+            kafka_source.max_out_of_orderness, day_precision=3
+        )
+        schema = (
+            Schema.new_builder()
+            .from_schema(schema)
+            .column(EVENT_TIME_ATTRIBUTE_NAME, DataTypes.TIMESTAMP_LTZ(3))
+            .watermark(
+                EVENT_TIME_ATTRIBUTE_NAME,
+                watermark_expr=f"`{EVENT_TIME_ATTRIBUTE_NAME}` "
+                f"- {max_out_of_orderness_interval}",
+            )
+            .build()
+        )
+        table = t_env.from_data_stream(t_env.to_data_stream(table), schema)
+
+    return table
 
 
 def insert_into_kafka_sink(

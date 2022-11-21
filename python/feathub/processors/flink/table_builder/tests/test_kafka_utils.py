@@ -29,9 +29,6 @@ from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sources.kafka_source import KafkaSource
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.processors.flink.table_builder.flink_table_builder import FlinkTableBuilder
-from feathub.processors.flink.table_builder.flink_table_builder_constants import (
-    EVENT_TIME_ATTRIBUTE_NAME,
-)
 from feathub.processors.flink.table_builder.source_sink_utils import (
     get_table_from_source,
     insert_into_sink,
@@ -201,6 +198,7 @@ class SourceSinkITTest(unittest.TestCase):
         self.row_data = self._produce_data_to_kafka(self.t_env)
 
     def test_kafka_source_sink(self):
+        table_builder = FlinkTableBuilder(self.t_env, LocalRegistry({}))
         # Consume data with kafka source
         source = KafkaSource(
             "kafka_source",
@@ -218,8 +216,7 @@ class SourceSinkITTest(unittest.TestCase):
         )
 
         expected_rows = {Row(*data) for data in self.row_data}
-        table = get_table_from_source(self.t_env, source)
-        table = table.drop_columns(EVENT_TIME_ATTRIBUTE_NAME)
+        table = table_builder.build(source)
         table_result = table.execute()
         result_rows = set()
         with table_result.collect() as results:

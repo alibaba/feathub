@@ -26,7 +26,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
-/** Convert the given TIMESTAMP type value to number of milliseconds since epoch. */
+/** Convert the given date time string to number of milliseconds since epoch. */
 public class UnixTimestampMillis extends ScalarFunction {
 
     private static final Logger LOG = LoggerFactory.getLogger(UnixTimestampMillis.class);
