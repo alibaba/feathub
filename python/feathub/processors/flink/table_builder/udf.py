@@ -99,10 +99,6 @@ SCALAR_JAVA_UDF: Dict[str, JavaUDFDescriptor] = {
     "UNIX_TIMESTAMP_MILLIS": JavaUDFDescriptor(
         "UNIX_TIMESTAMP_MILLIS", "com.alibaba.feathub.flink.udf.UnixTimestampMillis"
     ),
-    "FROM_UNIXTIME_MILLIS": JavaUDFDescriptor(
-        "FROM_UNIXTIME_MILLIS",
-        "com.alibaba.feathub.flink.udf.FromUnixTimestampMillis",
-    ),
 }
 
 

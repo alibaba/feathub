@@ -22,11 +22,10 @@ import org.apache.flink.table.catalog.DataTypeFactory;
 import org.apache.flink.table.functions.AggregateFunction;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.inference.TypeInference;
-import org.apache.flink.table.utils.DateTimeUtils;
 import org.apache.flink.util.Preconditions;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -81,10 +80,7 @@ public abstract class AbstractTimeWindowedAggFunc<INPUT_T, RESULT_T>
     }
 
     public void accumulate(
-            TimeWindowedAccumulator<INPUT_T> acc,
-            Duration duration,
-            INPUT_T value,
-            LocalDateTime localDateTime)
+            TimeWindowedAccumulator<INPUT_T> acc, Duration duration, INPUT_T value, Instant instant)
             throws Exception {
         if (this.timeInterval == null) {
             this.timeInterval = duration;
@@ -92,15 +88,12 @@ public abstract class AbstractTimeWindowedAggFunc<INPUT_T, RESULT_T>
         Preconditions.checkState(
                 this.timeInterval.equals(duration), "timeInterval should not changes.");
 
-        final long timestamp = DateTimeUtils.toTimestampMillis(localDateTime);
+        final long timestamp = instant.toEpochMilli();
         acc.addValue(value, timestamp);
     }
 
     public void retract(
-            TimeWindowedAccumulator<INPUT_T> acc,
-            Duration duration,
-            INPUT_T value,
-            LocalDateTime localDateTime)
+            TimeWindowedAccumulator<INPUT_T> acc, Duration duration, INPUT_T value, Instant instant)
             throws Exception {
         if (this.timeInterval == null) {
             this.timeInterval = duration;
@@ -108,7 +101,7 @@ public abstract class AbstractTimeWindowedAggFunc<INPUT_T, RESULT_T>
         Preconditions.checkState(
                 this.timeInterval.equals(duration), "timeInterval should not changes.");
 
-        final long timestamp = DateTimeUtils.toTimestampMillis(localDateTime);
+        final long timestamp = instant.toEpochMilli();
         acc.removeValue(value, timestamp);
     }
 

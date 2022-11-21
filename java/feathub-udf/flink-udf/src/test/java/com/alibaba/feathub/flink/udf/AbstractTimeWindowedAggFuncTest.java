@@ -31,7 +31,6 @@ import org.apache.flink.util.CollectionUtil;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -59,7 +58,7 @@ public abstract class AbstractTimeWindowedAggFuncTest {
                                 Schema.newBuilder()
                                         .column("f0", DataTypes.INT())
                                         .column("f1", DataTypes.INT())
-                                        .column("f2", DataTypes.TIMESTAMP(3))
+                                        .column("f2", DataTypes.TIMESTAMP_LTZ(3))
                                         .watermark("f2", "f2 - INTERVAL '2' SECOND")
                                         .build())
                         .as("id", "val", "ts");
@@ -67,26 +66,10 @@ public abstract class AbstractTimeWindowedAggFuncTest {
 
     protected DataStreamSource<Row> getData(StreamExecutionEnvironment env) {
         return env.fromElements(
-                Row.of(
-                        0,
-                        1,
-                        LocalDateTime.ofInstant(
-                                Instant.ofEpochMilli(1000), ZoneId.systemDefault())),
-                Row.of(
-                        0,
-                        3,
-                        LocalDateTime.ofInstant(
-                                Instant.ofEpochMilli(3000), ZoneId.systemDefault())),
-                Row.of(
-                        0,
-                        2,
-                        LocalDateTime.ofInstant(
-                                Instant.ofEpochMilli(2000), ZoneId.systemDefault())),
-                Row.of(
-                        0,
-                        4,
-                        LocalDateTime.ofInstant(
-                                Instant.ofEpochMilli(4000), ZoneId.systemDefault())));
+                Row.of(0, 1, Instant.ofEpochMilli(1000), ZoneId.systemDefault()),
+                Row.of(0, 3, Instant.ofEpochMilli(3000), ZoneId.systemDefault()),
+                Row.of(0, 2, Instant.ofEpochMilli(2000), ZoneId.systemDefault()),
+                Row.of(0, 4, Instant.ofEpochMilli(4000), ZoneId.systemDefault()));
     }
 
     protected abstract Class<? extends AbstractTimeWindowedAggFunc<?, ?>> getAggFunc();

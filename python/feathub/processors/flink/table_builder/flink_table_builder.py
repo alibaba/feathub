@@ -568,17 +568,17 @@ class FlinkTableBuilder:
         if start_datetime is not None:
             table = table.filter(
                 native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME).__ge__(
-                    native_flink_expr.lit(
-                        start_datetime.strftime("%Y-%m-%d %H:%M:%S")
-                    ).to_timestamp
+                    native_flink_expr.to_timestamp_ltz(
+                        int(start_datetime.timestamp() * 1000), 3
+                    )
                 )
             )
         if end_datetime is not None:
             table = table.filter(
                 native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME).__lt__(
-                    native_flink_expr.lit(
-                        end_datetime.strftime("%Y-%m-%d %H:%M:%S")
-                    ).to_timestamp
+                    native_flink_expr.to_timestamp_ltz(
+                        int(end_datetime.timestamp() * 1000), 3
+                    )
                 )
             )
         return table

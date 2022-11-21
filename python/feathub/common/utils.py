@@ -34,6 +34,7 @@ def to_java_date_format(python_format: str) -> str:
         "M": "mm",
         "S": "ss",
         "f": "SSS",
+        "z": "X",
     }
     return Template(python_format.replace("%", "$")).substitute(**mapping)
 

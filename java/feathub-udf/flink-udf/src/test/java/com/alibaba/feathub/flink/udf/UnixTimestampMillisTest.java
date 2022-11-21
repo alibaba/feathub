@@ -30,7 +30,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Tests for {@link UnixTimestampMillis} and {@link FromUnixTimestampMillis}. */
+/** Tests for {@link UnixTimestampMillis}. */
 public class UnixTimestampMillisTest {
 
     @Test
@@ -38,36 +38,26 @@ public class UnixTimestampMillisTest {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         StreamTableEnvironment tEnv = StreamTableEnvironment.create(env);
 
-        List<Row> expectedRow =
+        List<Row> rows =
                 Arrays.asList(
-                        Row.of("2022-01-01 00:00:00.001"),
-                        Row.of("2022-01-01 00:00:01.002"),
-                        Row.of("2022-01-01 00:01:00.999"));
-        Table table = tEnv.fromValues(expectedRow).as("ts");
+                        Row.of("1970-01-01 00:00:00.001 +0000"),
+                        Row.of("1970-01-01 08:00:01.002 +0800"),
+                        Row.of("1970-01-01 00:01:00.999 +0000"));
+        Table table = tEnv.fromValues(rows).as("ts");
 
         tEnv.createTemporaryFunction("UNIX_TIMESTAMP_MILLIS", UnixTimestampMillis.class);
-        tEnv.createTemporaryFunction("FROM_UNIXTIME_MILLIS", FromUnixTimestampMillis.class);
 
         table =
                 table.select(
                         Expressions.callSql(
                                         String.format(
-                                                "UNIX_TIMESTAMP_MILLIS(`ts`, '%s')",
+                                                "UNIX_TIMESTAMP_MILLIS(`ts`, 'yyyy-MM-dd HH:mm:ss.SSS X', '%s')",
                                                 tEnv.getConfig().getLocalTimeZone()))
                                 .as("epoch_millis"));
 
         final List<Row> epochMillis = CollectionUtil.iteratorToList(table.execute().collect());
 
-        table = tEnv.fromValues(epochMillis).as("epoch_millis");
-        table =
-                table.select(
-                        Expressions.callSql(
-                                        String.format(
-                                                "CAST(FROM_UNIXTIME_MILLIS(`epoch_millis`, '%s') AS STRING)",
-                                                tEnv.getConfig().getLocalTimeZone()))
-                                .as("ts"));
-
-        final List<Row> timestamps = CollectionUtil.iteratorToList(table.execute().collect());
-        assertThat(timestamps).isEqualTo(expectedRow);
+        List<Row> expectedRows = Arrays.asList(Row.of(1L), Row.of(1002L), Row.of(60999L));
+        assertThat(epochMillis).isEqualTo(expectedRows);
     }
 }

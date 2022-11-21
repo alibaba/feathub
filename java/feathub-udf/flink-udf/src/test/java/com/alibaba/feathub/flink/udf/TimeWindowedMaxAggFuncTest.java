@@ -25,7 +25,6 @@ import org.apache.flink.types.Row;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
@@ -36,26 +35,10 @@ public class TimeWindowedMaxAggFuncTest extends AbstractTimeWindowedAggFuncTest 
     @Override
     protected DataStreamSource<Row> getData(StreamExecutionEnvironment env) {
         return env.fromElements(
-                Row.of(
-                        0,
-                        4,
-                        LocalDateTime.ofInstant(
-                                Instant.ofEpochMilli(1000), ZoneId.systemDefault())),
-                Row.of(
-                        0,
-                        3,
-                        LocalDateTime.ofInstant(
-                                Instant.ofEpochMilli(3000), ZoneId.systemDefault())),
-                Row.of(
-                        0,
-                        2,
-                        LocalDateTime.ofInstant(
-                                Instant.ofEpochMilli(2000), ZoneId.systemDefault())),
-                Row.of(
-                        0,
-                        1,
-                        LocalDateTime.ofInstant(
-                                Instant.ofEpochMilli(4000), ZoneId.systemDefault())));
+                Row.of(0, 4, Instant.ofEpochMilli(1000), ZoneId.systemDefault()),
+                Row.of(0, 3, Instant.ofEpochMilli(3000), ZoneId.systemDefault()),
+                Row.of(0, 2, Instant.ofEpochMilli(2000), ZoneId.systemDefault()),
+                Row.of(0, 1, Instant.ofEpochMilli(4000), ZoneId.systemDefault()));
     }
 
     @Test
