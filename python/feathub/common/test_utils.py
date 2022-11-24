@@ -31,12 +31,12 @@ from feathub.table.schema import Schema
 class LocalProcessorTestCase(unittest.TestCase):
     def setUp(self) -> None:
         memory_online_store = OnlineStore.instantiate(
-            store_type=MemoryOnlineStore.STORE_TYPE, config={}
+            store_type=MemoryOnlineStore.STORE_TYPE, props={}
         )
         self.stores = {MemoryOnlineStore.STORE_TYPE: memory_online_store}
-        self.registry = LocalRegistry(config={})
+        self.registry = LocalRegistry(props={})
         self.processor = LocalProcessor(
-            config={}, stores=self.stores, registry=self.registry
+            props={}, stores=self.stores, registry=self.registry
         )
         self.temp_dir = tempfile.mkdtemp()
 

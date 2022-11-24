@@ -18,6 +18,11 @@ import pandas as pd
 from abc import ABC, abstractmethod
 from typing import Optional, List, Union, Dict
 
+from feathub.feature_service.feature_service_config import (
+    FeatureServiceConfig,
+    FEATURE_SERVICE_TYPE_CONFIG,
+    FeatureServiceType,
+)
 from feathub.online_stores.online_store import OnlineStore
 from feathub.registries.registry import Registry
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
@@ -60,20 +65,24 @@ class FeatureService(ABC):
 
     @staticmethod
     def instantiate(
-        service_type: str,
-        config: Dict,
+        props: Dict,
         stores: Dict[str, OnlineStore],
         registry: Registry,
     ) -> FeatureService:
         """
-        Instantiates a feature service using the given configuration and the store
+        Instantiates a feature service using the given properties and the store
         instances.
         """
-        from feathub.feature_service.local_feature_service import LocalFeatureService
-
-        if service_type == LocalFeatureService.SERVICE_TYPE:
-            return LocalFeatureService(config=config, stores=stores, registry=registry)
-
-        raise RuntimeError(
-            f"Failed to instantiate feature service with config={config}."
+        feature_service_config = FeatureServiceConfig(props)
+        service_type = FeatureServiceType(
+            feature_service_config.get(FEATURE_SERVICE_TYPE_CONFIG)
         )
+
+        if service_type == FeatureServiceType.LOCAL:
+            from feathub.feature_service.local_feature_service import (
+                LocalFeatureService,
+            )
+
+            return LocalFeatureService(props=props, stores=stores, registry=registry)
+
+        raise RuntimeError(f"Failed to instantiate feature service with props={props}.")

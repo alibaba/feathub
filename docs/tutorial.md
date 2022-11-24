@@ -22,20 +22,21 @@ See [README](./../README.md#quickstart) for the instruction to run this demo.
 client = FeathubClient(
     config={
         "processor": {
-            "processor_type": "local",
+            "type": "local",
             "local": {},
         },
         "online_store": {
+            "types": ["memory"],
             "memory": {},
         },
         "registry": {
-            "registry_type": "local",
+            "type": "local",
             "local": {
                 "namespace": "default",
             },
         },
         "feature_service": {
-            "service_type": "local",
+            "type": "local",
             "local": {},
         },
     }

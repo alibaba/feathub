@@ -18,6 +18,21 @@ from typing import Dict, Optional, List
 
 import pandas as pd
 
+from feathub.online_stores.online_store_config import (
+    OnlineStoreConfig,
+    ONLINE_STORE_TYPES_CONFIG,
+    OnlineStoreType,
+)
+
+
+def instantiate_online_stores(props: Dict) -> Dict[str, "OnlineStore"]:
+    online_store_config = OnlineStoreConfig(props)
+    store_types = online_store_config.get(ONLINE_STORE_TYPES_CONFIG)
+    return {
+        store_type: OnlineStore.instantiate(store_type, props)
+        for store_type in store_types
+    }
+
 
 class OnlineStore(ABC):
     """
@@ -82,16 +97,18 @@ class OnlineStore(ABC):
         pass
 
     @staticmethod
-    def instantiate(store_type: str, config: Dict) -> OnlineStore:
+    def instantiate(store_type: str, props: Dict) -> OnlineStore:
         """
-        Instantiates an OnlineStore of the given store type using the given config.
+        Instantiates an OnlineStore of the given store type using the given properties.
         """
-        from feathub.online_stores.memory_online_store import MemoryOnlineStore
 
-        if store_type == MemoryOnlineStore.STORE_TYPE:
-            return MemoryOnlineStore(config=config)
+        online_store_type = OnlineStoreType(store_type)
+        if online_store_type == OnlineStoreType.MEMORY:
+            from feathub.online_stores.memory_online_store import MemoryOnlineStore
+
+            return MemoryOnlineStore(props=props)
 
         raise RuntimeError(
             f"Failed to instantiate online store with type={store_type} and "
-            f"config={config}."
+            f"props={props}."
         )

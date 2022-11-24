@@ -40,9 +40,9 @@ class MemoryOnlineStore(OnlineStore):
 
     STORE_TYPE = "memory"
 
-    def __init__(self, config: Dict) -> None:
+    def __init__(self, props: Dict) -> None:
         """
-        :param config: The store configuration.
+        :param props: The store properties.
         """
         super().__init__()
         self.table_infos: Dict[str, _TableInfo] = {}

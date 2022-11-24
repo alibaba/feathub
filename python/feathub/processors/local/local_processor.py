@@ -59,16 +59,14 @@ class LocalProcessor(Processor):
         AggFunc.MIN: np.min,
     }
 
-    def __init__(
-        self, config: Dict, stores: Dict[str, OnlineStore], registry: Registry
-    ):
+    def __init__(self, props: Dict, stores: Dict[str, OnlineStore], registry: Registry):
         """
-        :param config: The processor configuration.
+        :param props: The processor properties.
         :param stores: A dict that maps each store type to an online store.
         :param registry: An entity registry.
         """
         super().__init__()
-        self.config = config
+        self.props = props
         self.stores = stores
         self.registry = registry
         self.singled_online_store = None

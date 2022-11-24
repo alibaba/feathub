@@ -50,10 +50,8 @@ def run_job(feathub_job_descriptor_path: str) -> None:
     env = StreamExecutionEnvironment.get_execution_environment()
     t_env = StreamTableEnvironment.create(env)
 
-    registry_config = feathub_job_descriptor.registry_config
-    registry = Registry.instantiate(
-        registry_type=feathub_job_descriptor.registry_type, config=registry_config
-    )
+    config = feathub_job_descriptor.config
+    registry = Registry.instantiate(props=config)
 
     for _, join_table in feathub_job_descriptor.local_registry_tables.items():
         registry.register_features(features=join_table, override=True)

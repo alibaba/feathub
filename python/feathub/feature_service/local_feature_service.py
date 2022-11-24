@@ -35,11 +35,9 @@ class LocalFeatureService(FeatureService):
 
     SERVICE_TYPE = "local"
 
-    def __init__(
-        self, config: Dict, stores: Dict[str, OnlineStore], registry: Registry
-    ):
+    def __init__(self, props: Dict, stores: Dict[str, OnlineStore], registry: Registry):
         super().__init__()
-        self.config = config
+        self.props = props
         self.stores = stores
         self.registry = registry
         self.parser = ExprParser()

@@ -16,6 +16,8 @@ import pandas as pd
 from typing import List
 
 from feathub.common import types
+from feathub.common.config import flatten_dict
+from feathub.feature_service.feature_service import FeatureService
 from feathub.feature_views.feature import Feature
 from feathub.common.test_utils import LocalProcessorTestCase
 from feathub.feature_service.local_feature_service import LocalFeatureService
@@ -29,7 +31,7 @@ class FeatureServiceTest(LocalProcessorTestCase):
     def setUp(self):
         super().setUp()
         self.feature_service = LocalFeatureService(
-            config={}, stores=self.stores, registry=self.registry
+            props={}, stores=self.stores, registry=self.registry
         )
         input_data_1 = pd.DataFrame(
             [
@@ -97,6 +99,13 @@ class FeatureServiceTest(LocalProcessorTestCase):
         self.registry.build_features([online_store_source])
 
         return online_store_source
+
+    def test_instantiate(self):
+        config = flatten_dict({"feature_service": {"type": "local"}})
+        feature_service = FeatureService.instantiate(
+            props=config, stores=self.stores, registry=self.registry
+        )
+        self.assertIsInstance(feature_service, LocalFeatureService)
 
     def test_join_and_expression_transform(self):
         request_df = pd.DataFrame(

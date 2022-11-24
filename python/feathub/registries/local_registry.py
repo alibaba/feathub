@@ -12,11 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Dict
+from typing import List, Dict, Any
 
+from feathub.common.config import BaseConfig, ConfigDef
 from feathub.common.exceptions import FeathubException
 from feathub.table.table_descriptor import TableDescriptor
 from feathub.registries.registry import Registry
+
+NAMESPACE_CONFIG = "registry.local.namespace"
+NAMESPACE_DOC = "The namespace of the local registry."
+
+
+class LocalRegistryConfig(BaseConfig):
+    def __init__(self, props: Dict[str, Any]) -> None:
+        super().__init__(
+            [
+                ConfigDef(
+                    name=NAMESPACE_CONFIG,
+                    value_type=str,
+                    description=NAMESPACE_DOC,
+                    default_value="default",
+                )
+            ],
+            props,
+        )
 
 
 class LocalRegistry(Registry):
@@ -26,12 +45,13 @@ class LocalRegistry(Registry):
 
     REGISTRY_TYPE = "local"
 
-    def __init__(self, config: Dict) -> None:
+    def __init__(self, props: Dict) -> None:
         """
-        :param config: The registry configuration.
+        :param props: The registry properties.
         """
-        super().__init__(LocalRegistry.REGISTRY_TYPE, config)
-        self.namespace = config.get("namespace", "default")
+        super().__init__(LocalRegistry.REGISTRY_TYPE, props)
+        local_registry_config = LocalRegistryConfig(props)
+        self.namespace = local_registry_config.get(NAMESPACE_CONFIG)
         self.tables: Dict[str, TableDescriptor] = {}
 
     # TODO: persist metadata on disks if cache_only == True.

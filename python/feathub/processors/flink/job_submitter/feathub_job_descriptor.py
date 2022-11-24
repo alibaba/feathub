@@ -32,9 +32,7 @@ class FeathubJobDescriptor:
         sink: FeatureTable,
         local_registry_tables: Dict[str, TableDescriptor],
         allow_overwrite: bool,
-        processor_config: Dict,
-        registry_type: str,
-        registry_config: Dict,
+        config: Dict,
     ):
         """
         Instantiate a FeathubJobDescriptor.
@@ -61,9 +59,7 @@ class FeathubJobDescriptor:
                                       table.
         :param allow_overwrite: If it is true, throw error if the features collide with
                                 existing data in the given sink.
-        :param processor_config: The FlinkProcessor configuration.
-        :param registry_type: The type of the registry.
-        :param registry_config: The Registry configuration.
+        :param config: All configurations of Feathub.
         """
         self.features = features
         self.keys = keys
@@ -72,9 +68,7 @@ class FeathubJobDescriptor:
         self.sink = sink
         self.local_registry_tables = local_registry_tables
         self.allow_overwrite = allow_overwrite
-        self.processor_config = processor_config
-        self.registry_type = registry_type
-        self.registry_config = registry_config
+        self.config = config
 
     def __eq__(self, other: Any) -> bool:
         return (
@@ -86,7 +80,5 @@ class FeathubJobDescriptor:
             and self.sink == other.sink
             and self.local_registry_tables == other.local_registry_tables
             and self.allow_overwrite == other.allow_overwrite
-            and self.processor_config == other.processor_config
-            and self.registry_type == other.registry_type
-            and self.registry_config == other.registry_config
+            and self.config == other.config
         )

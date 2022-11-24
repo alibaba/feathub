@@ -160,11 +160,7 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
             sink=sink,
             local_registry_tables=join_table,
             allow_overwrite=True,
-            processor_config={},
-            registry_type="local",
-            registry_config={
-                "namespace": "default",
-            },
+            config={},
         )
 
         with open(path, "wb") as f:

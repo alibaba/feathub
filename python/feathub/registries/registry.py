@@ -16,6 +16,11 @@ from __future__ import annotations
 from typing import List, Dict
 from abc import ABC, abstractmethod
 
+from feathub.registries.registry_config import (
+    RegistryConfig,
+    REGISTRY_TYPE_CONFIG,
+    RegistryType,
+)
 from feathub.table.table_descriptor import TableDescriptor
 
 
@@ -88,16 +93,20 @@ class Registry(ABC):
         pass
 
     @staticmethod
-    def instantiate(registry_type: str, config: Dict) -> Registry:
+    def instantiate(props: Dict) -> Registry:
         """
-        Instantiates a registry using the given configuration.
+        Instantiates a registry using the given properties.
         """
-        from feathub.registries.local_registry import LocalRegistry
 
-        if registry_type == LocalRegistry.REGISTRY_TYPE:
-            return LocalRegistry(config=config)
+        registry_config = RegistryConfig(props)
+        registry_type = RegistryType(registry_config.get(REGISTRY_TYPE_CONFIG))
 
-        raise RuntimeError(f"Failed to instantiate registry with config={config}.")
+        if registry_type == RegistryType.LOCAL:
+            from feathub.registries.local_registry import LocalRegistry
+
+            return LocalRegistry(props=props)
+
+        raise RuntimeError(f"Failed to instantiate registry with props={props}.")
 
     @property
     def config(self) -> Dict:

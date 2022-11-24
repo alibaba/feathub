@@ -48,6 +48,14 @@ from pyflink.find_flink_home import _find_flink_home  # noqa
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_tables.feature_table import FeatureTable
+from feathub.processors.flink.flink_processor_config import (
+    FlinkProcessorConfig,
+    KUBERNETES_IMAGE_CONFIG,
+    KUBERNETES_NAMESPACE_CONFIG,
+    KUBERNETES_CONFIG_FILE_CONFIG,
+    NATIVE_CONFIG_PREFIX,
+    FLINK_HOME_CONFIG,
+)
 from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
     FeathubJobDescriptor,
 )
@@ -57,8 +65,6 @@ from feathub.processors.flink.job_submitter.flink_job_submitter import (
 from feathub.processors.processor_job import ProcessorJob
 from feathub.table.table_descriptor import TableDescriptor
 
-FLINK_CONFIG_PREFIX = "flink"
-
 logger = logging.getLogger(__file__)
 
 
@@ -66,7 +72,10 @@ class FlinkKubernetesApplicationClusterJobSubmitter(FlinkJobSubmitter):
     """The Flink job submitter for kubernetes application cluster."""
 
     def __init__(
-        self, processor_config: Dict, registry_type: str, registry_config: Dict
+        self,
+        processor_config: FlinkProcessorConfig,
+        registry_type: str,
+        registry_config: Dict,
     ) -> None:
         """
         Instantiate the FlinkKubernetesApplicationClusterJobSubmitter.
@@ -75,10 +84,10 @@ class FlinkKubernetesApplicationClusterJobSubmitter(FlinkJobSubmitter):
         :param registry_type: The type of the registry.
         :param registry_config: The registry configuration.
         """
-        self.processor_config: Dict = processor_config
+        self.processor_config = processor_config
         self.registry_type = registry_type
         self.registry_config = registry_config
-        flink_home = processor_config.get("flink_home")
+        flink_home = processor_config.get(FLINK_HOME_CONFIG)
         if flink_home is None:
             flink_home = _find_flink_home()
             logger.info(
@@ -88,11 +97,9 @@ class FlinkKubernetesApplicationClusterJobSubmitter(FlinkJobSubmitter):
         self._flink_cli_executable = os.path.join(flink_home, "bin", "flink")
         self._executor = ThreadPoolExecutor()
 
-        self.flink_kubernetes_image = processor_config.get(
-            "kubernetes.image", "feathub:latest"
-        )
-        self.kube_namespace = processor_config.get("kubernetes.namespace", "default")
-        self.kube_config_file = processor_config.get("kubernetes.config.file", None)
+        self.flink_kubernetes_image = processor_config.get(KUBERNETES_IMAGE_CONFIG)
+        self.kube_namespace = processor_config.get(KUBERNETES_NAMESPACE_CONFIG)
+        self.kube_config_file = processor_config.get(KUBERNETES_CONFIG_FILE_CONFIG)
 
         load_kube_config(self.kube_config_file)
         self.kube_core_v1_api = CoreV1Api()
@@ -116,9 +123,7 @@ class FlinkKubernetesApplicationClusterJobSubmitter(FlinkJobSubmitter):
             sink=sink,
             local_registry_tables=local_registry_tables,
             allow_overwrite=allow_overwrite,
-            processor_config=self.processor_config,
-            registry_type=self.registry_type,
-            registry_config=self.registry_config,
+            config=self.processor_config.original_props,
         )
 
         job_id = str(uuid.uuid4())
@@ -240,11 +245,10 @@ class FlinkKubernetesApplicationClusterJobSubmitter(FlinkJobSubmitter):
 
     def _get_flink_submit_configuration(self) -> List[str]:
         flink_config = {}
-        for k, v in self.processor_config.items():
-            split_k = k.split(".")
-            if split_k[0] != FLINK_CONFIG_PREFIX:
-                continue
-            flink_config[".".join(split_k[1:])] = v
+        for k, v in self.processor_config.original_props_with_prefix(
+            NATIVE_CONFIG_PREFIX, True
+        ).items():
+            flink_config[k] = v
 
         flink_config["kubernetes.container.image"] = self.flink_kubernetes_image
         flink_config["kubernetes.namespace"] = self.kube_namespace

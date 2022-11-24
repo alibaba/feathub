@@ -27,7 +27,7 @@ from feathub.table.schema import Schema
 
 class FeatureViewTest(unittest.TestCase):
     def setUp(self):
-        self.registry = LocalRegistry(config={})
+        self.registry = LocalRegistry(props={})
 
     def test_features(self):
         source = FileSystemSource(

@@ -30,6 +30,13 @@ from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.online_stores.online_store import OnlineStore
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
+from feathub.processors.flink.flink_processor_config import (
+    FlinkProcessorConfig,
+    DEPLOYMENT_MODE_CONFIG,
+    REST_ADDRESS_CONFIG,
+    REST_PORT_CONFIG,
+    NATIVE_CONFIG_PREFIX,
+)
 from feathub.processors.flink.flink_table import FlinkTable
 from feathub.processors.flink.table_builder.flink_table_builder import (
     FlinkTableBuilder,
@@ -45,8 +52,6 @@ from feathub.registries.registry import Registry
 from feathub.table.table_descriptor import TableDescriptor
 
 logger = logging.getLogger(__file__)
-
-NATIVE_CONFIG_PREFIX = "native"
 
 
 class FlinkProcessor(Processor):
@@ -83,23 +88,23 @@ class FlinkProcessor(Processor):
     PROCESSOR_TYPE = "flink"
 
     def __init__(
-        self, config: Dict, stores: Dict[str, OnlineStore], registry: Registry
+        self, props: Dict, stores: Dict[str, OnlineStore], registry: Registry
     ) -> None:
         """
         Instantiate the FlinkProcessor.
 
-        :param config: The processor configuration.
+        :param props: The processor properties.
         :param stores: A dict that maps each store type to an online store.
         :param registry: An entity registry.
         """
         super().__init__()
-        self.config = config
+        self.config = FlinkProcessorConfig(props)
         self.stores = stores
         self.registry = registry
 
         try:
             self.deployment_mode = DeploymentMode(
-                self.config.get("deployment_mode", "session")
+                self.config.get(DEPLOYMENT_MODE_CONFIG)
             )
         except ValueError:
             raise FeathubException("Unsupported deployment mode.")
@@ -115,8 +120,8 @@ class FlinkProcessor(Processor):
                 FlinkSessionClusterJobSubmitter(self, self.stores)
             )
         elif self.deployment_mode == DeploymentMode.SESSION:
-            jobmanager_rpc_address = self.config.get("rest.address")
-            jobmanager_rpc_port = self.config.get("rest.port")
+            jobmanager_rpc_address = self.config.get(REST_ADDRESS_CONFIG)
+            jobmanager_rpc_port = self.config.get(REST_PORT_CONFIG)
             if jobmanager_rpc_address is None or jobmanager_rpc_port is None:
                 raise FeathubException(
                     "rest.address or rest.port has to be set with session "
@@ -227,11 +232,10 @@ class FlinkProcessor(Processor):
         env = StreamExecutionEnvironment.get_execution_environment()
         table_env = StreamTableEnvironment.create(env)
         # TODO: report error when processor configs conflict with native.* configs.
-        for k, v in self.config.items():
-            split_k = k.split(".")
-            if split_k[0] != NATIVE_CONFIG_PREFIX:
-                continue
-            table_env.get_config().set(".".join(split_k[1:]), v)
+        for k, v in self.config.original_props_with_prefix(
+            NATIVE_CONFIG_PREFIX, True
+        ).items():
+            table_env.get_config().set(k, v)
 
         if jobmanager_rpc_address is not None and jobmanager_rpc_port is not None:
             os.environ.pop("SUBMIT_ARGS")
