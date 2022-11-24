@@ -29,7 +29,7 @@ from feathub.table.schema import Schema
 
 class SlidingFeatureViewTest(unittest.TestCase):
     def setUp(self):
-        self.registry = LocalRegistry(config={})
+        self.registry = LocalRegistry(props={})
         self.source = FileSystemSource(
             name="source_1",
             path="dummy_source_file",

@@ -29,8 +29,8 @@ from feathub.table.schema import Schema
 
 class LocalRegistryTest(unittest.TestCase):
     def setUp(self):
-        self.registry = LocalRegistry(config={})
-        self.processor = LocalProcessor(config={}, stores={}, registry=self.registry)
+        self.registry = LocalRegistry(props={})
+        self.processor = LocalProcessor(props={}, stores={}, registry=self.registry)
         self.temp_dir = tempfile.mkdtemp()
         self.input_data = pd.DataFrame(
             [

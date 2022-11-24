@@ -32,16 +32,16 @@ from feathub.table.table_descriptor import TableDescriptor
 class FlinkTableTest(unittest.TestCase):
     def setUp(self) -> None:
         memory_online_store = OnlineStore.instantiate(
-            store_type=MemoryOnlineStore.STORE_TYPE, config={}
+            store_type=MemoryOnlineStore.STORE_TYPE, props={}
         )
         self.stores: Dict[str, OnlineStore] = {
             MemoryOnlineStore.STORE_TYPE: memory_online_store
         }
-        self.registry = LocalRegistry(config={})
+        self.registry = LocalRegistry(props={})
         self.processor = FlinkProcessor(
-            config={
-                "rest.address": "127.0.0.1",
-                "rest.port": "1234",
+            props={
+                "processor.flink.rest.address": "127.0.0.1",
+                "processor.flink.rest.port": 1234,
             },
             stores=self.stores,
             registry=self.registry,

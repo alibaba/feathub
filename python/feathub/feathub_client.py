@@ -16,11 +16,12 @@ from typing import Union, Optional, Dict, List
 import pandas as pd
 from datetime import datetime, timedelta
 
+from feathub.common.config import flatten_dict
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.processors.processor import Processor
 from feathub.registries.registry import Registry
 from feathub.feature_service.feature_service import FeatureService
-from feathub.online_stores.online_store import OnlineStore
+from feathub.online_stores.online_store import instantiate_online_stores
 from feathub.table.table import Table
 from feathub.processors.processor_job import ProcessorJob
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
@@ -32,31 +33,22 @@ class FeathubClient:
     The Feathub client provides APIs to manage features.
     """
 
-    def __init__(self, config: Dict) -> None:
+    def __init__(self, props: Dict) -> None:
         """
-        :param config: Provides the configuration to initialize the client.
+        :param props: Provides the properties to initialize the client.
         """
-        self.config = config
-        stores = {}
-        for store_type, store_config in config["online_store"].items():
-            stores[store_type] = OnlineStore.instantiate(
-                store_type=store_type, config=store_config
-            )
-        registry_type = config["registry"]["registry_type"]
-        self.registry = Registry.instantiate(
-            registry_type=registry_type, config=config["registry"][registry_type]
-        )
-        processor_type = config["processor"]["processor_type"]
+        self.props = flatten_dict(props)
+
+        self.registry = Registry.instantiate(props=self.props)
+
+        stores = instantiate_online_stores(self.props)
+
         self.processor = Processor.instantiate(
-            processor_type=processor_type,
-            config=config["processor"][processor_type],
-            stores=stores,
-            registry=self.registry,
+            props=self.props, stores=stores, registry=self.registry
         )
-        service_type = config["feature_service"]["service_type"]
+
         self.feature_service = FeatureService.instantiate(
-            service_type=service_type,
-            config=config["feature_service"][service_type],
+            props=self.props,
             stores=stores,
             registry=self.registry,
         )

@@ -42,22 +42,23 @@ from feathub.feature_views.derived_feature_view import DerivedFeatureView
 
 def main() -> None:
     client = FeathubClient(
-        config={
+        props={
             "processor": {
-                "processor_type": "local",
+                "type": "local",
                 "local": {},
             },
             "online_store": {
+                "types": ["memory"],
                 "memory": {},
             },
             "registry": {
-                "registry_type": "local",
+                "type": "local",
                 "local": {
                     "namespace": "default",
                 },
             },
             "feature_service": {
-                "service_type": "local",
+                "type": "local",
                 "local": {},
             },
         }

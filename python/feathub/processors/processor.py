@@ -19,6 +19,11 @@ from abc import ABC, abstractmethod
 import pandas as pd
 
 from feathub.feature_tables.feature_table import FeatureTable
+from feathub.processors.processor_config import (
+    ProcessorConfig,
+    ProcessorType,
+    PROCESSOR_TYPE_CONFIG,
+)
 from feathub.table.table import Table
 from feathub.table.table_descriptor import TableDescriptor
 from feathub.processors.processor_job import ProcessorJob
@@ -132,20 +137,24 @@ class Processor(ABC):
 
     @staticmethod
     def instantiate(
-        processor_type: str,
-        config: Dict,
+        props: Dict,
         stores: Dict[str, OnlineStore],
         registry: Registry,
     ) -> Processor:
         """
-        Instantiates a processor using the given configuration and the store instances.
+        Instantiates a processor using the given properties and the store instances.
         """
-        from feathub.processors.local.local_processor import LocalProcessor
-        from feathub.processors.flink.flink_processor import FlinkProcessor
 
-        if processor_type == LocalProcessor.PROCESSOR_TYPE:
-            return LocalProcessor(config=config, stores=stores, registry=registry)
-        elif processor_type == FlinkProcessor.PROCESSOR_TYPE:
-            return FlinkProcessor(config=config, stores=stores, registry=registry)
+        processor_config = ProcessorConfig(props)
+        processor_type = ProcessorType(processor_config.get(PROCESSOR_TYPE_CONFIG))
 
-        raise RuntimeError(f"Failed to instantiate processor with config={config}.")
+        if processor_type == ProcessorType.LOCAL:
+            from feathub.processors.local.local_processor import LocalProcessor
+
+            return LocalProcessor(props=props, stores=stores, registry=registry)
+        elif processor_type == ProcessorType.FLINK:
+            from feathub.processors.flink.flink_processor import FlinkProcessor
+
+            return FlinkProcessor(props=props, stores=stores, registry=registry)
+
+        raise RuntimeError(f"Failed to instantiate processor with props={props}.")

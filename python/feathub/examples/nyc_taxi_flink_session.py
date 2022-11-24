@@ -23,25 +23,26 @@ from feathub.feathub_client import FeathubClient
 
 def main() -> None:
     client = FeathubClient(
-        config={
+        props={
             "processor": {
-                "processor_type": "flink",
+                "type": "flink",
                 "flink": {
                     "rest.address": "localhost",
-                    "rest.port": "8081",
+                    "rest.port": 8081,
                 },
             },
             "online_store": {
+                "types": ["memory"],
                 "memory": {},
             },
             "registry": {
-                "registry_type": "local",
+                "type": "local",
                 "local": {
                     "namespace": "default",
                 },
             },
             "feature_service": {
-                "service_type": "local",
+                "type": "local",
                 "local": {},
             },
         }

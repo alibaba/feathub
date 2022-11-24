@@ -19,6 +19,7 @@ from unittest.mock import patch, MagicMock
 import feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster_job_submitter  # noqa
 from kubernetes.client import CoreV1Api, AppsV1Api
 
+from feathub.processors.flink.flink_processor_config import FlinkProcessorConfig
 from feathub.processors.flink.job_submitter import (
     flink_kubernetes_application_cluster_job_submitter,
 )
@@ -35,12 +36,16 @@ from feathub.table.schema import Schema
 
 class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
     def setUp(self) -> None:
-        processor_config = {"flink_home": "/flink-home"}
+        processor_config = {
+            "processor.flink.deployment_mode": "kubernetes-application",
+            "processor.flink.flink_home": "/flink-home",
+        }
+
         feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster_job_submitter.load_kube_config = (  # noqa
             MagicMock()
         )
         self.submitter = FlinkKubernetesApplicationClusterJobSubmitter(
-            processor_config,
+            FlinkProcessorConfig(processor_config),
             registry_type="local",
             registry_config={"namespace": "default"},
         )
@@ -49,18 +54,20 @@ class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
 
     def test_init(self):
         submitter = FlinkKubernetesApplicationClusterJobSubmitter(
-            {"flink_home": "/tmp"}, "local", {}
+            FlinkProcessorConfig({"processor.flink.flink_home": "/tmp"}), "local", {}
         )
         self.assertEqual("/tmp/bin/flink", submitter._flink_cli_executable)
         self.assertEqual("feathub:latest", submitter.flink_kubernetes_image)
         self.assertEqual("default", submitter.kube_namespace)
 
         submitter = FlinkKubernetesApplicationClusterJobSubmitter(
-            {
-                "flink_home": "/tmp",
-                "kubernetes.image": "feathub:0.1",
-                "kubernetes.namespace": "test-namespace",
-            },
+            FlinkProcessorConfig(
+                {
+                    "processor.flink.flink_home": "/tmp",
+                    "processor.flink.kubernetes.image": "feathub:0.1",
+                    "processor.flink.kubernetes.namespace": "test-namespace",
+                }
+            ),
             "local",
             {},
         )
@@ -102,9 +109,7 @@ class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
                 sink,
                 {},
                 True,
-                self.submitter.processor_config,
-                self.submitter.registry_type,
-                self.submitter.registry_config,
+                self.submitter.processor_config.original_props,
             )
             self.assertEqual(
                 expected_job_descriptor,
@@ -143,7 +148,9 @@ class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
     def test_submit_job_with_additional_flink_configuration(self):
         source = FileSystemSource("source", "/dummy/path", "csv", Schema([], []))
         sink = FileSystemSink("/dummy/path", "csv")
-        self.submitter.processor_config["flink.additional.configuration"] = "value"
+        self.submitter.processor_config.original_props[
+            "processor.flink.native.additional.configuration"
+        ] = "value"
 
         mock_popen_return = MagicMock()
         mock_popen_return.returncode = 0
@@ -166,7 +173,9 @@ class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
         source = FileSystemSource("source", "/dummy/path", "csv", Schema([], []))
         table = FileSystemSource("table", "/dummy/path", "csv", Schema([], []))
         sink = FileSystemSink("/dummy/path", "csv")
-        self.submitter.processor_config["flink.additional.configuration"] = "value"
+        self.submitter.processor_config.original_props[
+            "processor.flink.native.additional.configuration"
+        ] = "value"
 
         mock_popen_return = MagicMock()
         mock_popen_return.returncode = 0
@@ -192,9 +201,7 @@ class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
                 sink,
                 {"table": table},
                 True,
-                self.submitter.processor_config,
-                self.submitter.registry_type,
-                self.submitter.registry_config,
+                self.submitter.processor_config.original_props,
             )
             self.assertEqual(
                 expected_job_descriptor,

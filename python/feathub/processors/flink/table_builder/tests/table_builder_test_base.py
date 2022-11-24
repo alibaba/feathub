@@ -34,7 +34,7 @@ class FlinkTableBuilderTestBase(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
 
-        self.registry = LocalRegistry(config={})
+        self.registry = LocalRegistry(props={})
 
         env = StreamExecutionEnvironment.get_execution_environment()
         t_env = StreamTableEnvironment.create(env)

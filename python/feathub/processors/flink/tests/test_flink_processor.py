@@ -48,12 +48,12 @@ from feathub.table.schema import Schema
 class FlinkProcessorTest(unittest.TestCase):
     def setUp(self) -> None:
         memory_online_store = OnlineStore.instantiate(
-            store_type=MemoryOnlineStore.STORE_TYPE, config={}
+            store_type=MemoryOnlineStore.STORE_TYPE, props={}
         )
         self.stores: Dict[str, OnlineStore] = {
             MemoryOnlineStore.STORE_TYPE: memory_online_store
         }
-        self.registry = LocalRegistry(config={})
+        self.registry = LocalRegistry(props={})
 
     def tearDown(self) -> None:
         # clean up the java_gateway so that it won't affect other tests.
@@ -64,9 +64,9 @@ class FlinkProcessorTest(unittest.TestCase):
 
     def test_default_deployment_mode(self):
         processor = FlinkProcessor(
-            config={
-                "rest.address": "127.0.0.1",
-                "rest.port": "1234",
+            props={
+                "processor.flink.rest.address": "127.0.0.1",
+                "processor.flink.rest.port": 1234,
             },
             stores=self.stores,
             registry=self.registry,
@@ -76,10 +76,10 @@ class FlinkProcessorTest(unittest.TestCase):
     def test_unsupported_deployment_mode(self):
         with self.assertRaises(FeathubException):
             FlinkProcessor(
-                config={
-                    "rest.address": "127.0.0.1",
-                    "rest.port": "1234",
-                    "deployment_mode": "unsupported",
+                props={
+                    "processor.flink.rest.address": "127.0.0.1",
+                    "processor.flink.rest.port": 1234,
+                    "processor.flink.deployment_mode": "unsupported",
                 },
                 stores=self.stores,
                 registry=self.registry,
@@ -87,13 +87,13 @@ class FlinkProcessorTest(unittest.TestCase):
 
     def test_session_mode_without_session_cluster_settings(self):
         with self.assertRaises(FeathubException):
-            FlinkProcessor(config={}, stores=self.stores, registry=self.registry)
+            FlinkProcessor(props={}, stores=self.stores, registry=self.registry)
 
     def test_get_table_with_session_mode(self):
         processor = FlinkProcessor(
-            config={
-                "rest.address": "127.0.0.1",
-                "rest.port": "1234",
+            props={
+                "processor.flink.rest.address": "127.0.0.1",
+                "processor.flink.rest.port": 1234,
             },
             stores=self.stores,
             registry=self.registry,
@@ -107,9 +107,9 @@ class FlinkProcessorTest(unittest.TestCase):
 
     def test_flink_processor_with_session_mode(self):
         processor = FlinkProcessor(
-            config={
-                "rest.address": "127.0.0.1",
-                "rest.port": "1234",
+            props={
+                "processor.flink.rest.address": "127.0.0.1",
+                "processor.flink.rest.port": 1234,
             },
             stores=self.stores,
             registry=self.registry,
@@ -122,9 +122,9 @@ class FlinkProcessorTest(unittest.TestCase):
 
     def test_materialize_with_session_mode(self):
         processor = FlinkProcessor(
-            config={
-                "rest.address": "127.0.0.1",
-                "rest.port": "1234",
+            props={
+                "processor.flink.rest.address": "127.0.0.1",
+                "processor.flink.rest.port": 1234,
             },
             stores=self.stores,
             registry=self.registry,
@@ -148,9 +148,9 @@ class FlinkProcessorTest(unittest.TestCase):
 
     def test_to_pandas_with_kubernetes_application_mode(self):
         processor = FlinkProcessor(
-            config={
+            props={
                 "flink_home": "/flink/home",
-                "deployment_mode": "kubernetes-application",
+                "processor.flink.deployment_mode": "kubernetes-application",
             },
             stores=self.stores,
             registry=self.registry,
@@ -169,9 +169,9 @@ class FlinkProcessorTest(unittest.TestCase):
 
     def test_table_schema_with_kubernetes_application_mode(self):
         processor = FlinkProcessor(
-            config={
+            props={
                 "flink_home": "/flink/home",
-                "deployment_mode": "kubernetes-application",
+                "processor.flink.deployment_mode": "kubernetes-application",
             },
             stores=self.stores,
             registry=self.registry,
@@ -188,9 +188,9 @@ class FlinkProcessorTest(unittest.TestCase):
 
     def test_table_execute_insert_with_kubernetes_application_mode(self):
         processor = FlinkProcessor(
-            config={
+            props={
                 "flink_home": "flink/home",
-                "deployment_mode": "kubernetes-application",
+                "processor.flink.deployment_mode": "kubernetes-application",
             },
             stores=self.stores,
             registry=self.registry,
@@ -214,9 +214,9 @@ class FlinkProcessorTest(unittest.TestCase):
 
     def test_materialize_joined_feature_application_mode(self):
         processor = FlinkProcessor(
-            config={
+            props={
                 "flink_home": "flink/home",
-                "deployment_mode": "kubernetes-application",
+                "processor.flink.deployment_mode": "kubernetes-application",
             },
             stores=self.stores,
             registry=self.registry,
@@ -281,9 +281,9 @@ class FlinkProcessorTest(unittest.TestCase):
 
     def test_materialize_to_online_store_with_session_mode(self):
         processor = FlinkProcessor(
-            config={
-                "rest.address": "127.0.0.1",
-                "rest.port": "1234",
+            props={
+                "processor.flink.rest.address": "127.0.0.1",
+                "processor.flink.rest.port": 1234,
             },
             stores=self.stores,
             registry=self.registry,
@@ -326,7 +326,10 @@ class FlinkProcessorTest(unittest.TestCase):
 
     def test_flink_config(self):
         processor = FlinkProcessor(
-            config={"deployment_mode": "cli", "native.key": "value"},
+            props={
+                "processor.flink.deployment_mode": "cli",
+                "processor.flink.native.key": "value",
+            },
             stores=self.stores,
             registry=self.registry,
         )
