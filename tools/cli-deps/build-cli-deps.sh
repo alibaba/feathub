@@ -22,10 +22,16 @@ set -e
 CURRENT_DIR=$(dirname "${BASH_SOURCE-$0}")
 CURRENT_DIR=$(cd "${CURRENT_DIR}"; pwd)
 
+FEATHUB_WHEEL_PATH=${1:-}
+
 # zip Feathub and its dependencies
 cd "${CURRENT_DIR}"
-# TODO: Install the latest stable version after Feathub released.
-python -m pip install --target __pypackages__ feathub-nightly --no-deps
+if [[ -z "${FEATHUB_WHEEL_PATH}" ]]; then
+  # TODO: Install the latest stable version after Feathub released.
+  python -m pip install --target __pypackages__ feathub-nightly --no-deps
+else
+  python -m pip install --target __pypackages__ "${FEATHUB_WHEEL_PATH}" --no-deps
+fi
 python -m pip install --target __pypackages__ -r requirements.txt
 cd __pypackages__ && zip -r deps.zip . && mv deps.zip ../ && cd ..
 rm -rf __pypackages__

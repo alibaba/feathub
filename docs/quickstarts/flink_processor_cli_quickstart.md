@@ -45,14 +45,19 @@ file that contains the dependencies. When submitting to Kubernetes cluster, user
 to install the dependencies to the Docker image.
 
 We provide the script to package a zip that contains the Python dependencies to run
-Feathub job. In this example, we will submit the Flink job together with the zip file to
-the standalone Flink cluster.
+Feathub job. You can build the Python dependencies with nightly version of Feathub or 
+with a Feathub wheel with the commands below.
 
 ```bash
+# Build Feathub Python Dependencies with nightly version of Feathub
 $ bash tools/cli-deps/build-cli-deps.sh
+
+# Build Feathub Python dependencies with wheel of Feathub
+$ bash tools/cli-deps/build-cli-deps.sh feathub_wheel_path
 ```
 
-The dependencies zip will be available at `tools/cli-dep/deps.zip`. 
+The dependencies zip will be available at `tools/cli-dep/deps.zip`. We will submit the 
+Flink job together with the zip file to the standalone Flink cluster.
 
 You can modify `tools/cli-dep/requirements.txt` to include any additional Python 
 dependencies to the `deps.zip`.
