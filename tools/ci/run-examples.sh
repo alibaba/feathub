@@ -40,9 +40,9 @@ echo "Running Flink processor session mode quickstart."
 python python/feathub/examples/nyc_taxi_flink_session.py
 
 echo "Restarting standalone Flink cluster."
-./bin/stop-cluster.sh && sleep 2 && ./bin/start-cluster.sh
+./flink-"${FLINK_VERSION}"/bin/stop-cluster.sh && sleep 2 && ./flink-"${FLINK_VERSION}"/bin/start-cluster.sh
 echo "Running Flink processor cli mode quickstart."
-bash tools/cli-deps/build-cli-deps.sh
+bash tools/cli-deps/build-cli-deps.sh "${PWD}"/wheels/*
 ./flink-"${FLINK_VERSION}"/bin/flink run \
     --detach \
     --python python/feathub/examples/streaming_average_flink_cli.py \
