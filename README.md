@@ -58,10 +58,8 @@ $ python -m pip install feathub-nightly
 #### Install From Source
 Run the following command to install Feathub from source.
 ```bash
-# Build Java dependencies for Feathub 
-$ cd java
-$ mvn clean package -DskipTests
-$ cd ..
+# Build Java dependencies for Feathub
+$ mvn clean package -DskipTests -f java/
 
 # Install Feathub
 $ python -m pip install ./python
@@ -187,6 +185,9 @@ $ python -m pip install -r python/dev-requirements.txt
 ### Running All Tests
 
 ```bash
+# Build Java dependencies for Feathub
+$ mvn clean package -DskipTests -f java/
+
 $ pytest -W ignore::DeprecationWarning
 ```
 
