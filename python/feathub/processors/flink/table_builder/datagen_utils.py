@@ -29,6 +29,7 @@ from feathub.feature_tables.sources.datagen_source import (
 from feathub.processors.flink.flink_types_utils import to_flink_schema
 from feathub.processors.flink.table_builder.source_sink_utils_common import (
     define_watermark,
+    generate_random_table_name,
 )
 from feathub.processors.flink.table_builder.time_utils import (
     timedelta_to_flink_sql_interval,
@@ -99,6 +100,6 @@ def get_table_from_data_gen_source(
         else:
             raise FeathubException(f"Unknown field config type {type(field_config)}.")
 
-    t_env.create_temporary_table(data_gen_source.name, table_descriptor_builder.build())
-
-    return t_env.from_path(data_gen_source.name)
+    table_name = generate_random_table_name(data_gen_source.name)
+    t_env.create_temporary_table(table_name, table_descriptor_builder.build())
+    return t_env.from_path(table_name)

@@ -68,8 +68,9 @@ def get_table_from_file_source(
         # Set ignore-parse-errors to set null in case of csv parse error
         descriptor_builder.option("csv.ignore-parse-errors", "true")
 
-    t_env.create_temporary_table(file_source.name, descriptor_builder.build())
-    return t_env.from_path(file_source.name)
+    table_name = generate_random_table_name(file_source.name)
+    t_env.create_temporary_table(table_name, descriptor_builder.build())
+    return t_env.from_path(table_name)
 
 
 def insert_into_file_sink(
