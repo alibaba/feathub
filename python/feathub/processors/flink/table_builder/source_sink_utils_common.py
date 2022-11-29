@@ -28,8 +28,8 @@ from feathub.processors.flink.table_builder.flink_table_builder_constants import
 )
 
 
-def generate_random_table_name(name_prefix: str) -> str:
-    random_sink_name = name_prefix + str(uuid.uuid4()).replace("-", "") + "table"
+def generate_random_table_name(original_table_name: str) -> str:
+    random_sink_name = f"{original_table_name}_{str(uuid.uuid4()).replace('-', '')}"
     return random_sink_name
 
 
