@@ -44,6 +44,7 @@ Prerequisites for building python packages:
 - Unix-like operating system (e.g. Linux, Mac OS X)
 - x86_64 architecture
 - Python 3.7
+- Pip >= 21.3
 - Java 8
 - Maven >= 3.1.1
 
@@ -87,7 +88,7 @@ $ python python/feathub/examples/nyc_taxi.py
 #### Quickstart using Flink Processor
 
 If you are interested in computing the Feathub features with Flink processor in a local 
-Flink cluster. You can see the following quickstart with different deployment modes:
+Flink cluster, you can see the following quickstart with different deployment modes:
 
 - [Flink Processor Session Mode Quickstart](docs/quickstarts/flink_processor_session_quickstart.md)
 - [Flink Processor Cli Mode Quickstart](docs/quickstarts/flink_processor_cli_quickstart.md)

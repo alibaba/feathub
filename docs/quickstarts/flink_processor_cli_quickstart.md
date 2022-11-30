@@ -15,7 +15,7 @@ The prerequisites to run the quickstart are listed below.
 
 ### Install Flink 
 
-Download a stable release of Flink 1.15, then extract the archive:
+Download a stable release of Flink 1.15.2, then extract the archive:
 
 ```bash
 $ curl -LO https://archive.apache.org/dist/flink/flink-1.15.2/flink-1.15.2-bin-scala_2.12.tgz
