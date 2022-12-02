@@ -395,7 +395,6 @@ class FlinkTableBuilderDerivedFeatureViewTest(FlinkTableBuilderTestBase):
         ).reset_index(drop=True)
 
         table = self.flink_table_builder.build(features=feature_view)
-        table.execute().print()
         result_df = (
             table.to_pandas().sort_values(by=["name", "time"]).reset_index(drop=True)
         )

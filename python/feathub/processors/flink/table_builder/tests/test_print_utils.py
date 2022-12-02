@@ -11,20 +11,16 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-import unittest
-
-from pyflink.datastream import StreamExecutionEnvironment
-from pyflink.table import StreamTableEnvironment
 
 from feathub.processors.flink.table_builder.print_utils import insert_into_print_sink
+from feathub.processors.flink.table_builder.tests.table_builder_test_base import (
+    FlinkTableBuilderTestBase,
+)
 
 
-class PrintSinkTest(unittest.TestCase):
+class PrintSinkTest(FlinkTableBuilderTestBase):
     def test_print_sink(self):
-        env = StreamExecutionEnvironment.get_execution_environment()
-        t_env = StreamTableEnvironment.create(env)
+        table = self.t_env.from_elements([(1,), (2,)], ["val"])
 
-        table = t_env.from_elements([(1,), (2,)], ["val"])
-
-        table_result = insert_into_print_sink(t_env, table)
+        table_result = insert_into_print_sink(self.t_env, table)
         table_result.wait()

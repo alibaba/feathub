@@ -11,10 +11,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-import unittest
-
-from pyflink.datastream import StreamExecutionEnvironment
-from pyflink.table import StreamTableEnvironment
 
 from feathub.common.types import Int32, Timestamp
 from feathub.feature_tables.sources.datagen_source import (
@@ -25,15 +21,15 @@ from feathub.feature_tables.sources.datagen_source import (
 from feathub.processors.flink.table_builder.datagen_utils import (
     get_table_from_data_gen_source,
 )
+from feathub.processors.flink.table_builder.tests.table_builder_test_base import (
+    FlinkTableBuilderTestBase,
+)
 
 from feathub.table.schema import Schema
 
 
-class DataGenUtilsTest(unittest.TestCase):
+class DataGenUtilsTest(FlinkTableBuilderTestBase):
     def test_data_gen_source(self):
-        env = StreamExecutionEnvironment.get_execution_environment()
-        t_env = StreamTableEnvironment.create(env)
-
         source = DataGenSource(
             name="datagen_src",
             rows_per_second=10,
@@ -46,7 +42,7 @@ class DataGenUtilsTest(unittest.TestCase):
             timestamp_format="%Y-%m-%d %H:%M:%S",
         )
 
-        table = get_table_from_data_gen_source(t_env, source)
+        table = get_table_from_data_gen_source(self.t_env, source)
         df = table.to_pandas()
         self.assertEquals(10, df.shape[0])
         self.assertTrue((df["val"] >= 0).all() and (df["val"] <= 100).all())

@@ -31,15 +31,27 @@ from feathub.table.schema import Schema
 
 
 class FlinkTableBuilderTestBase(unittest.TestCase):
+    registry = None
+    env = None
+    t_env = None
+    flink_table_builder = None
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        # Due to the resource leak in PyFlink StreamExecutionEnvironment and
+        # StreamTableEnvironment https://issues.apache.org/jira/browse/FLINK-30258.
+        # We want to share env and t_env across all the tests in one class to mitigate
+        # the leak.
+        # TODO: After the ticket is resolved, we should clean up the resource in
+        #  StreamExecutionEnvironment and StreamTableEnvironment after every test to
+        #  fully avoid resource leak.
+        cls.registry = LocalRegistry(props={})
+        cls.env = StreamExecutionEnvironment.get_execution_environment()
+        cls.t_env = StreamTableEnvironment.create(cls.env)
+        cls.flink_table_builder = FlinkTableBuilder(cls.t_env, registry=cls.registry)
+
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
-
-        self.registry = LocalRegistry(props={})
-
-        env = StreamExecutionEnvironment.get_execution_environment()
-        t_env = StreamTableEnvironment.create(env)
-
-        self.flink_table_builder = FlinkTableBuilder(t_env, registry=self.registry)
 
         self.input_data = pd.DataFrame(
             [
