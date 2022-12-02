@@ -11,15 +11,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-import unittest
 from datetime import datetime, timezone
 from typing import cast
 from unittest.mock import patch
 
 from pyflink.common import Row
-from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import (
-    StreamTableEnvironment,
     TableDescriptor as NativeFlinkTableDescriptor,
     DataTypes,
 )
@@ -30,19 +27,18 @@ from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sources.kafka_source import KafkaSource
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
-from feathub.processors.flink.table_builder.flink_table_builder import FlinkTableBuilder
 from feathub.processors.flink.table_builder.source_sink_utils import (
     get_table_from_source,
     insert_into_sink,
 )
-from feathub.registries.local_registry import LocalRegistry
+from feathub.processors.flink.table_builder.tests.table_builder_test_base import (
+    FlinkTableBuilderTestBase,
+)
 from feathub.table.schema import Schema
 
 
-class SourceUtilsTest(unittest.TestCase):
+class SourceUtilsTest(FlinkTableBuilderTestBase):
     def test_kafka_source(self):
-        env = StreamExecutionEnvironment.get_execution_environment()
-        t_env = StreamTableEnvironment.create(env)
         schema = Schema(["id", "val", "ts"], [String, Int64, Int64])
         source = KafkaSource(
             "kafka_source",
@@ -69,9 +65,9 @@ class SourceUtilsTest(unittest.TestCase):
         )
 
         with patch.object(
-            t_env, "create_temporary_table"
-        ) as create_temporary_table, patch.object(t_env, "from_path"):
-            get_table_from_source(t_env, source)
+            self.t_env, "create_temporary_table"
+        ) as create_temporary_table, patch.object(self.t_env, "from_path"):
+            get_table_from_source(self.t_env, source)
             flink_table_descriptor: NativeFlinkTableDescriptor = (
                 create_temporary_table.call_args[0][1]
             )
@@ -104,7 +100,7 @@ class SourceUtilsTest(unittest.TestCase):
             )
 
             bounded_source = source.get_bounded_view()
-            get_table_from_source(t_env, cast(FeatureTable, bounded_source))
+            get_table_from_source(self.t_env, cast(FeatureTable, bounded_source))
             flink_table_descriptor = create_temporary_table.call_args[0][1]
 
             expected_col_strs = [
@@ -135,10 +131,8 @@ class SourceUtilsTest(unittest.TestCase):
             )
 
 
-class SinkUtilTest(unittest.TestCase):
+class SinkUtilTest(FlinkTableBuilderTestBase):
     def test_kafka_sink(self):
-        env = StreamExecutionEnvironment.get_execution_environment()
-        t_env = StreamTableEnvironment.create(env)
         sink = KafkaSink(
             bootstrap_server="localhost:9092",
             topic="test-topic",
@@ -147,11 +141,11 @@ class SinkUtilTest(unittest.TestCase):
             producer_properties={"producer.key": "value"},
         )
 
-        table = t_env.from_elements([(1,)])
+        table = self.t_env.from_elements([(1,)])
         with patch.object(
-            t_env, "create_temporary_table"
+            self.t_env, "create_temporary_table"
         ) as create_temporary_table, patch.object(table, "execute_insert"):
-            insert_into_sink(t_env, table, sink, ("id",))
+            insert_into_sink(self.t_env, table, sink, ("id",))
             flink_table_descriptor: NativeFlinkTableDescriptor = (
                 create_temporary_table.call_args[0][1]
             )
@@ -171,7 +165,7 @@ class SinkUtilTest(unittest.TestCase):
             )
 
 
-class SourceSinkITTest(unittest.TestCase):
+class SourceSinkITTest(FlinkTableBuilderTestBase):
     kafka_container: KafkaContainer = None
 
     def __init__(self, methodName: str):
@@ -181,6 +175,7 @@ class SourceSinkITTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
+        super().setUpClass()
         cls.kafka_container = KafkaContainer()
         cls.kafka_container.start()
 
@@ -189,18 +184,16 @@ class SourceSinkITTest(unittest.TestCase):
         cls.kafka_container.stop()
 
     def setUp(self) -> None:
+        super().setUp()
         self.kafka_bootstrap_servers = (
             SourceSinkITTest.kafka_container.get_bootstrap_server()
         )
 
-        self.env = StreamExecutionEnvironment.get_execution_environment()
-        self.t_env = StreamTableEnvironment.create(self.env)
         self.test_time = datetime.now()
 
         self.row_data = self._produce_data_to_kafka(self.t_env)
 
     def test_kafka_source_sink(self):
-        table_builder = FlinkTableBuilder(self.t_env, LocalRegistry({}))
         # Consume data with kafka source
         source = KafkaSource(
             "kafka_source",
@@ -218,7 +211,7 @@ class SourceSinkITTest(unittest.TestCase):
         )
 
         expected_rows = {Row(*data) for data in self.row_data}
-        table = table_builder.build(source)
+        table = self.flink_table_builder.build(source)
         table_result = table.execute()
         result_rows = set()
         with table_result.collect() as results:
@@ -231,7 +224,6 @@ class SourceSinkITTest(unittest.TestCase):
         self.assertEquals(expected_rows, result_rows)
 
     def test_bounded_kafka_source(self):
-        table_builder = FlinkTableBuilder(self.t_env, LocalRegistry({}))
         # Consume data with kafka source
         source = KafkaSource(
             "kafka_source",
@@ -252,7 +244,7 @@ class SourceSinkITTest(unittest.TestCase):
         features = DerivedFeatureView(
             "feature_view", source, features=[], keep_source_fields=True
         )
-        table = table_builder.build(features)
+        table = self.flink_table_builder.build(features)
         expected_rows = {Row(*data) for data in self.row_data}
         table_result = table.execute()
         with table_result.collect() as results:

@@ -16,9 +16,9 @@ from typing import Dict
 
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import (
-    StreamTableEnvironment,
     TableDescriptor,
     DataTypes,
+    StreamTableEnvironment,
 )
 
 from feathub.common.exceptions import FeathubTypeException
