@@ -53,7 +53,7 @@ Prerequisites for building python packages:
 #### Install Nightly Build
 Run the following command to install preview(nightly) version of Feathub.
 ```bash
-$ python -m pip install feathub-nightly
+$ python -m pip install --upgrade feathub-nightly
 ```
 
 #### Install From Source
