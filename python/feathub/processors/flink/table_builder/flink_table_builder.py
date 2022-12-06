@@ -299,6 +299,20 @@ class FlinkTableBuilder:
 
                 join_transform = feature.transform
                 right_table_descriptor = descriptors_by_names[join_transform.table_name]
+                # TODO: Remove this check after after Flink support terminate the
+                #  job when the bounded left table finished.
+                #  https://issues.apache.org/jira/projects/FLINK/issues/FLINK-30078
+                # Raise exception if bounded left table join with an unbounded right
+                # table.
+                if (
+                    feature_view.is_bounded()
+                    and not right_table_descriptor.is_bounded()
+                ):
+                    raise FeathubException(
+                        "Joining a bounded left table with an unbounded right table is "
+                        "currently not supported. You can make the right table bounded "
+                        "by setting its source to be bounded."
+                    )
                 right_timestamp_field = right_table_descriptor.timestamp_field
                 if right_timestamp_field is None:
                     raise FeathubException(

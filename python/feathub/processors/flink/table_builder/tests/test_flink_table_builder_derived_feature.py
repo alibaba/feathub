@@ -16,7 +16,9 @@ from datetime import timedelta
 
 import pandas as pd
 
+from feathub.common.exceptions import FeathubException
 from feathub.common.types import Float64, Int64, String
+from feathub.feature_tables.sources.datagen_source import DataGenSource
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
@@ -511,4 +513,40 @@ class FlinkTableBuilderDerivedFeatureViewTest(FlinkTableBuilderTestBase):
 
         self.flink_table_builder.t_env.get_config().set_local_timezone(
             prev_local_timezone
+        )
+
+    def test_bounded_left_table_join_unbounded_right_table(self):
+        source = DataGenSource(
+            name="source_1",
+            schema=Schema(["id", "val1", "time"], [Int64, Int64, String]),
+            timestamp_field="time",
+            timestamp_format="%Y-%m-%d %H:%M:%S",
+            keys=["id"],
+            number_of_rows=1,
+        )
+
+        source_2 = DataGenSource(
+            name="source_2",
+            schema=Schema(["id", "val2", "time"], [Int64, Int64, String]),
+            timestamp_field="time",
+            timestamp_format="%Y-%m-%d %H:%M:%S",
+            keys=["id"],
+        )
+
+        feature_view_1 = DerivedFeatureView(
+            name="feature_view_1",
+            source=source,
+            features=["source_2.val2"],
+            keep_source_fields=True,
+        )
+
+        built_feature_view = self.registry.build_features([source_2, feature_view_1])[1]
+
+        with self.assertRaises(FeathubException) as cm:
+            self.flink_table_builder.build(built_feature_view)
+
+        self.assertIn(
+            "Joining a bounded left table with an unbounded right table is currently "
+            "not supported.",
+            cm.exception.args[0],
         )

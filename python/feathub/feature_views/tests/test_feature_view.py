@@ -14,7 +14,6 @@
 
 import unittest
 
-from feathub.common.exceptions import FeathubException
 from feathub.common.types import Int64
 from feathub.feature_tables.sources.datagen_source import DataGenSource
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
@@ -166,37 +165,3 @@ class FeatureViewTest(unittest.TestCase):
             [bounded_source_2, feature_view_2]
         )[1]
         self.assertTrue(built_feature_view_2.is_bounded())
-
-    def test_bounded_left_table_join_unbounded_right_table(self):
-        source = DataGenSource(
-            name="source_1",
-            schema=Schema(["id", "val1"], [Int64, Int64]),
-            timestamp_field="lpep_dropoff_datetime",
-            timestamp_format="%Y-%m-%d %H:%M:%S",
-            keys=["id"],
-            number_of_rows=1,
-        )
-
-        source_2 = DataGenSource(
-            name="source_2",
-            schema=Schema(["id", "val2"], [Int64, Int64]),
-            timestamp_field="lpep_dropoff_datetime",
-            timestamp_format="%Y-%m-%d %H:%M:%S",
-            keys=["id"],
-        )
-
-        feature_view_1 = DerivedFeatureView(
-            name="feature_view_1",
-            source=source,
-            features=["source_2.val2"],
-            keep_source_fields=True,
-        )
-
-        with self.assertRaises(FeathubException) as cm:
-            _ = self.registry.build_features([source_2, feature_view_1])[1]
-
-        self.assertIn(
-            "Joining a bounded left table with an unbounded right table is currently "
-            "not supported.",
-            cm.exception.args[0],
-        )
