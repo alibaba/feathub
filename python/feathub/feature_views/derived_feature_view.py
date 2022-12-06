@@ -15,7 +15,6 @@
 from __future__ import annotations
 from typing import Union, Dict, Sequence, Optional
 
-from feathub.common.exceptions import FeathubException
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.table.table_descriptor import TableDescriptor
 from feathub.feature_views.feature import Feature
@@ -90,17 +89,6 @@ class DerivedFeatureView(FeatureView):
                     join_feature_name = parts[0]
 
                 table_desc = registry.get_features(name=join_table_name)
-                if source.is_bounded() and not table_desc.is_bounded():
-                    # TODO: Remove this check after after Flink support terminate the
-                    #  job when the bounded left table finished.
-                    #  https://issues.apache.org/jira/projects/FLINK/issues/FLINK-30078
-                    # Raise exception if bounded left table join with an unbounded right
-                    # table.
-                    raise FeathubException(
-                        "Joining a bounded left table with an unbounded right table is "
-                        "currently not supported. You can make the right table bounded "
-                        "by setting its source to be bounded."
-                    )
                 join_feature = table_desc.get_feature(feature_name=join_feature_name)
                 if source.name == join_table_name:
                     feature = join_feature
