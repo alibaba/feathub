@@ -24,5 +24,13 @@ RUN pip3 install /tmp/wheels/* && \
     rm -rf /tmp/wheels && \
     cp $(python -c "from feathub.processors.flink.job_submitter import get_application_job_entry_point; print(get_application_job_entry_point())") /opt/flink
 
+# Prepare flink
+WORKDIR ${FLINK_HOME}
+COPY ./libs/* ${FLINK_HOME}/lib
+RUN mkdir plugins/oss-fs-hadoop && \
+    mkdir plugins/s3-fs-hadoop && \
+    ln -s ../../opt/$(ls opt | grep oss-fs-hadoop) plugins/oss-fs-hadoop/$(ls opt | grep oss-fs-hadoop) && \
+    ln -s ../../opt/$(ls opt | grep s3-fs-hadoop) plugins/s3-fs-hadoop/$(ls opt | grep s3-fs-hadoop)
+
 # Further customization can be added.
 # You can refer to https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/resource-providers/standalone/docker/#further-customization.

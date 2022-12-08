@@ -29,6 +29,11 @@ JAVA_DIR=${PROJECT_DIR}/java
 cd ${JAVA_DIR}
 mvn clean package -DskipTests
 
+# prepare libs
+[ -d ${DOCKER_DIR}/libs ] && rm -rf ${DOCKER_DIR}/libs
+mkdir ${DOCKER_DIR}/libs
+cp feathub-dist/target/feathub-dist-*-lib/feathub-dist-*/lib/* ${DOCKER_DIR}/libs
+
 # build wheels
 cd ${PYTHON_DIR}
 python3 setup.py bdist_wheel
@@ -40,3 +45,4 @@ cp dist/feathub-*.whl ${DOCKER_DIR}/wheels
 cd ${DOCKER_DIR}
 docker build --tag feathub:latest .
 rm -rf ${DOCKER_DIR}/wheels
+rm -rf ${DOCKER_DIR}/libs

@@ -35,6 +35,18 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-shaded-hadoop-2-uber</artifactId>
+            <version>${flink-shaded-hadoop.verison}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
             <groupId>com.alibaba.feathub</groupId>
             <artifactId>flink-connector-kafka</artifactId>
             <version>${project.version}</version>
@@ -61,6 +73,7 @@
                         <configuration>
                             <descriptors>
                                 <descriptor>src/main/assemblies/bin.xml</descriptor>
+                                <descriptor>src/main/assemblies/lib.xml</descriptor>
                             </descriptors>
                         </configuration>
                     </execution>

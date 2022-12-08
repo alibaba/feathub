@@ -51,7 +51,7 @@ class DerivedFeatureView(FeatureView):
                          computed by ExpressionTransform or OverWindowTransform, its
                          expression can only depend on the features specified earlier in
                          this list and the features in the source table.
-        :param keep_source_fields: True iff all fields in the source table should be
+        :param keep_source_fields: True if all fields in the source table should be
                                    included in this table.
         """
         super().__init__(

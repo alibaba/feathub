@@ -35,6 +35,7 @@
         <maven.compiler.target>1.8</maven.compiler.target>
 
         <flink.version>1.15.2</flink.version>
+        <flink-shaded-hadoop.verison>2.8.3-10.0</flink-shaded-hadoop.verison>
         <spotless.version>2.13.0</spotless.version>
         <spotless.scalafmt.version>3.4.3</spotless.scalafmt.version>
         <spotless.delimiter>package</spotless.delimiter>
