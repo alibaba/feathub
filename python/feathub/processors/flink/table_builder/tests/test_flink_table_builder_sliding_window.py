@@ -1917,3 +1917,148 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 f"Failed with props: {props}\nexpected: {expected_result_df}\n"
                 f"actual: {result_df}",
             )
+
+    def test_multiple_window_size_with_same_step(self):
+        df = self.input_data.copy()
+        source = self._create_file_source(df)
+
+        f_total_cost_two_days = Feature(
+            name="total_cost_two_days",
+            dtype=Int64,
+            transform=SlidingWindowTransform(
+                expr="cost",
+                agg_func="SUM",
+                window_size=timedelta(days=2),
+                step_size=timedelta(days=1),
+                group_by_keys=["name"],
+            ),
+        )
+
+        f_avg_cost_three_days = Feature(
+            name="avg_cost_three_days",
+            dtype=Float32,
+            transform=SlidingWindowTransform(
+                expr="cost",
+                agg_func="AVG",
+                window_size=timedelta(days=3),
+                step_size=timedelta(days=1),
+                group_by_keys=["name"],
+            ),
+        )
+
+        f_cost_value_counts_two_days = Feature(
+            name="cost_value_counts_two_days",
+            dtype=MapType(Int64, Int64),
+            transform=SlidingWindowTransform(
+                expr="cost",
+                agg_func="VALUE_COUNTS",
+                window_size=timedelta(days=2),
+                step_size=timedelta(days=1),
+                group_by_keys=["name"],
+            ),
+        )
+
+        expected_result_df = pd.DataFrame(
+            [
+                [
+                    "Alex",
+                    to_epoch_millis("2022-01-01 23:59:59.999"),
+                    100,
+                    100.0,
+                    {100: 1},
+                ],
+                [
+                    "Alex",
+                    to_epoch_millis("2022-01-02 23:59:59.999"),
+                    400,
+                    200.0,
+                    {100: 1, 300: 1},
+                ],
+                [
+                    "Alex",
+                    to_epoch_millis("2022-01-03 23:59:59.999"),
+                    900,
+                    1000 / 3,
+                    {300: 1, 600: 1},
+                ],
+                [
+                    "Alex",
+                    to_epoch_millis("2022-01-04 23:59:59.999"),
+                    600,
+                    450.0,
+                    {600: 1},
+                ],
+                ["Alex", to_epoch_millis("2022-01-05 23:59:59.999"), 0, 600.0, None],
+                ["Alex", to_epoch_millis("2022-01-06 23:59:59.999"), 0, None, None],
+                [
+                    "Emma",
+                    to_epoch_millis("2022-01-01 23:59:59.999"),
+                    400,
+                    400.0,
+                    {400: 1},
+                ],
+                [
+                    "Emma",
+                    to_epoch_millis("2022-01-02 23:59:59.999"),
+                    600,
+                    300.0,
+                    {400: 1, 200: 1},
+                ],
+                [
+                    "Emma",
+                    to_epoch_millis("2022-01-03 23:59:59.999"),
+                    200,
+                    300.0,
+                    {200: 1},
+                ],
+                ["Emma", to_epoch_millis("2022-01-04 23:59:59.999"), 0, 200.0, None],
+                ["Emma", to_epoch_millis("2022-01-05 23:59:59.999"), 0, None, None],
+                [
+                    "Jack",
+                    to_epoch_millis("2022-01-03 23:59:59.999"),
+                    500,
+                    500.0,
+                    {500: 1},
+                ],
+                ["Jack", to_epoch_millis("2022-01-05 23:59:59.999"), 0, 500.0, None],
+                ["Jack", to_epoch_millis("2022-01-06 23:59:59.999"), 0, None, None],
+            ],
+            columns=[
+                "name",
+                "window_time",
+                "total_cost_two_days",
+                "avg_cost_three_days",
+                "cost_value_counts_two_days",
+            ],
+        )
+
+        expected_result_df = expected_result_df.astype(
+            {
+                "name": str,
+                "window_time": "int64",
+                "total_cost_two_days": "int64",
+                "avg_cost_three_days": "float32",
+                "cost_value_counts_two_days": object,
+            }
+        )
+
+        features = SlidingFeatureView(
+            name="features",
+            source=source,
+            features=[
+                f_total_cost_two_days,
+                f_avg_cost_three_days,
+                f_cost_value_counts_two_days,
+            ],
+        )
+
+        result_df = (
+            flink_table_to_pandas(self.flink_table_builder.build(features=features))
+            .sort_values(by=["name", "window_time"])
+            .reset_index(drop=True)
+        )
+
+        self.assertTrue(
+            expected_result_df.equals(result_df),
+            f"expected: {expected_result_df}\n" f"actual: {result_df}",
+        )

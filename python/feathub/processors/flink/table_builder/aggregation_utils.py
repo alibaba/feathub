@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+from datetime import timedelta
 from typing import Any, Tuple
 
 from pyflink.table.types import DataType, DataTypes
@@ -40,11 +40,13 @@ class AggregationFieldDescriptor:
         field_data_type: DataType,
         expr: str,
         agg_func: AggFunc,
+        window_size: timedelta,
     ) -> None:
         self.field_name = field_name
         self.field_data_type = field_data_type
         self.expr = expr
         self.agg_func = agg_func
+        self.window_size = window_size
 
     @staticmethod
     def from_feature(feature: Feature) -> "AggregationFieldDescriptor":
@@ -61,6 +63,7 @@ class AggregationFieldDescriptor:
             to_flink_type(feature.dtype),
             to_flink_sql_expr(transform.expr),
             transform.agg_func,
+            transform.window_size,
         )
 
 

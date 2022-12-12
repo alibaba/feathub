@@ -154,7 +154,8 @@ def get_table_from_kafka_source(
         #  https://issues.apache.org/jira/browse/FLINK-19200
         schema = to_flink_schema(schema)
         max_out_of_orderness_interval = timedelta_to_flink_sql_interval(
-            kafka_source.max_out_of_orderness, day_precision=3
+            kafka_source.max_out_of_orderness + timedelta(milliseconds=1),
+            day_precision=3,
         )
         schema = (
             Schema.new_builder()
