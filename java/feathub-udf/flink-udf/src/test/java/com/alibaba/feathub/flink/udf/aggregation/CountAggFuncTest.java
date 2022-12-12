@@ -14,15 +14,22 @@
  * limitations under the License.
  */
 
-package com.alibaba.feathub.flink.udf;
+package com.alibaba.feathub.flink.udf.aggregation;
 
-import org.apache.flink.types.Row;
-import org.apache.flink.util.Collector;
+import org.junit.jupiter.api.Test;
 
-import java.io.Serializable;
+import static org.assertj.core.api.Assertions.assertThat;
 
-/** Interface for handling post sliding window expired row. */
-// TODO: Implement a PostSlidingWindowExpiredRowHandler that retract the expired row.
-public interface PostSlidingWindowExpiredRowHandler extends Serializable {
-    void handleExpiredRow(Collector<Row> out, Row expiredRow, long currentTimestamp);
+/** Test for {@link CountAggFunc}. */
+class CountAggFuncTest {
+    @Test
+    void testCountAggregationFunction() {
+        final CountAggFunc aggFunc = new CountAggFunc();
+        assertThat(aggFunc.getResult()).isEqualTo(0);
+        aggFunc.aggregate(0, 0);
+        aggFunc.aggregate(0, 0);
+        assertThat(aggFunc.getResult()).isEqualTo(2);
+        aggFunc.reset();
+        assertThat(aggFunc.getResult()).isEqualTo(0);
+    }
 }

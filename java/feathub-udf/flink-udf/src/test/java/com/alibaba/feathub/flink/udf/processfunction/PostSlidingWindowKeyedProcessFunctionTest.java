@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.alibaba.feathub.flink.udf;
+package com.alibaba.feathub.flink.udf.processfunction;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;

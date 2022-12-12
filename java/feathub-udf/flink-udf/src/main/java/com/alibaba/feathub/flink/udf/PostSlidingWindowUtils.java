@@ -28,6 +28,9 @@ import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.LogicalTypeRoot;
 import org.apache.flink.types.Row;
 
+import com.alibaba.feathub.flink.udf.processfunction.PostSlidingWindowDefaultRowExpiredRowHandler;
+import com.alibaba.feathub.flink.udf.processfunction.PostSlidingWindowKeyedProcessFunction;
+
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Objects;

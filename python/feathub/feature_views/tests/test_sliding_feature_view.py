@@ -221,42 +221,6 @@ class SlidingFeatureViewTest(unittest.TestCase):
             )
         self.assertIn("different step size", cm.exception.args[0])
 
-    def test_different_window_size(self):
-        feature_1 = Feature(
-            name="feature_1",
-            dtype=types.Float32,
-            transform=SlidingWindowTransform(
-                expr="CAST(fare_amount AS FLOAT)",
-                agg_func="SUM",
-                window_size=timedelta(seconds=30),
-                group_by_keys=["id"],
-                step_size=timedelta(seconds=10),
-            ),
-        )
-
-        feature_2 = Feature(
-            name="feature_2",
-            dtype=types.Float32,
-            transform=SlidingWindowTransform(
-                expr="CAST(fare_amount AS FLOAT) + 1",
-                agg_func="SUM",
-                window_size=timedelta(seconds=31),
-                group_by_keys=["id"],
-                step_size=timedelta(seconds=10),
-            ),
-        )
-
-        with self.assertRaises(FeathubException) as cm:
-            SlidingFeatureView(
-                name="feature_view_1",
-                source=self.source,
-                features=[
-                    feature_1,
-                    feature_2,
-                ],
-            )
-        self.assertIn("different window size", cm.exception.args[0])
-
     def test_without_sliding_window_transform(self):
         feature_1 = "feature_1"
 

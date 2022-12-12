@@ -56,7 +56,9 @@ def flink_table_to_pandas(table: NativeFlinkTable) -> pd.DataFrame:
     schema = table.get_schema()
     field_names = schema.get_field_names()
     field_types = {
-        name: FLINK_DATA_TYPE_TO_NUMPY_TYPE.get(schema.get_field_data_type(name), None)
+        name: FLINK_DATA_TYPE_TO_NUMPY_TYPE.get(
+            type(schema.get_field_data_type(name)), None
+        )
         for name in field_names
     }
     with table.execute().collect() as results:

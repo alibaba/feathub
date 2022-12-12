@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.alibaba.feathub.flink.udf;
+package com.alibaba.feathub.flink.udf.processfunction;
 
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Collector;

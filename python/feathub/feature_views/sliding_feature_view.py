@@ -300,12 +300,3 @@ class SlidingFeatureView(FeatureView):
             raise FeathubException(
                 f"SlidingWindowTransforms have different step size " f"{steps}."
             )
-
-        window_sizes = set(
-            [transform.window_size for transform in sliding_window_transforms]
-        )
-        if len(window_sizes) > 1:
-            raise FeathubException(
-                f"SlidingWindowTransforms have different window size "
-                f"{window_sizes}."
-            )
