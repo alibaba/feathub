@@ -42,6 +42,22 @@
 
         <dependency>
             <groupId>com.alibaba.feathub</groupId>
+            <artifactId>flink-connector-redis</artifactId>
+            <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.commons</groupId>
+                    <artifactId>commons-pool2</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.json</groupId>
+                    <artifactId>json</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba.feathub</groupId>
             <artifactId>flink-udf</artifactId>
             <version>${project.version}</version>
         </dependency>

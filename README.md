@@ -177,18 +177,36 @@ f_lower_case_name = Feature(
 
 ## Developer Guidelines
 
-### Install Development Dependencies
+### Installing Development Dependencies
+
+1. Install required Python libraries in your Python environment.
 
 ```bash
 $ python -m pip install -r python/dev-requirements.txt
 ```
 
+2. Make sure you have installed Protocol Buffers compiler 3.17.x in your local
+environment. You may refer to [Protocol Buffers'
+README](https://github.com/protocolbuffers/protobuf#protocol-compiler-installation)
+for installation guidelines. 
+
+### Building Feathub Project
+
+1. Use the following command to build Java dependencies for Feathub.
+
+```bash
+$ mvn clean package -DskipTests -f java/
+```
+
+2. Use the following command to generate necessary python files.
+
+```bash
+$ protoc -I=python/feathub/common/protobuf/ --python_out=python/feathub/common/protobuf/ value.proto
+```
+
 ### Running All Tests
 
 ```bash
-# Build Java dependencies for Feathub
-$ mvn clean package -DskipTests -f java/
-
 $ pytest -W ignore::DeprecationWarning
 ```
 

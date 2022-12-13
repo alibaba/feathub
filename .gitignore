@@ -18,7 +18,7 @@ target
 *.ipr
 *.iws
 *.pyc
-
+*_pb2.py
 build
 dist
 *.egg-info

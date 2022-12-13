@@ -11,7 +11,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Sequence
 
 from pyflink.table import (
     StreamTableEnvironment,
@@ -24,6 +23,7 @@ from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sinks.print_sink import PrintSink
+from feathub.feature_tables.sinks.redis_sink import RedisSink
 from feathub.feature_tables.sources.datagen_source import DataGenSource
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_tables.sources.kafka_source import KafkaSource
@@ -39,6 +39,8 @@ from feathub.processors.flink.table_builder.kafka_utils import (
     insert_into_kafka_sink,
 )
 from feathub.processors.flink.table_builder.print_utils import insert_into_print_sink
+from feathub.processors.flink.table_builder.redis_utils import insert_into_redis_sink
+from feathub.table.table_descriptor import TableDescriptor
 
 
 def get_table_from_source(
@@ -64,18 +66,20 @@ def get_table_from_source(
 
 def insert_into_sink(
     t_env: StreamTableEnvironment,
-    table: NativeFlinkTable,
+    features_table: NativeFlinkTable,
+    features_desc: TableDescriptor,
     sink: FeatureTable,
-    keys: Sequence[str],
 ) -> TableResult:
     """
     Insert the flink table to the given sink.
     """
     if isinstance(sink, FileSystemSink):
-        return insert_into_file_sink(t_env, table, sink)
+        return insert_into_file_sink(t_env, features_table, sink)
     elif isinstance(sink, KafkaSink):
-        return insert_into_kafka_sink(t_env, table, sink, keys)
+        return insert_into_kafka_sink(t_env, features_table, sink, features_desc.keys)
     elif isinstance(sink, PrintSink):
-        return insert_into_print_sink(t_env, table)
+        return insert_into_print_sink(t_env, features_table)
+    elif isinstance(sink, RedisSink):
+        return insert_into_redis_sink(t_env, features_table, features_desc, sink)
     else:
         raise FeathubException(f"Unsupported sink type {type(sink)}.")

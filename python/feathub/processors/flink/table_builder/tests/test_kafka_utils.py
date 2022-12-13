@@ -31,10 +31,12 @@ from feathub.processors.flink.table_builder.source_sink_utils import (
     get_table_from_source,
     insert_into_sink,
 )
-from feathub.processors.flink.table_builder.tests.table_builder_test_base import (
+from feathub.processors.flink.table_builder.tests.table_builder_test_utils import (
     FlinkTableBuilderTestBase,
+    MockTableDescriptor,
 )
 from feathub.table.schema import Schema
+from feathub.table.table_descriptor import TableDescriptor
 
 
 class SourceUtilsTest(FlinkTableBuilderTestBase):
@@ -145,7 +147,9 @@ class SinkUtilTest(FlinkTableBuilderTestBase):
         with patch.object(
             self.t_env, "create_temporary_table"
         ) as create_temporary_table, patch.object(table, "execute_insert"):
-            insert_into_sink(self.t_env, table, sink, ("id",))
+
+            descriptor: TableDescriptor = MockTableDescriptor(keys=["id"])
+            insert_into_sink(self.t_env, table, descriptor, sink)
             flink_table_descriptor: NativeFlinkTableDescriptor = (
                 create_temporary_table.call_args[0][1]
             )
@@ -273,5 +277,8 @@ class SourceSinkITTest(FlinkTableBuilderTestBase):
             key_format="json",
             value_format="json",
         )
-        insert_into_sink(t_env, table, sink, ("id",)).wait()
+
+        descriptor: TableDescriptor = MockTableDescriptor(keys=["id"])
+
+        insert_into_sink(t_env, table, descriptor, sink).wait()
         return row_data

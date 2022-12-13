@@ -32,7 +32,7 @@ from feathub.common.types import Int64, Float64
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
-from feathub.processors.flink.table_builder.tests.table_builder_test_base import (
+from feathub.processors.flink.table_builder.tests.table_builder_test_utils import (
     FlinkTableBuilderTestBase,
 )
 from feathub.feature_tables.sources.online_store_source import OnlineStoreSource

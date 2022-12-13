@@ -21,7 +21,7 @@ from feathub.feature_tables.sources.datagen_source import (
 from feathub.processors.flink.table_builder.datagen_utils import (
     get_table_from_data_gen_source,
 )
-from feathub.processors.flink.table_builder.tests.table_builder_test_base import (
+from feathub.processors.flink.table_builder.tests.table_builder_test_utils import (
     FlinkTableBuilderTestBase,
 )
 

@@ -92,8 +92,8 @@ class FlinkSessionClusterJobSubmitter(FlinkJobSubmitter):
         table_result = insert_into_sink(
             self.flink_processor.flink_table_builder.t_env,
             native_flink_table,
+            features,
             sink,
-            features.keys,
         )
         return FlinkSessionClusterJob(table_result, self._executor)
 
