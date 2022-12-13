@@ -12,6 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import uuid
+from datetime import timedelta
 
 from pyflink.table import (
     Table as NativeFlinkTable,
@@ -25,6 +26,9 @@ from feathub.common.types import DType
 from feathub.common.utils import to_java_date_format
 from feathub.processors.flink.table_builder.flink_table_builder_constants import (
     EVENT_TIME_ATTRIBUTE_NAME,
+)
+from feathub.processors.flink.table_builder.time_utils import (
+    timedelta_to_flink_sql_interval,
 )
 
 
@@ -46,7 +50,7 @@ def get_schema_from_table(table: NativeFlinkTable) -> NativeFlinkSchema:
 def define_watermark(
     t_env: StreamTableEnvironment,
     flink_schema: NativeFlinkSchema,
-    max_out_of_orderness_interval: str,
+    max_out_of_orderness: timedelta,
     timestamp_field: str,
     timestamp_format: str,
     timestamp_field_dtype: DType,
@@ -99,6 +103,9 @@ def define_watermark(
             f"3)",
         )
 
+    max_out_of_orderness_interval = timedelta_to_flink_sql_interval(
+        max_out_of_orderness + timedelta(milliseconds=1), day_precision=3
+    )
     builder.watermark(
         EVENT_TIME_ATTRIBUTE_NAME,
         watermark_expr=f"`{EVENT_TIME_ATTRIBUTE_NAME}` "

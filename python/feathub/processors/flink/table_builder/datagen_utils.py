@@ -31,9 +31,6 @@ from feathub.processors.flink.table_builder.source_sink_utils_common import (
     define_watermark,
     generate_random_table_name,
 )
-from feathub.processors.flink.table_builder.time_utils import (
-    timedelta_to_flink_sql_interval,
-)
 
 
 def get_table_from_data_gen_source(
@@ -46,9 +43,7 @@ def get_table_from_data_gen_source(
         flink_schema = define_watermark(
             t_env,
             flink_schema,
-            timedelta_to_flink_sql_interval(
-                data_gen_source.max_out_of_orderness, day_precision=3
-            ),
+            data_gen_source.max_out_of_orderness,
             data_gen_source.timestamp_field,
             data_gen_source.timestamp_format,
             data_gen_source.schema.get_field_type(data_gen_source.timestamp_field),

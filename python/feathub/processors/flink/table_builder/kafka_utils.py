@@ -68,9 +68,7 @@ def get_table_from_kafka_source(
             flink_schema = define_watermark(
                 t_env,
                 flink_schema,
-                timedelta_to_flink_sql_interval(
-                    kafka_source.max_out_of_orderness, day_precision=3
-                ),
+                kafka_source.max_out_of_orderness,
                 kafka_source.timestamp_field,
                 kafka_source.timestamp_format,
                 schema.get_field_type(kafka_source.timestamp_field),

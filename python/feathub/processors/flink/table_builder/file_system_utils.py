@@ -28,9 +28,6 @@ from feathub.processors.flink.table_builder.source_sink_utils_common import (
     get_schema_from_table,
     define_watermark,
 )
-from feathub.processors.flink.table_builder.time_utils import (
-    timedelta_to_flink_sql_interval,
-)
 
 
 def get_table_from_file_source(
@@ -49,9 +46,7 @@ def get_table_from_file_source(
         flink_schema = define_watermark(
             t_env,
             flink_schema,
-            timedelta_to_flink_sql_interval(
-                file_source.max_out_of_orderness, day_precision=3
-            ),
+            file_source.max_out_of_orderness,
             file_source.timestamp_field,
             file_source.timestamp_format,
             schema.get_field_type(file_source.timestamp_field),
