@@ -78,6 +78,13 @@ def insert_into_file_sink(
 ) -> TableResult:
     path = sink.path
 
+    # TODO: Remove this check after FLINK-28513 is resolved.
+    if sink.data_format == "csv" and path.startswith("s3://"):
+        raise FeathubException(
+            "Cannot sink files in CSV format to s3 because of Flink issue. "
+            "See FLINK-28513."
+        )
+
     # TODO: Alibaba Cloud Realtime Compute has bug that assumes all the tables should
     # have a name in VVR-6.0.2, which should be fixed in next version VVR-6.0.3. As a
     # current workaround, we have to generate a random table name. We should update the
