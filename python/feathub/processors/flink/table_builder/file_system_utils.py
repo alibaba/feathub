@@ -81,8 +81,7 @@ def insert_into_file_sink(
     # TODO: Remove this check after FLINK-28513 is resolved.
     if sink.data_format == "csv" and path.startswith("s3://"):
         raise FeathubException(
-            "Cannot sink files in CSV format to s3 because of Flink issue. "
-            "See FLINK-28513."
+            "Cannot sink files in CSV format to s3 due to FLINK-28513."
         )
 
     # TODO: Alibaba Cloud Realtime Compute has bug that assumes all the tables should
