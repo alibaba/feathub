@@ -14,16 +14,19 @@
 from feathub.common.exceptions import FeathubException
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.processors.flink.table_builder.source_sink_utils import insert_into_sink
-from feathub.processors.flink.table_builder.tests.table_builder_test_base import (
+from feathub.processors.flink.table_builder.tests.table_builder_test_utils import (
     FlinkTableBuilderTestBase,
+    MockTableDescriptor,
 )
+from feathub.table.table_descriptor import TableDescriptor
 
 
 class SinkUtilTest(FlinkTableBuilderTestBase):
-    def test_nsupported_file_format(self):
+    def test_unsupported_file_format(self):
         sink = FileSystemSink("s3://dummy-bucket/path", "csv")
         table = self.t_env.from_elements([(1,)])
         with self.assertRaisesRegex(
             FeathubException, "Cannot sink files in CSV format to s3"
         ):
-            insert_into_sink(self.t_env, table, sink, ("id",))
+            descriptor: TableDescriptor = MockTableDescriptor(keys=["id"])
+            insert_into_sink(self.t_env, table, descriptor, sink)

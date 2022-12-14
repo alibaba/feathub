@@ -13,7 +13,7 @@
 #  limitations under the License.
 
 from feathub.processors.flink.table_builder.print_utils import insert_into_print_sink
-from feathub.processors.flink.table_builder.tests.table_builder_test_base import (
+from feathub.processors.flink.table_builder.tests.table_builder_test_utils import (
     FlinkTableBuilderTestBase,
 )
 

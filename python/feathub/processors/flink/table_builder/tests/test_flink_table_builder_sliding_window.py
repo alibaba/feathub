@@ -30,7 +30,7 @@ from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
 from feathub.processors.flink.flink_table import flink_table_to_pandas
-from feathub.processors.flink.table_builder.tests.table_builder_test_base import (
+from feathub.processors.flink.table_builder.tests.table_builder_test_utils import (
     FlinkTableBuilderTestBase,
 )
 from feathub.table.schema import Schema

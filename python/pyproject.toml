@@ -1,0 +1,2 @@
+[tool.black]
+exclude = ".*_pb2.py"

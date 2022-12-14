@@ -71,8 +71,8 @@ def run_job(feathub_job_descriptor_path: str) -> None:
     table_result = insert_into_sink(
         t_env,
         native_flink_table,
+        feathub_job_descriptor.features,
         feathub_job_descriptor.sink,
-        feathub_job_descriptor.features.keys,
     )
     table_result.wait()
 

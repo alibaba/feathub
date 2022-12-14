@@ -16,18 +16,24 @@ import os
 import tempfile
 import unittest
 import uuid
+from abc import ABC
 from datetime import timedelta
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 import pandas as pd
+from feathub.processors.flink.table_builder.source_sink_utils_common import (
+    generate_random_table_name,
+)
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import StreamTableEnvironment
 
 from feathub.common.types import String, Int64
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
+from feathub.feature_views.feature import Feature
 from feathub.processors.flink.table_builder.flink_table_builder import FlinkTableBuilder
 from feathub.registries.local_registry import LocalRegistry
 from feathub.table.schema import Schema
+from feathub.table.table_descriptor import TableDescriptor
 
 
 class FlinkTableBuilderTestBase(unittest.TestCase):
@@ -95,3 +101,31 @@ class FlinkTableBuilderTestBase(unittest.TestCase):
             timestamp_format=timestamp_format,
             max_out_of_orderness=timedelta(minutes=1),
         )
+
+
+class MockTableDescriptor(TableDescriptor, ABC):
+    def __init__(
+        self,
+        name: str = generate_random_table_name("mock_descriptor"),
+        keys: Optional[List[str]] = None,
+        timestamp_field: Optional[str] = None,
+        timestamp_format: str = "epoch",
+    ) -> None:
+        super().__init__(
+            name=name,
+            keys=keys,
+            timestamp_field=timestamp_field,
+            timestamp_format=timestamp_format,
+        )
+
+    def get_feature(self, feature_name: str) -> Feature:
+        raise RuntimeError("Unsupported operation.")
+
+    def is_bounded(self) -> bool:
+        raise RuntimeError("Unsupported operation.")
+
+    def get_bounded_view(self) -> TableDescriptor:
+        raise RuntimeError("Unsupported operation.")
+
+    def to_json(self) -> Dict:
+        raise RuntimeError("Unsupported operation.")

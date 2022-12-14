@@ -54,6 +54,7 @@ class TableDescriptor(Entity):
         self.name = name
         self.keys = keys
         self.timestamp_field = timestamp_field
+        # TODO: Add document about supported timestamp format values.
         self.timestamp_format = timestamp_format
 
     def build(
