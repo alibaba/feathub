@@ -108,6 +108,8 @@ try:
         "numpy>=1.14.3,<1.20",
         "apache-flink==1.15.2",
         "kubernetes~=24.2",
+        "protobuf~=3.17.3",
+        "redis==4.3.0",
     ]
 
     setup(

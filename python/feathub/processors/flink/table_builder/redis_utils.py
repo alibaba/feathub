@@ -13,7 +13,7 @@
 #  limitations under the License.
 import glob
 import os
-from typing import Any, Sequence
+from typing import Any, Sequence, List
 
 from pyflink.table import (
     TableResult,
@@ -24,6 +24,7 @@ from pyflink.table import (
     expressions as native_flink_expr,
     DataTypes,
 )
+from pyflink.table.expressions import col
 from pyflink.table.udf import udf
 
 from feathub.common import types
@@ -122,6 +123,8 @@ def _serialize_data_and_convert_key_timestamp(
                 _TimeStampToEpochMillisFunction(timestamp_format),
                 result_type=DataTypes.BIGINT(),
             )
+        elif field_names[i] in key_fields:
+            continue
         else:
             python_udf = udf(
                 _SerializeWithProtobufFunction(field_types[i]),
@@ -135,7 +138,12 @@ def _serialize_data_and_convert_key_timestamp(
 
     flink_table = flink_table.add_or_replace_columns(*result_fields)
 
-    python_udf = udf(_AppendJoinedKeyValueFunction(), result_type=DataTypes.BYTES())
+    python_udf = udf(
+        _AppendJoinedKeyValueFunction(
+            *[field_types[field_names.index(x)] for x in key_fields]
+        ),
+        result_type=DataTypes.BYTES(),
+    )
 
     flink_table = flink_table.select(
         native_flink_expr.col("*"),
@@ -144,7 +152,7 @@ def _serialize_data_and_convert_key_timestamp(
         ).alias(REDIS_SINK_KEY_FIELD_NAME),
     )
 
-    flink_table = flink_table.drop_columns(*key_fields)
+    flink_table = flink_table.drop_columns(*[col(x) for x in key_fields])
 
     return flink_table
 
@@ -170,7 +178,19 @@ class _SerializeWithProtobufFunction(ScalarFunction):
 
 
 class _AppendJoinedKeyValueFunction(ScalarFunction):
+    def __init__(self, *field_types: DType):
+        self.field_types = list(field_types)
+
     def eval(self, *args: Any) -> Any:
-        if len(args) == 1:
-            return args[0]
-        return serialize_object_with_protobuf(list(args), types.VectorType(types.Bytes))
+        return serialize_and_join_keys(list(args), self.field_types)
+
+
+def serialize_and_join_keys(key_objects: List[Any], key_types: List[DType]) -> bytes:
+    results = []
+    for key_object, key_type in zip(key_objects, key_types):
+        results.append(serialize_object_with_protobuf(key_object, key_type))
+
+    if len(results) > 1:
+        return serialize_object_with_protobuf(results, types.VectorType(types.Bytes))
+    else:
+        return results[0]

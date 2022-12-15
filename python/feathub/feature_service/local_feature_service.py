@@ -17,6 +17,9 @@ from typing import Optional, List, Dict, Union
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_service.feature_service import FeatureService
+from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sources.redis_source import RedisSource
+from feathub.online_stores.online_store_client import OnlineStoreClient
 from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstEvaluator
 from feathub.registries.registry import Registry
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
@@ -42,6 +45,7 @@ class LocalFeatureService(FeatureService):
         self.registry = registry
         self.parser = ExprParser()
         self.ast_evaluator = LocalAstEvaluator()
+        self.online_store_clients: Dict[str, OnlineStoreClient] = {}
 
     def get_online_features(
         self,
@@ -118,9 +122,21 @@ class LocalFeatureService(FeatureService):
             raise RuntimeError(f"Feature '{feature.name}' should use JoinTransform.")
 
         source = self.registry.get_features(join_transform.table_name)
-        if not isinstance(source, OnlineStoreSource):
-            raise RuntimeError(f"Unsupported source {source.to_json()}.")
 
-        return self.stores[source.store_type].get(
-            table_name=source.table_name, input_data=input_df
-        )
+        if isinstance(source, OnlineStoreSource):
+            return self.stores[source.store_type].get(
+                table_name=source.table_name, input_data=input_df
+            )
+
+        if isinstance(source, RedisSource):
+            redis_client = self._get_online_store_client(source)
+            return redis_client.get(input_data=input_df)
+
+        raise RuntimeError(f"Unsupported source {source.to_json()}.")
+
+    def _get_online_store_client(self, source: FeatureTable) -> OnlineStoreClient:
+        if source.name not in self.online_store_clients:
+            client = OnlineStoreClient.instantiate(source)
+            self.online_store_clients[source.name] = client
+
+        return self.online_store_clients[source.name]
