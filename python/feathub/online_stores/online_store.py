@@ -36,8 +36,9 @@ def instantiate_online_stores(props: Dict) -> Dict[str, "OnlineStore"]:
 
 class OnlineStore(ABC):
     """
-    An online feature store implements APIs to put and get features by keys. It can
-    provide a uniform interface to interact with kv stores such as Redis.
+    An online feature store implements APIs to put and get features by keys. It
+    provides the storage on its own and exposes a uniform interface to put and
+    get features.
     """
 
     def __init__(self) -> None:

@@ -16,6 +16,7 @@ from typing import Union, Dict, Sequence, Optional
 
 from feathub.common import types
 from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sources.redis_source import RedisSource
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
 from feathub.table.table_descriptor import TableDescriptor
@@ -110,16 +111,19 @@ class OnDemandFeatureView(FeatureView):
 
                 table_desc = registry.get_features(name=join_table_name)
 
-                if not isinstance(table_desc, OnlineStoreSource):
-                    raise RuntimeError(f"Unsupported {table_desc.to_json()}.")
+                if isinstance(table_desc, OnlineStoreSource) or isinstance(
+                    table_desc, RedisSource
+                ):
+                    # TODO: consider specifying dtype.
+                    feature = Feature(
+                        name=join_feature_name,
+                        dtype=types.Unknown,
+                        transform=JoinTransform(join_table_name, join_feature_name),
+                        keys=table_desc.keys,
+                    )
 
-                # TODO: consider specifying dtype.
-                feature = Feature(
-                    name=join_feature_name,
-                    dtype=types.Unknown,
-                    transform=JoinTransform(join_table_name, join_feature_name),
-                    keys=table_desc.keys,
-                )
+                else:
+                    raise RuntimeError(f"Unsupported {table_desc.to_json()}.")
 
             features.append(feature)
 
