@@ -78,7 +78,7 @@ class OnlineStore(ABC):
         self,
         table_name: str,
         input_data: pd.DataFrame,
-        feature_fields: Optional[List[str]] = None,
+        feature_names: Optional[List[str]] = None,
         include_timestamp_field: bool = False,
     ) -> pd.DataFrame:
         """
@@ -86,14 +86,14 @@ class OnlineStore(ABC):
 
         :param table_name: The name of the table containing the features.
         :param input_data: A DataFrame where each row contains the keys of this table.
-        :param feature_fields: Optional. The names of fields of values that should be
+        :param feature_names: Optional. The names of fields of values that should be
                                included in the output DataFrame. If it is None, all
                                fields of the specified table should be outputted.
         :param include_timestamp_field: If it is true, the table should have a timestamp
                                         field. And the timestamp field will be outputted
-                                        regardless of `feature_fields`.
+                                        regardless of `feature_names`.
         :return: A DataFrame consisting of the input_data and the requested
-                 feature_fields.
+                 feature_names.
         """
         pass
 

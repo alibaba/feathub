@@ -68,9 +68,7 @@ class RedisClient(OnlineStoreClient):
         self.redis_client.select(db_num)
 
     def get(
-        self,
-        input_data: pd.DataFrame,
-        feature_fields: Optional[List[str]] = None,
+        self, input_data: pd.DataFrame, feature_names: Optional[List[str]] = None
     ) -> pd.DataFrame:
         if not set(self.key_names) <= set(input_data.columns.values):
             raise RuntimeError(
@@ -78,11 +76,11 @@ class RedisClient(OnlineStoreClient):
                 f"should contain all of source key field names {self.key_names}."
             )
 
-        if feature_fields is None:
-            feature_fields = self.all_feature_names
+        if feature_names is None:
+            feature_names = self.all_feature_names
 
         selected_feature_indices = [
-            self.encoded_feature_indices[field] for field in feature_fields
+            self.encoded_feature_indices[field] for field in feature_names
         ]
 
         results_list = []
@@ -99,6 +97,6 @@ class RedisClient(OnlineStoreClient):
                 result.append(deserialize_object_with_protobuf(bytes(raw_value)))
             results_list.append(result)
 
-        features = pd.DataFrame(results_list, columns=feature_fields)
+        features = pd.DataFrame(results_list, columns=feature_names)
         features = input_data.join(features)
         return features

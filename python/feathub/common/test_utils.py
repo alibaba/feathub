@@ -74,7 +74,7 @@ class LocalProcessorTestCase(unittest.TestCase):
         table_name: str,
         input_data: pd.DataFrame,
         keys_to_get: pd.DataFrame,
-        feature_fields: Optional[List[str]] = None,
+        feature_names: Optional[List[str]] = None,
         include_timestamp_field: bool = True,
     ) -> pd.DataFrame:
         sink = OnlineStoreSink(
@@ -92,7 +92,7 @@ class LocalProcessorTestCase(unittest.TestCase):
         return self.processor.get_online_features(
             table_name=table_name,
             input_data=keys_to_get,
-            feature_fields=feature_fields,
+            feature_names=feature_names,
             include_timestamp_field=include_timestamp_field,
             store_type=MemoryOnlineStore.STORE_TYPE,
         )

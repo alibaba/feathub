@@ -175,7 +175,7 @@ class FeatureServiceTest(LocalProcessorTestCase):
         online_features = self.feature_service.get_online_features(
             request_df=request_df,
             feature_view=on_demand_fv,
-            feature_fields=["distance", "avg_cost"],
+            feature_names=["distance", "avg_cost"],
         )
         expected_online_features = pd.DataFrame(
             [

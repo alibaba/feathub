@@ -102,7 +102,7 @@ class MemoryOnlineStore(OnlineStore):
         self,
         table_name: str,
         input_data: pd.DataFrame,
-        feature_fields: Optional[List[str]] = None,
+        feature_names: Optional[List[str]] = None,
         include_timestamp_field: bool = False,
     ) -> pd.DataFrame:
         table_info = self.table_infos[table_name]
@@ -131,10 +131,10 @@ class MemoryOnlineStore(OnlineStore):
         input_data = input_data.drop(columns=features.columns.tolist(), errors="ignore")
         features = input_data.join(features)
 
-        if feature_fields is not None:
+        if feature_names is not None:
             if table_info.timestamp_field is not None:
-                feature_fields.append(table_info.timestamp_field)
-            features = features[input_data.columns.values.tolist() + feature_fields]
+                feature_names.append(table_info.timestamp_field)
+            features = features[input_data.columns.values.tolist() + feature_names]
         if table_info.timestamp_field is not None and not include_timestamp_field:
             features = features.drop(columns=[field_to_drop])
         return features
