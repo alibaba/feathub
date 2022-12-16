@@ -133,18 +133,18 @@ class FeathubClient:
         self,
         request_df: pd.DataFrame,
         feature_view: Union[str, OnDemandFeatureView],
-        feature_fields: Optional[List[str]] = None,
+        feature_names: Optional[List[str]] = None,
     ) -> pd.DataFrame:
         """
         Queries features for the given keys from the online store.
 
         :return: A DataFrame consisting of the input_data and the requested
-                 feature_fields.
+                 feature_names.
         """
         return self.feature_service.get_online_features(
             request_df=request_df,
             feature_view=feature_view,
-            feature_fields=feature_fields,
+            feature_names=feature_names,
         )
 
     def build_features(

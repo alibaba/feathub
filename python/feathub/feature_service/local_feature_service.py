@@ -51,7 +51,7 @@ class LocalFeatureService(FeatureService):
         self,
         request_df: pd.DataFrame,
         feature_view: Union[str, OnDemandFeatureView],
-        feature_fields: Optional[List[str]] = None,
+        feature_names: Optional[List[str]] = None,
     ) -> pd.DataFrame:
         """
         Returns a DataFrame obtained by applying the given OnDemandFeatureView on the
@@ -61,7 +61,7 @@ class LocalFeatureService(FeatureService):
         :param feature_view: Describes the features to be included in the output. If it
                              is a string, it refers to the name of a OnDemandFeatureView
                              in the entity registry.
-        :param feature_fields: Optional. The names of fields of values that should be
+        :param feature_names: Optional. The names of fields of values that should be
                                included in the output DataFrame. If it is None, all
                                fields of the specified table should be outputted.
         :return: A DataFrame obtained according to the specified criteria.
@@ -84,8 +84,8 @@ class LocalFeatureService(FeatureService):
                     f"Unsupported transformation type for feature {feature.to_json()}."
                 )
 
-        if feature_fields is not None:
-            output_fields = feature_fields
+        if feature_names is not None:
+            output_fields = feature_names
         else:
             output_fields = feature_view.get_output_fields(input_fields)
 

@@ -256,7 +256,7 @@ class ProcessorTest(LocalProcessorTestCase):
             table_name="table_name_1",
             input_data=self.input_data,
             keys_to_get=pd.DataFrame(["Alex", "Emma"], columns=["name"]),
-            feature_fields=["cost"],
+            feature_names=["cost"],
         )
         expected_online_features = pd.DataFrame(
             [

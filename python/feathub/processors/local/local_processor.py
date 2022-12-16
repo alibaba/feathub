@@ -162,7 +162,7 @@ class LocalProcessor(Processor):
         self,
         table_name: str,
         input_data: pd.DataFrame,
-        feature_fields: Optional[List[str]] = None,
+        feature_names: Optional[List[str]] = None,
         include_timestamp_field: bool = False,
         store_type: Optional[str] = None,
     ) -> pd.DataFrame:
@@ -177,7 +177,7 @@ class LocalProcessor(Processor):
         return store.get(
             table_name=table_name,
             input_data=input_data,
-            feature_fields=feature_fields,
+            feature_names=feature_names,
             include_timestamp_field=include_timestamp_field,
         )
 

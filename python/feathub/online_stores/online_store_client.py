@@ -35,20 +35,18 @@ class OnlineStoreClient(ABC):
     # TODO: replace input_data with keys.
     @abstractmethod
     def get(
-        self,
-        input_data: pd.DataFrame,
-        feature_fields: Optional[List[str]] = None,
+        self, input_data: pd.DataFrame, feature_names: Optional[List[str]] = None
     ) -> pd.DataFrame:
         """
         Gets values matching the given keys from the specified table in the kv store.
 
         :param input_data: A DataFrame where each row contains the keys of this table.
-        :param feature_fields: Optional. The names of fields of values that should be
+        :param feature_names: Optional. The names of fields of values that should be
                                included in the output DataFrame. If it is None, all
                                feature fields of the specified table should be
                                outputted.
         :return: A DataFrame consisting of the input_data and the requested
-                 feature_fields.
+                 feature_names.
         """
         pass
 

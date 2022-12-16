@@ -208,7 +208,7 @@ class FlinkProcessor(Processor):
         self,
         table_name: str,
         input_data: pd.DataFrame,
-        feature_fields: Optional[List[str]] = None,
+        feature_names: Optional[List[str]] = None,
         include_timestamp_field: bool = False,
         store_type: Optional[str] = None,
     ) -> pd.DataFrame:
