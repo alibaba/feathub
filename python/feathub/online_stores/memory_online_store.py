@@ -10,13 +10,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
 from typing import Dict, List, Optional, Mapping
 from collections import OrderedDict
 import pandas as pd
 
 import feathub.common.utils as utils
 from feathub.common.exceptions import FeathubException
-from feathub.online_stores.online_store import OnlineStore
 
 
 class _TableInfo:
@@ -33,14 +33,14 @@ class _TableInfo:
         self.key_fields = key_fields
 
 
-class MemoryOnlineStore(OnlineStore):
+class MemoryOnlineStore:
     """
     An online store that stores all feature values in memory.
     """
 
-    STORE_TYPE = "memory"
+    INSTANCE = None
 
-    def __init__(self, props: Dict) -> None:
+    def __init__(self) -> None:
         """
         :param props: The store properties.
         """
@@ -55,6 +55,23 @@ class MemoryOnlineStore(OnlineStore):
         timestamp_field: Optional[str],
         timestamp_format: Optional[str],
     ) -> None:
+        """
+        For each row in the `features`, inserts or updates an entry of the specified
+        table in the kv store. The key of each entry consists of values of the
+        key_fields in the row. The value of this entry is the row itself.
+        If timestamp_field is not None and an entry with the same key already exists,
+        its value is updated only if the new row's timestamp > existing entry's
+        timestamp.
+
+        :param table_name: The table's name.
+        :param features: A DataFrame with rows to put into the specified table.
+        :param key_fields: The name of fields in the DataFrame to construct the key.
+        :param timestamp_field: Optional. If it is not None, it is the name of the field
+                                whose values show the time when the corresponding row
+                                is generated.
+        :param timestamp_format: Optional. The format of the timestamp field.
+        """
+
         if table_name not in self.table_infos:
             self.table_infos[table_name] = _TableInfo(
                 table={},
@@ -66,14 +83,19 @@ class MemoryOnlineStore(OnlineStore):
         dtypes = features.dtypes.to_dict()
         if table_info.dtypes != dtypes:
             raise RuntimeError(
-                f"Features' dtypes {dtypes} do not match with table {table_name}."
+                f"Features' dtypes {dtypes} do not match with dtypes "
+                f"{table_info.dtypes} of the table {table_name}."
             )
         if table_info.timestamp_field != timestamp_field:
             raise RuntimeError(
-                f"Features' {timestamp_field} does not match with table {table_name}."
+                f"Features' field {timestamp_field} does not match with field "
+                f"{table_info.timestamp_field} of the table {table_name}."
             )
         if not set(table_info.key_fields).issubset(list(features.columns)):
-            raise RuntimeError("Features do not have all the keys.")
+            raise RuntimeError(
+                f"Features' columns {features.columns} do not have all "
+                f"the keys {table_info.key_fields}."
+            )
 
         table = table_info.table
         for index, row in features.iterrows():
@@ -105,6 +127,21 @@ class MemoryOnlineStore(OnlineStore):
         feature_names: Optional[List[str]] = None,
         include_timestamp_field: bool = False,
     ) -> pd.DataFrame:
+        """
+        Gets values matching the given keys from the specified table in the kv store.
+
+        :param table_name: The name of the table containing the features.
+        :param input_data: A DataFrame where each row contains the keys of this table.
+        :param feature_names: Optional. The names of fields of values that should be
+                               included in the output DataFrame. If it is None, all
+                               fields of the specified table should be outputted.
+        :param include_timestamp_field: If it is true, the table should have a timestamp
+                                        field. And the timestamp field will be outputted
+                                        regardless of `feature_names`.
+        :return: A DataFrame consisting of the input_data and the requested
+                 feature_names.
+        """
+
         table_info = self.table_infos[table_name]
         table = table_info.table
         key_fields = table_info.key_fields
@@ -138,3 +175,13 @@ class MemoryOnlineStore(OnlineStore):
         if table_info.timestamp_field is not None and not include_timestamp_field:
             features = features.drop(columns=[field_to_drop])
         return features
+
+    def reset(self) -> None:
+        self.table_infos = {}
+
+    @staticmethod
+    def get_instance() -> MemoryOnlineStore:
+        if MemoryOnlineStore.INSTANCE is None:
+            MemoryOnlineStore.INSTANCE = MemoryOnlineStore()
+
+        return MemoryOnlineStore.INSTANCE

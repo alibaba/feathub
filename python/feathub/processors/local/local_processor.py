@@ -27,8 +27,7 @@ from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstE
 from feathub.processors.processor import Processor
 from feathub.registries.registry import Registry
 from feathub.processors.local.local_job import LocalJob
-from feathub.online_stores.online_store import OnlineStore
-from feathub.feature_tables.sinks.online_store_sink import OnlineStoreSink
+from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
 from feathub.processors.local.local_table import LocalTable
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature_view import FeatureView
@@ -41,6 +40,7 @@ from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.table.table_descriptor import TableDescriptor
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_views.feature import Feature
+from feathub.online_stores.memory_online_store import MemoryOnlineStore
 
 
 class LocalProcessor(Processor):
@@ -59,25 +59,16 @@ class LocalProcessor(Processor):
         AggFunc.MIN: np.min,
     }
 
-    def __init__(self, props: Dict, stores: Dict[str, OnlineStore], registry: Registry):
+    def __init__(self, props: Dict, registry: Registry):
         """
         :param props: The processor properties.
-        :param stores: A dict that maps each store type to an online store.
         :param registry: An entity registry.
         """
         super().__init__()
         self.props = props
-        self.stores = stores
         self.registry = registry
-        self.singled_online_store = None
         self.parser = ExprParser()
         self.ast_evaluator = LocalAstEvaluator()
-
-        online_stores = [
-            store for store in stores.values() if isinstance(store, OnlineStore)
-        ]
-        if len(online_stores) == 1:
-            self.singled_online_store = online_stores[0]
 
     def get_table(
         self,
@@ -147,7 +138,7 @@ class LocalProcessor(Processor):
 
         # TODO: handle allow_overwrite.
         # TODO: Support FileSystemSink, KafkaSink, PrintSink.
-        if isinstance(sink, OnlineStoreSink):
+        if isinstance(sink, MemoryStoreSink):
             return self._write_features_to_online_store(
                 features=features_df,
                 sink=sink,
@@ -157,29 +148,6 @@ class LocalProcessor(Processor):
             )
 
         raise RuntimeError(f"Unsupported sink: {sink}.")
-
-    def get_online_features(
-        self,
-        table_name: str,
-        input_data: pd.DataFrame,
-        feature_names: Optional[List[str]] = None,
-        include_timestamp_field: bool = False,
-        store_type: Optional[str] = None,
-    ) -> pd.DataFrame:
-        store = (
-            self.stores[store_type]
-            if store_type is not None
-            else self.singled_online_store
-        )
-        if not store:
-            raise RuntimeError(f"Unsupported store type: {store_type}.")
-
-        return store.get(
-            table_name=table_name,
-            input_data=input_data,
-            feature_names=feature_names,
-            include_timestamp_field=include_timestamp_field,
-        )
 
     def _get_table(self, features: Union[pd.DataFrame, TableDescriptor]) -> LocalTable:
         if isinstance(features, pd.DataFrame):
@@ -202,12 +170,12 @@ class LocalProcessor(Processor):
     def _write_features_to_online_store(
         self,
         features: pd.DataFrame,
-        sink: OnlineStoreSink,
+        sink: MemoryStoreSink,
         key_fields: List[str],
         timestamp_field: Optional[str],
         timestamp_format: Optional[str],
     ) -> LocalJob:
-        self.stores[sink.store_type].put(
+        MemoryOnlineStore.get_instance().put(
             table_name=sink.table_name,
             features=features,
             key_fields=key_fields,

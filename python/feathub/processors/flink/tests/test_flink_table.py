@@ -12,15 +12,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import unittest
-from typing import Dict
 from unittest.mock import patch
 
 from feathub.common.exceptions import FeathubException
 from feathub.common.types import String
 from feathub.feature_tables.sources.datagen_source import DataGenSource
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
-from feathub.online_stores.memory_online_store import MemoryOnlineStore
-from feathub.online_stores.online_store import OnlineStore
 from feathub.processors.flink import flink_table
 from feathub.processors.flink.flink_processor import FlinkProcessor
 from feathub.processors.flink.flink_table import FlinkTable
@@ -31,19 +28,12 @@ from feathub.table.table_descriptor import TableDescriptor
 
 class FlinkTableTest(unittest.TestCase):
     def setUp(self) -> None:
-        memory_online_store = OnlineStore.instantiate(
-            store_type=MemoryOnlineStore.STORE_TYPE, props={}
-        )
-        self.stores: Dict[str, OnlineStore] = {
-            MemoryOnlineStore.STORE_TYPE: memory_online_store
-        }
         self.registry = LocalRegistry(props={})
         self.processor = FlinkProcessor(
             props={
                 "processor.flink.rest.address": "127.0.0.1",
                 "processor.flink.rest.port": 1234,
             },
-            stores=self.stores,
             registry=self.registry,
         )
 

@@ -60,7 +60,7 @@ $ python -m pip install --upgrade feathub-nightly
 Run the following command to install Feathub from source.
 ```bash
 # Build Java dependencies for Feathub
-$ mvn clean package -DskipTests -f java/
+$ mvn clean package -DskipTests -f ./java
 
 # Install Feathub
 $ python -m pip install ./python
@@ -179,35 +179,46 @@ f_lower_case_name = Feature(
 
 ### Installing Development Dependencies
 
-1. Install required Python libraries in your Python environment.
+1. Install the required Python libraries.
 
 ```bash
 $ python -m pip install -r python/dev-requirements.txt
 ```
+ 
+2. Start docker engine and pull the required images
 
-2. Make sure you have installed Protocol Buffers compiler 3.17.x in your local
-environment. You may refer to [Protocol Buffers'
-README](https://github.com/protocolbuffers/protobuf#protocol-compiler-installation)
-for installation guidelines. 
+```bash
+$ docker image pull redis:latest
+$ docker image pull confluentinc/cp-kafka:5.4.3
+```
+
+3. Increase open file limit to be at least 1024.
+
+```bash
+$ ulimit -n 1024
+```
 
 ### Building Feathub Project
 
-1. Use the following command to build Java dependencies for Feathub.
-
-```bash
-$ mvn clean package -DskipTests -f java/
-```
-
-2. Use the following command to generate necessary python files.
+1. Use the following command to generate protobuf files. You can follow this
+   [README](https://github.com/protocolbuffers/protobuf#protocol-compiler-installation)
+   to install protoc.
 
 ```bash
 $ protoc -I=python/feathub/common/protobuf/ --python_out=python/feathub/common/protobuf/ value.proto
 ```
 
-### Running All Tests
+2. Use the following command to build Java and Python libraries.
 
 ```bash
-$ pytest -W ignore::DeprecationWarning
+$ mvn clean package -DskipTests -f ./java
+$ python -m pip install ./python
+```
+
+### Running All Python Tests
+
+```bash
+$ pytest --tb=line -W ignore::DeprecationWarning ./python
 ```
 
 ### Code Formatting
@@ -222,13 +233,13 @@ before uploading PRs for review.
 
 ```bash
 # Format python code
-$ python -m black python
+$ python -m black ./python
 
 # Check python code style
-$ python -m flake8 --config=python/setup.cfg python
+$ python -m flake8 --config=python/setup.cfg ./python
 
 # Check python type annotation
-$ python -m mypy --config-file python/setup.cfg python
+$ python -m mypy --config-file python/setup.cfg ./python
 ```
 
 ## Roadmap

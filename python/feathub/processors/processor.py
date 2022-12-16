@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Dict, Union, Optional, List
+from typing import Dict, Union, Optional
 from datetime import datetime, timedelta
 from abc import ABC, abstractmethod
 import pandas as pd
@@ -28,7 +28,6 @@ from feathub.table.table import Table
 from feathub.table.table_descriptor import TableDescriptor
 from feathub.processors.processor_job import ProcessorJob
 from feathub.registries.registry import Registry
-from feathub.online_stores.online_store import OnlineStore
 
 
 class Processor(ABC):
@@ -106,39 +105,9 @@ class Processor(ABC):
         """
         pass
 
-    @abstractmethod
-    def get_online_features(
-        self,
-        table_name: str,
-        input_data: pd.DataFrame,
-        feature_names: Optional[List[str]] = None,
-        include_timestamp_field: bool = False,
-        store_type: Optional[str] = None,
-    ) -> pd.DataFrame:
-        """
-        Queries features for the given keys from the online store.
-
-        :param table_name: The name of the table containing the features.
-        :param input_data: A DataFrame where each row contains the keys of this table.
-        :param feature_names: Optional. The names of fields of values that should be
-                               included in the output DataFrame. If it is None, all
-                               fields of the specified table should be outputted.
-        :param include_timestamp_field: If it is true, the table should have a timestamp
-                                        field. And the timestamp field will be outputted
-                                        regardless of `feature_names`.
-        :param store_type: Optional. If it is not None, gets features from the store
-                           with the given type. Otherwise, there should be exactly one
-                           store specified in the FeathubClient configuration. Gets
-                           features from this store.
-        :return: A DataFrame consisting of the input_data and the requested
-                 feature_names.
-        """
-        pass
-
     @staticmethod
     def instantiate(
         props: Dict,
-        stores: Dict[str, OnlineStore],
         registry: Registry,
     ) -> Processor:
         """
@@ -151,10 +120,10 @@ class Processor(ABC):
         if processor_type == ProcessorType.LOCAL:
             from feathub.processors.local.local_processor import LocalProcessor
 
-            return LocalProcessor(props=props, stores=stores, registry=registry)
+            return LocalProcessor(props=props, registry=registry)
         elif processor_type == ProcessorType.FLINK:
             from feathub.processors.flink.flink_processor import FlinkProcessor
 
-            return FlinkProcessor(props=props, stores=stores, registry=registry)
+            return FlinkProcessor(props=props, registry=registry)
 
         raise RuntimeError(f"Failed to instantiate processor with props={props}.")

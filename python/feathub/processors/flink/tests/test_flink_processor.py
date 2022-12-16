@@ -13,7 +13,6 @@
 #  limitations under the License.
 
 import unittest
-from typing import Dict
 from unittest.mock import MagicMock, Mock, patch
 
 import pandas as pd
@@ -27,7 +26,6 @@ from feathub.common.types import Int32
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
-from feathub.online_stores.online_store import OnlineStore
 from feathub.processors.flink import flink_table
 from feathub.processors.flink.flink_processor import FlinkProcessor
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
@@ -40,19 +38,13 @@ from feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster
 )
 from feathub.registries.local_registry import LocalRegistry
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
-from feathub.feature_tables.sinks.online_store_sink import OnlineStoreSink
+from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.table.schema import Schema
 
 
 class FlinkProcessorTest(unittest.TestCase):
     def setUp(self) -> None:
-        memory_online_store = OnlineStore.instantiate(
-            store_type=MemoryOnlineStore.STORE_TYPE, props={}
-        )
-        self.stores: Dict[str, OnlineStore] = {
-            MemoryOnlineStore.STORE_TYPE: memory_online_store
-        }
         self.registry = LocalRegistry(props={})
 
     def tearDown(self) -> None:
@@ -61,6 +53,7 @@ class FlinkProcessorTest(unittest.TestCase):
             if java_gateway._gateway is not None:
                 java_gateway._gateway.shutdown()
                 java_gateway._gateway = None
+        MemoryOnlineStore.get_instance().reset()
 
     def test_default_deployment_mode(self):
         processor = FlinkProcessor(
@@ -68,7 +61,6 @@ class FlinkProcessorTest(unittest.TestCase):
                 "processor.flink.rest.address": "127.0.0.1",
                 "processor.flink.rest.port": 1234,
             },
-            stores=self.stores,
             registry=self.registry,
         )
         self.assertEqual(DeploymentMode.SESSION, processor.deployment_mode)
@@ -81,13 +73,12 @@ class FlinkProcessorTest(unittest.TestCase):
                     "processor.flink.rest.port": 1234,
                     "processor.flink.deployment_mode": "unsupported",
                 },
-                stores=self.stores,
                 registry=self.registry,
             )
 
     def test_session_mode_without_session_cluster_settings(self):
         with self.assertRaises(FeathubException):
-            FlinkProcessor(props={}, stores=self.stores, registry=self.registry)
+            FlinkProcessor(props={}, registry=self.registry)
 
     def test_get_table_with_session_mode(self):
         processor = FlinkProcessor(
@@ -95,7 +86,6 @@ class FlinkProcessorTest(unittest.TestCase):
                 "processor.flink.rest.address": "127.0.0.1",
                 "processor.flink.rest.port": 1234,
             },
-            stores=self.stores,
             registry=self.registry,
         )
 
@@ -111,7 +101,6 @@ class FlinkProcessorTest(unittest.TestCase):
                 "processor.flink.rest.address": "127.0.0.1",
                 "processor.flink.rest.port": 1234,
             },
-            stores=self.stores,
             registry=self.registry,
         )
         configuration = dict(
@@ -126,7 +115,6 @@ class FlinkProcessorTest(unittest.TestCase):
                 "processor.flink.rest.address": "127.0.0.1",
                 "processor.flink.rest.port": 1234,
             },
-            stores=self.stores,
             registry=self.registry,
         )
         mock_table = Mock(spec=Table)
@@ -152,7 +140,6 @@ class FlinkProcessorTest(unittest.TestCase):
                 "flink_home": "/flink/home",
                 "processor.flink.deployment_mode": "kubernetes-application",
             },
-            stores=self.stores,
             registry=self.registry,
         )
         self.assertTrue(
@@ -173,7 +160,6 @@ class FlinkProcessorTest(unittest.TestCase):
                 "flink_home": "/flink/home",
                 "processor.flink.deployment_mode": "kubernetes-application",
             },
-            stores=self.stores,
             registry=self.registry,
         )
         self.assertTrue(
@@ -192,7 +178,6 @@ class FlinkProcessorTest(unittest.TestCase):
                 "flink_home": "flink/home",
                 "processor.flink.deployment_mode": "kubernetes-application",
             },
-            stores=self.stores,
             registry=self.registry,
         )
         schema = Schema(["id"], [Int32])
@@ -218,7 +203,6 @@ class FlinkProcessorTest(unittest.TestCase):
                 "flink_home": "flink/home",
                 "processor.flink.deployment_mode": "kubernetes-application",
             },
-            stores=self.stores,
             registry=self.registry,
         )
 
@@ -285,7 +269,6 @@ class FlinkProcessorTest(unittest.TestCase):
                 "processor.flink.rest.address": "127.0.0.1",
                 "processor.flink.rest.port": 1234,
             },
-            stores=self.stores,
             registry=self.registry,
         )
         expected_df = pd.DataFrame(
@@ -310,7 +293,7 @@ class FlinkProcessorTest(unittest.TestCase):
             timestamp_field="time",
             timestamp_format="%Y-%m-%d %H:%M:%S",
         )
-        sink = OnlineStoreSink(MemoryOnlineStore.STORE_TYPE, "test_table")
+        sink = MemoryStoreSink("test_table")
 
         with patch.object(flink_table, "flink_table_to_pandas") as to_pandas_method:
             to_pandas_method.return_value = expected_df
@@ -318,7 +301,7 @@ class FlinkProcessorTest(unittest.TestCase):
 
             self.assertTrue(
                 pd.Series([7]).equals(
-                    self.stores[MemoryOnlineStore.STORE_TYPE].get(
+                    MemoryOnlineStore.get_instance().get(
                         "test_table", pd.DataFrame([[1]], columns=["key"])
                     )["val"]
                 )
@@ -330,7 +313,6 @@ class FlinkProcessorTest(unittest.TestCase):
                 "processor.flink.deployment_mode": "cli",
                 "processor.flink.native.key": "value",
             },
-            stores=self.stores,
             registry=self.registry,
         )
 

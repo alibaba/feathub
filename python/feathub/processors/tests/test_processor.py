@@ -30,9 +30,7 @@ class ProcessorTest(unittest.TestCase):
                 }
             }
         )
-        processor = Processor.instantiate(
-            props=config, stores={}, registry=LocalRegistry(config)
-        )
+        processor = Processor.instantiate(props=config, registry=LocalRegistry(config))
         self.assertIsInstance(processor, LocalProcessor)
 
         config = flatten_dict(
@@ -46,7 +44,5 @@ class ProcessorTest(unittest.TestCase):
                 }
             }
         )
-        processor = Processor.instantiate(
-            props=config, stores={}, registry=LocalRegistry(config)
-        )
+        processor = Processor.instantiate(props=config, registry=LocalRegistry(config))
         self.assertIsInstance(processor, FlinkProcessor)

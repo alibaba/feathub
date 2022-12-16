@@ -23,7 +23,6 @@ from feathub.feature_service.feature_service_config import (
     FEATURE_SERVICE_TYPE_CONFIG,
     FeatureServiceType,
 )
-from feathub.online_stores.online_store import OnlineStore
 from feathub.registries.registry import Registry
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
 
@@ -66,7 +65,6 @@ class FeatureService(ABC):
     @staticmethod
     def instantiate(
         props: Dict,
-        stores: Dict[str, OnlineStore],
         registry: Registry,
     ) -> FeatureService:
         """
@@ -83,6 +81,6 @@ class FeatureService(ABC):
                 LocalFeatureService,
             )
 
-            return LocalFeatureService(props=props, stores=stores, registry=registry)
+            return LocalFeatureService(props=props, registry=registry)
 
         raise RuntimeError(f"Failed to instantiate feature service with props={props}.")

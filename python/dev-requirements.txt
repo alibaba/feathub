@@ -14,7 +14,7 @@
 
 setuptools>=18.0
 wheel
-black>=22.3.0
+black==22.3.0
 autopep8>=1.6.0
 pytest==4.4.1
 flake8==4.0.1

@@ -21,18 +21,16 @@ from feathub.feature_service.feature_service import FeatureService
 from feathub.feature_views.feature import Feature
 from feathub.common.test_utils import LocalProcessorTestCase
 from feathub.feature_service.local_feature_service import LocalFeatureService
-from feathub.feature_tables.sinks.online_store_sink import OnlineStoreSink
-from feathub.feature_tables.sources.online_store_source import OnlineStoreSource
-from feathub.online_stores.memory_online_store import MemoryOnlineStore
+from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
+from feathub.feature_tables.sources.memory_store_source import MemoryStoreSource
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
+from feathub.online_stores.memory_online_store import MemoryOnlineStore
 
 
 class FeatureServiceTest(LocalProcessorTestCase):
     def setUp(self):
         super().setUp()
-        self.feature_service = LocalFeatureService(
-            props={}, stores=self.stores, registry=self.registry
-        )
+        self.feature_service = LocalFeatureService(props={}, registry=self.registry)
         input_data_1 = pd.DataFrame(
             [
                 ["Emma", 200, "2022-01-02 08:01:00"],
@@ -44,7 +42,6 @@ class FeatureServiceTest(LocalProcessorTestCase):
 
         self.online_source_1 = self._materialize_and_get_online_store_source(
             name="online_store_source_1",
-            store_type=MemoryOnlineStore.STORE_TYPE,
             table_name="table_name_1",
             input_data=input_data_1,
             keys=["name"],
@@ -60,7 +57,6 @@ class FeatureServiceTest(LocalProcessorTestCase):
         )
         self.online_source_2 = self._materialize_and_get_online_store_source(
             name="online_store_source_2",
-            store_type=MemoryOnlineStore.STORE_TYPE,
             table_name="table_name_2",
             input_data=input_data_2,
             keys=["name"],
@@ -68,19 +64,16 @@ class FeatureServiceTest(LocalProcessorTestCase):
 
     def tearDown(self):
         super().tearDown()
+        MemoryOnlineStore.get_instance().reset()
 
     def _materialize_and_get_online_store_source(
         self,
         name: str,
-        store_type: str,
         table_name: str,
         input_data: pd.DataFrame,
         keys: List[str],
-    ) -> OnlineStoreSource:
-        online_store_sink = OnlineStoreSink(
-            store_type=store_type,
-            table_name=table_name,
-        )
+    ) -> MemoryStoreSource:
+        online_store_sink = MemoryStoreSink(table_name=table_name)
 
         file_source = self._create_file_source(input_data, keys=keys)
 
@@ -90,10 +83,9 @@ class FeatureServiceTest(LocalProcessorTestCase):
             allow_overwrite=True,
         ).wait()
 
-        online_store_source = OnlineStoreSource(
+        online_store_source = MemoryStoreSource(
             name=name,
             keys=keys,
-            store_type=store_type,
             table_name=table_name,
         )
         self.registry.build_features([online_store_source])
@@ -103,7 +95,7 @@ class FeatureServiceTest(LocalProcessorTestCase):
     def test_instantiate(self):
         config = flatten_dict({"feature_service": {"type": "local"}})
         feature_service = FeatureService.instantiate(
-            props=config, stores=self.stores, registry=self.registry
+            props=config, registry=self.registry
         )
         self.assertIsInstance(feature_service, LocalFeatureService)
 

@@ -25,10 +25,10 @@ from feathub.registries.registry import Registry
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
-from feathub.online_stores.online_store import OnlineStore
-from feathub.feature_tables.sources.online_store_source import OnlineStoreSource
+from feathub.feature_tables.sources.memory_store_source import MemoryStoreSource
 from feathub.feature_views.feature import Feature
 from feathub.dsl.expr_parser import ExprParser
+from feathub.online_stores.memory_online_store import MemoryOnlineStore
 
 
 class LocalFeatureService(FeatureService):
@@ -38,10 +38,9 @@ class LocalFeatureService(FeatureService):
 
     SERVICE_TYPE = "local"
 
-    def __init__(self, props: Dict, stores: Dict[str, OnlineStore], registry: Registry):
+    def __init__(self, props: Dict, registry: Registry):
         super().__init__()
         self.props = props
-        self.stores = stores
         self.registry = registry
         self.parser = ExprParser()
         self.ast_evaluator = LocalAstEvaluator()
@@ -123,8 +122,8 @@ class LocalFeatureService(FeatureService):
 
         source = self.registry.get_features(join_transform.table_name)
 
-        if isinstance(source, OnlineStoreSource):
-            return self.stores[source.store_type].get(
+        if isinstance(source, MemoryStoreSource):
+            return MemoryOnlineStore.get_instance().get(
                 table_name=source.table_name, input_data=input_df
             )
 

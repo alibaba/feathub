@@ -17,7 +17,7 @@ from datetime import datetime
 
 from feathub.common.exceptions import FeathubException
 from feathub.common.test_utils import LocalProcessorTestCase
-from feathub.feature_tables.sinks.online_store_sink import OnlineStoreSink
+from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
 
 
@@ -38,6 +38,7 @@ class ProcessorTest(LocalProcessorTestCase):
 
     def tearDown(self):
         super().tearDown()
+        MemoryOnlineStore.get_instance().reset()
 
     def test_get_table_with_single_key(self):
         df = self.input_data.copy()
@@ -136,10 +137,7 @@ class ProcessorTest(LocalProcessorTestCase):
 
     def test_materialize_features_with_inconsistent_dtypes(self):
         table_name = "table_name_1"
-        sink = OnlineStoreSink(
-            store_type=MemoryOnlineStore.STORE_TYPE,
-            table_name=table_name,
-        )
+        sink = MemoryStoreSink(table_name=table_name)
 
         source_1 = self._create_file_source(self.input_data, keys=["name"])
         self.processor.materialize_features(
@@ -168,8 +166,8 @@ class ProcessorTest(LocalProcessorTestCase):
         except RuntimeError as err:
             self.assertEqual(
                 str(err),
-                f"Features' dtypes {input_data_2.dtypes.to_dict()} do not "
-                f"match with table {table_name}.",
+                f"Features' dtypes {input_data_2.dtypes.to_dict()} do not match with "
+                f"dtypes {self.input_data.dtypes.to_dict()} of the table {table_name}.",
             )
 
     def test_materialize_features(self):
