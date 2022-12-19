@@ -23,14 +23,19 @@ jobs:
           java-version: '8'
           distribution: 'adopt'
           cache: 'maven'
+      - name: Build Feathub Java Library
+        run: |
+          cd java
+          mvn clean package -B -DskipTests
       - name: Set up python 3.7
         uses: actions/setup-python@v4
         with:
           python-version: '3.7'
-      - name: Build Feathub Jar
-        run: |
-          cd java
-          mvn clean package -B -DskipTests
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1
+        with:
+          version: '3.17.3'
+          repo-token: ${{ secrets.FETCH_RELEASE_DATA }}
       - name: Build Feathub Wheel
         env:
           NIGHTLY_BUILD: ${{ inputs.is_nightly }}

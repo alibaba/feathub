@@ -41,12 +41,11 @@ jobs:
         uses: arduino/setup-protoc@v1
         with:
           version: '3.17.3'
+          repo-token: ${{ secrets.FETCH_RELEASE_DATA }}
       - name: Build and test Feathub Python library
         run: |
           python -m pip install --upgrade pip setuptools wheel
 
-          protoc -I=python/feathub/common/protobuf/ --python_out=python/feathub/common/protobuf/ value.proto
-          
           python -m pip install -r python/dev-requirements.txt
           python -m pip install ./python
           
