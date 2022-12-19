@@ -14,7 +14,7 @@
 import logging
 import os
 from datetime import timedelta, datetime
-from typing import Optional, List, Union, Dict
+from typing import Optional, Union, Dict
 
 import pandas as pd
 from pyflink.datastream import StreamExecutionEnvironment
@@ -28,7 +28,6 @@ from feathub.common.exceptions import (
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.transforms.join_transform import JoinTransform
-from feathub.online_stores.online_store import OnlineStore
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
 from feathub.processors.flink.flink_processor_config import (
     FlinkProcessorConfig,
@@ -87,19 +86,15 @@ class FlinkProcessor(Processor):
 
     PROCESSOR_TYPE = "flink"
 
-    def __init__(
-        self, props: Dict, stores: Dict[str, OnlineStore], registry: Registry
-    ) -> None:
+    def __init__(self, props: Dict, registry: Registry) -> None:
         """
         Instantiate the FlinkProcessor.
 
         :param props: The processor properties.
-        :param stores: A dict that maps each store type to an online store.
         :param registry: An entity registry.
         """
         super().__init__()
         self.config = FlinkProcessorConfig(props)
-        self.stores = stores
         self.registry = registry
 
         try:
@@ -117,7 +112,7 @@ class FlinkProcessor(Processor):
             # The type of flink_job_submitter is set explicitly to the base class
             # FlinkJobSubmitter so that the type checking won't complain.
             self.flink_job_submitter: FlinkJobSubmitter = (
-                FlinkSessionClusterJobSubmitter(self, self.stores)
+                FlinkSessionClusterJobSubmitter(self)
             )
         elif self.deployment_mode == DeploymentMode.SESSION:
             jobmanager_rpc_address = self.config.get(REST_ADDRESS_CONFIG)
@@ -131,9 +126,7 @@ class FlinkProcessor(Processor):
                 self._get_table_env(jobmanager_rpc_address, jobmanager_rpc_port),
                 self.registry,
             )
-            self.flink_job_submitter = FlinkSessionClusterJobSubmitter(
-                self, self.stores
-            )
+            self.flink_job_submitter = FlinkSessionClusterJobSubmitter(self)
         elif self.deployment_mode == DeploymentMode.KUBERNETES_APPLICATION:
             # Only import FlinkKubernetesApplicationClusterJobSubmitter in
             # kubernetes-application mode so that kubernetes is not required when the
@@ -203,17 +196,6 @@ class FlinkProcessor(Processor):
             local_registry_tables=join_tables,
             allow_overwrite=allow_overwrite,
         )
-
-    def get_online_features(
-        self,
-        table_name: str,
-        input_data: pd.DataFrame,
-        feature_names: Optional[List[str]] = None,
-        include_timestamp_field: bool = False,
-        store_type: Optional[str] = None,
-    ) -> pd.DataFrame:
-        # TODO: to be implemented
-        pass
 
     def _get_table_env(
         self,

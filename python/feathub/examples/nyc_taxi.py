@@ -30,11 +30,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import GradientBoostingRegressor
 
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
-from feathub.feature_tables.sinks.online_store_sink import OnlineStoreSink
+from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
 from feathub.common import types
-from feathub.feature_tables.sources.online_store_source import OnlineStoreSource
+from feathub.feature_tables.sources.memory_store_source import MemoryStoreSource
 from feathub.feathub_client import FeathubClient
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
@@ -46,10 +46,6 @@ def main() -> None:
             "processor": {
                 "type": "local",
                 "local": {},
-            },
-            "online_store": {
-                "types": ["memory"],
-                "memory": {},
             },
             "registry": {
                 "type": "local",
@@ -78,10 +74,7 @@ def run_nyc_taxi_example(client: FeathubClient) -> None:
     train_and_evaluate_accuracy(train_df)
 
     # Materialize features into online feature store.
-    sink = OnlineStoreSink(
-        store_type="memory",
-        table_name="table_name_1",
-    )
+    sink = MemoryStoreSink(table_name="table_name_1")
     selected_features = DerivedFeatureView(
         name="feature_view_3",
         source="feature_view_2",
@@ -99,10 +92,9 @@ def run_nyc_taxi_example(client: FeathubClient) -> None:
     job.wait(timeout_ms=10000)
 
     # Fetch features from online feature store with on-demand transformations.
-    source = OnlineStoreSource(
+    source = MemoryStoreSource(
         name="online_store_source",
         keys=["DOLocationID"],
-        store_type="memory",
         table_name="table_name_1",
     )
     on_demand_feature_view = OnDemandFeatureView(

@@ -34,6 +34,7 @@ from feathub.processors.flink.table_builder.flink_table_builder import FlinkTabl
 from feathub.registries.local_registry import LocalRegistry
 from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
+from feathub.online_stores.memory_online_store import MemoryOnlineStore
 
 
 class FlinkTableBuilderTestBase(unittest.TestCase):
@@ -74,6 +75,9 @@ class FlinkTableBuilderTestBase(unittest.TestCase):
         self.schema = Schema(
             ["name", "cost", "distance", "time"], [String, Int64, Int64, String]
         )
+
+    def tearDown(self) -> None:
+        MemoryOnlineStore.get_instance().reset()
 
     @classmethod
     def tearDownClass(cls) -> None:

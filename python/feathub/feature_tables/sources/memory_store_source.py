@@ -11,32 +11,42 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict
 
-from feathub.feature_tables.sinks.sink import Sink
+from typing import List, Dict
+
+from feathub.feature_tables.feature_table import FeatureTable
 
 
-class OnlineStoreSink(Sink):
+class MemoryStoreSource(FeatureTable):
     """
-    A sink corresponding to a table in an online feature store.
+    A source corresponding to a table in an online feature store.
     """
 
-    def __init__(self, store_type: str, table_name: str):
+    def __init__(
+        self,
+        name: str,
+        keys: List[str],
+        table_name: str,
+    ):
         """
-        :param store_type: A string that uniquely identifies a store class.
-        :param table_name: The name of a table in the feature store.
+        :param name: The name that uniquely identifies this source in a registry.
+        :param keys: The keys of the table in the online feature store.
+        :param table_name: The name of the table in the online feature store.
         """
         super().__init__(
-            name="",
-            system_name=store_type,
+            name=name,
+            system_name="memory",
             properties={"table_name": table_name},
+            keys=keys,
+            timestamp_field=None,
+            timestamp_format="epoch",
         )
-        self.store_type = store_type
         self.table_name = table_name
 
     def to_json(self) -> Dict:
         return {
-            "type": "OnlineStoreSink",
-            "store_type": self.store_type,
+            "type": "MemoryStoreSource",
+            "name": self.name,
+            "keys": self.keys,
             "table_name": self.table_name,
         }

@@ -21,7 +21,7 @@ from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
 from feathub.table.table_descriptor import TableDescriptor
 from feathub.feature_views.feature_view import FeatureView
-from feathub.feature_tables.sources.online_store_source import OnlineStoreSource
+from feathub.feature_tables.sources.memory_store_source import MemoryStoreSource
 from feathub.registries.registry import Registry
 from feathub.feature_views.feature import Feature
 
@@ -111,7 +111,7 @@ class OnDemandFeatureView(FeatureView):
 
                 table_desc = registry.get_features(name=join_table_name)
 
-                if isinstance(table_desc, OnlineStoreSource) or isinstance(
+                if isinstance(table_desc, MemoryStoreSource) or isinstance(
                     table_desc, RedisSource
                 ):
                     # TODO: consider specifying dtype.

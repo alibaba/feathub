@@ -14,16 +14,16 @@
 import unittest
 from typing import cast
 
-from feathub.feature_tables.sources.online_store_source import OnlineStoreSource
+from feathub.feature_tables.sources.memory_store_source import MemoryStoreSource
 
 
-class OnlineStoreSourceTest(unittest.TestCase):
+class MemoryStoreSourceTest(unittest.TestCase):
     def test_get_bounded_feature_table(self):
-        source = OnlineStoreSource("source", ["id"], "filesystem", "table")
+        source = MemoryStoreSource("source", ["id"], "table")
         self.assertTrue(source.is_bounded())
 
         bounded_source = source.get_bounded_view()
-        self.assertTrue(cast(OnlineStoreSource, bounded_source).is_bounded())
+        self.assertTrue(cast(MemoryStoreSource, bounded_source).is_bounded())
 
         source_json = source.to_json()
         bounded_source_json = bounded_source.to_json()

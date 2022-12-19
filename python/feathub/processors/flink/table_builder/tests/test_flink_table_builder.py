@@ -35,7 +35,7 @@ from feathub.feature_views.transforms.over_window_transform import OverWindowTra
 from feathub.processors.flink.table_builder.tests.table_builder_test_utils import (
     FlinkTableBuilderTestBase,
 )
-from feathub.feature_tables.sources.online_store_source import OnlineStoreSource
+from feathub.feature_tables.sources.memory_store_source import MemoryStoreSource
 
 
 def _to_timestamp(datetime_str):
@@ -197,9 +197,7 @@ class FlinkTableBuilderTest(FlinkTableBuilderTestBase):
 
     def test_get_table_with_unsupported_feature_view(self):
         with self.assertRaises(FeathubException):
-            self.flink_table_builder.build(
-                OnlineStoreSource("table", ["a"], "memory", "table")
-            )
+            self.flink_table_builder.build(MemoryStoreSource("table", ["a"], "table"))
 
     def test_keep_source(self):
         df = self.input_data.copy()

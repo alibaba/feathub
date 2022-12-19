@@ -21,7 +21,6 @@ from feathub.feature_tables.feature_table import FeatureTable
 from feathub.processors.processor import Processor
 from feathub.registries.registry import Registry
 from feathub.feature_service.feature_service import FeatureService
-from feathub.online_stores.online_store import instantiate_online_stores
 from feathub.table.table import Table
 from feathub.processors.processor_job import ProcessorJob
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
@@ -38,18 +37,10 @@ class FeathubClient:
         :param props: Provides the properties to initialize the client.
         """
         self.props = flatten_dict(props)
-
         self.registry = Registry.instantiate(props=self.props)
-
-        stores = instantiate_online_stores(self.props)
-
-        self.processor = Processor.instantiate(
-            props=self.props, stores=stores, registry=self.registry
-        )
-
+        self.processor = Processor.instantiate(props=self.props, registry=self.registry)
         self.feature_service = FeatureService.instantiate(
             props=self.props,
-            stores=stores,
             registry=self.registry,
         )
 
