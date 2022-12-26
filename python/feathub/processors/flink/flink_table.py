@@ -49,6 +49,10 @@ FLINK_DATA_TYPE_TO_NUMPY_TYPE: Dict = {
 }
 
 
+# PyFlink Table#to_pandas currently doesn't support Map type. We have to collect the
+# result and construct the pandas DataFrame.
+# TODO: Use PyFlink Table#to_pandas after
+#  https://issues.apache.org/jira/projects/FLINK/issues/FLINK-30607 is resolved.
 def flink_table_to_pandas(table: NativeFlinkTable) -> pd.DataFrame:
     """
     Converting the given flink table to pandas dataframe.

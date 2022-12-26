@@ -39,7 +39,7 @@ from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
 
 
-class SourceUtilsTest(FlinkTableBuilderTestBase):
+class KafkaSourceTest(FlinkTableBuilderTestBase):
     def test_kafka_source(self):
         schema = Schema(["id", "val", "ts"], [String, Int64, Int64])
         source = KafkaSource(
@@ -133,7 +133,7 @@ class SourceUtilsTest(FlinkTableBuilderTestBase):
             )
 
 
-class SinkUtilTest(FlinkTableBuilderTestBase):
+class KafkaSinkTest(FlinkTableBuilderTestBase):
     def test_kafka_sink(self):
         sink = KafkaSink(
             bootstrap_server="localhost:9092",
@@ -169,7 +169,7 @@ class SinkUtilTest(FlinkTableBuilderTestBase):
             )
 
 
-class SourceSinkITTest(FlinkTableBuilderTestBase):
+class KafkaSourceSinkITTest(FlinkTableBuilderTestBase):
     kafka_container: KafkaContainer = None
 
     def __init__(self, methodName: str):
@@ -190,7 +190,7 @@ class SourceSinkITTest(FlinkTableBuilderTestBase):
     def setUp(self) -> None:
         super().setUp()
         self.kafka_bootstrap_servers = (
-            SourceSinkITTest.kafka_container.get_bootstrap_server()
+            KafkaSourceSinkITTest.kafka_container.get_bootstrap_server()
         )
 
         self.test_time = datetime.now()

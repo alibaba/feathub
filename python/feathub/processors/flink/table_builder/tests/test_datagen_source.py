@@ -18,8 +18,8 @@ from feathub.feature_tables.sources.datagen_source import (
     RandomField,
     SequenceField,
 )
-from feathub.processors.flink.table_builder.datagen_utils import (
-    get_table_from_data_gen_source,
+from feathub.processors.flink.table_builder.source_sink_utils import (
+    get_table_from_source,
 )
 from feathub.processors.flink.table_builder.tests.table_builder_test_utils import (
     FlinkTableBuilderTestBase,
@@ -28,7 +28,7 @@ from feathub.processors.flink.table_builder.tests.table_builder_test_utils impor
 from feathub.table.schema import Schema
 
 
-class DataGenUtilsTest(FlinkTableBuilderTestBase):
+class DataGenSourceTest(FlinkTableBuilderTestBase):
     def test_data_gen_source(self):
         source = DataGenSource(
             name="datagen_src",
@@ -42,7 +42,7 @@ class DataGenUtilsTest(FlinkTableBuilderTestBase):
             timestamp_format="%Y-%m-%d %H:%M:%S",
         )
 
-        table = get_table_from_data_gen_source(self.t_env, source)
+        table = get_table_from_source(self.t_env, source)
         df = table.to_pandas()
         self.assertEquals(10, df.shape[0])
         self.assertTrue((df["val"] >= 0).all() and (df["val"] <= 100).all())
