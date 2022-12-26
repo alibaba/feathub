@@ -75,6 +75,15 @@ class FeatureView(TableDescriptor, ABC):
                 timestamp_field = cast(TableDescriptor, self.source).timestamp_field
                 timestamp_format = cast(TableDescriptor, self.source).timestamp_format
 
+            feature_names = set()
+            for feature in self.get_resolved_features():
+                if feature.name in feature_names:
+                    raise FeathubException(
+                        f"FeatureView {name} contains duplicated feature name "
+                        f"{feature.name}."
+                    )
+                feature_names.add(feature.name)
+
         super().__init__(
             name=name,
             keys=keys,

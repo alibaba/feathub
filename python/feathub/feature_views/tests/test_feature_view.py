@@ -14,6 +14,7 @@
 
 import unittest
 
+from feathub.common.exceptions import FeathubException
 from feathub.common.types import Int64
 from feathub.feature_tables.sources.datagen_source import DataGenSource
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
@@ -165,3 +166,24 @@ class FeatureViewTest(unittest.TestCase):
             [bounded_source_2, feature_view_2]
         )[1]
         self.assertTrue(built_feature_view_2.is_bounded())
+
+    def test_duplicate_feature_names_throw_exception(self):
+        source = DataGenSource(
+            name="source",
+            schema=Schema(["id", "val1"], [Int64, Int64]),
+            timestamp_field="lpep_dropoff_datetime",
+            timestamp_format="%Y-%m-%d %H:%M:%S",
+            keys=["id"],
+        )
+
+        with self.assertRaises(FeathubException) as ctx:
+            DerivedFeatureView(
+                name="feature_view",
+                source=source,
+                features=[
+                    Feature(name="a", dtype=types.Int32, transform="val1 + 1"),
+                    Feature(name="a", dtype=types.Int32, transform="val1 + 2"),
+                ],
+                keep_source_fields=True,
+            )
+        self.assertIn("contains duplicated feature name", ctx.exception.args[0])
