@@ -100,3 +100,6 @@ class RedisClient(OnlineStoreClient):
         features = pd.DataFrame(results_list, columns=feature_names)
         features = input_data.join(features)
         return features
+
+    def __del__(self) -> None:
+        self.redis_client.close()
