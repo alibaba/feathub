@@ -41,7 +41,7 @@ jobs:
         uses: arduino/setup-protoc@v1
         with:
           version: '3.17.3'
-          repo-token: ${{ secrets.FETCH_RELEASE_DATA }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and test Feathub Python library
         run: |
           python -m pip install --upgrade pip setuptools wheel
