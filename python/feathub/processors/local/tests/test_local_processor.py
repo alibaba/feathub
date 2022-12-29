@@ -68,32 +68,10 @@ class LocalProcessorITTest(
     def test_bounded_left_table_join_unbounded_right_table(self):
         pass
 
-    def test_over_window_transform_without_key(self):
-        pass
-
-    def test_over_window_transform_with_limit(self):
-        pass
-
-    def test_with_epoch_millis_window_size(self):
-        pass
-
-    def test_over_window_transform_with_window_size_and_limit(self):
-        pass
-
-    def test_over_window_transform_first_last_value(self):
-        pass
-
-    def test_over_window_transform_row_num(self):
-        pass
-
-    def test_over_window_transform_value_counts(self):
-        pass
-
-    def test_over_window_transform_filter_expr(self):
-        pass
-
-    def test_over_window_transform_with_different_criteria(self):
-        pass
-
+    # TODO: Update local processor types so that it support int with null value.
     def test_over_window_on_join_field(self):
+        pass
+
+    # TODO: Support Map type conversion in local processor.
+    def test_over_window_transform_value_counts(self):
         pass

@@ -30,6 +30,10 @@ class UtilsTest(unittest.TestCase):
         unix_timestamp = utils.to_unix_timestamp("1970-01-01 00:00:01")
         self.assertEqual(1.0, unix_timestamp)
 
+    def test_to_unix_timestamp_epoch(self):
+        self.assertEqual(0.0, utils.to_unix_timestamp(0, format="epoch"))
+        self.assertEqual(1.234, utils.to_unix_timestamp(1234, format="epoch_millis"))
+
     def test_read_write_protobuf(self):
         schema: Schema = (
             Schema.new_builder()

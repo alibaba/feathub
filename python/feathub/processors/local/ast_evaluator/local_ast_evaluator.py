@@ -70,7 +70,7 @@ class LocalAstEvaluator(AbstractAstEvaluator):
             return left_value > right_value
         elif ast.op_type == ">=":
             return left_value >= right_value
-        elif ast.op_type == "==":
+        elif ast.op_type == "=":
             return left_value == right_value
         elif ast.op_type == "<>":
             return left_value != right_value
