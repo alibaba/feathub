@@ -50,8 +50,8 @@ class SparkAstEvaluatorTest(unittest.TestCase):
         self.assertEqual("(1 + 2) < 3", self._eval(expr))
         expr = "(1 + 2) <= 3"
         self.assertEqual("(1 + 2) <= 3", self._eval(expr))
-        expr = "(1 + 2) == 3"
-        self.assertEqual("(1 + 2) == 3", self._eval(expr))
+        expr = "(1 + 2) = 3"
+        self.assertEqual("(1 + 2) = 3", self._eval(expr))
         expr = "(1 + 2) <> 3"
         self.assertEqual("(1 + 2) <> 3", self._eval(expr))
         expr = "(a + b) <> 3"

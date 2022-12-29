@@ -70,7 +70,7 @@ class ExprLexerRules:
     t_LE = r"<="
     t_GT = r">"
     t_GE = r">="
-    t_EQ = r"==?"
+    t_EQ = r"="
     t_NE = r"<>"
     t_OR = r"\|\|"
     t_AND = r"\&\&"

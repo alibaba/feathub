@@ -53,7 +53,7 @@ class LocalAstEvaluatorTest(unittest.TestCase):
         self.assertEqual(False, self._eval(expr))
         expr = "(1 + 2) <= 3"
         self.assertEqual(True, self._eval(expr))
-        expr = "(1 + 2) == 3"
+        expr = "(1 + 2) = 3"
         self.assertEqual(True, self._eval(expr))
         expr = "(1 + 2) <> 3"
         self.assertEqual(False, self._eval(expr))

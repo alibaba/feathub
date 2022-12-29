@@ -14,7 +14,7 @@
 
 import pandas as pd
 import numpy as np
-from typing import Dict, Optional, Union, List
+from typing import Dict, Optional, Union, List, Any
 from datetime import datetime, timedelta
 
 import feathub.common.utils as utils
@@ -49,12 +49,15 @@ class LocalProcessor(Processor):
     DataFrame to store tabular data in memory.
     """
 
-    # TODO: Support agg function LAST_VALUE, FIRST_VALUE, ROW_NUMBER, VALUE_COUNTS
     _AGG_FUNCTIONS = {
         AggFunc.AVG: np.mean,
         AggFunc.SUM: np.sum,
         AggFunc.MAX: np.max,
         AggFunc.MIN: np.min,
+        AggFunc.FIRST_VALUE: lambda l: l[0],
+        AggFunc.LAST_VALUE: lambda l: l[-1],
+        AggFunc.ROW_NUMBER: lambda l: len(l),
+        AggFunc.VALUE_COUNTS: lambda l: dict(pd.Series(l).value_counts()),
     }
 
     def __init__(self, props: Dict, registry: Registry):
@@ -258,7 +261,7 @@ class LocalProcessor(Processor):
                         "FeatureView must have timestamp field and timestamp format "
                         "specified for OverWindowTransform."
                     )
-                source_df[feature.name] = self._evaluate_window_transform(
+                source_df[feature.name] = self._evaluate_over_window_transform(
                     source_df,
                     feature.transform,
                     feature_view.timestamp_field,
@@ -278,6 +281,9 @@ class LocalProcessor(Processor):
                     f"Unsupported transformation type "
                     f"{type(feature.transform).__name__} for feature {feature.name}."
                 )
+            source_df[feature.name] = source_df[feature.name].astype(
+                to_numpy_dtype(feature.dtype)
+            )
 
         output_fields = feature_view.get_output_fields(source_fields)
 
@@ -361,7 +367,7 @@ class LocalProcessor(Processor):
 
         return result
 
-    def _evaluate_window_transform(
+    def _evaluate_over_window_transform(
         self,
         df: pd.DataFrame,
         transform: OverWindowTransform,
@@ -381,27 +387,35 @@ class LocalProcessor(Processor):
                     f"Group-by key '{key}' is not found in {df.columns}."
                 )
 
-        # TODO: Support OverWindowTransform with filter.
         expr_node = self.parser.parse(transform.expr)
         df_copy = df.copy()
         df_copy[temp_column] = df_copy.apply(
             lambda row: self.ast_evaluator.eval(expr_node, row), axis=1
         )
 
-        # Sorts dataframe by the time column in ascending order.
-        unix_time_column = utils.append_and_sort_unix_time_column(
+        # Append an internal unix time column.
+        unix_time_column = utils.append_unix_time_column(
             df_copy, timestamp_field, timestamp_format
         )
 
         group_by_idx = {}
-        for group in df_copy.groupby(transform.group_by_keys).indices.values():
-            for idx in group:
-                group_by_idx[idx] = group
+        if len(transform.group_by_keys) > 0:
+            for group in df_copy.groupby(transform.group_by_keys).indices.values():
+                for idx in group:
+                    group_by_idx[idx] = group
 
-        result = []
+        filter_expr_node = None
+        if transform.filter_expr is not None:
+            filter_expr_node = self.parser.parse(transform.filter_expr)
+        result: List[Any] = []
         # TODO: optimize the performance for the following code.
         # Computes the feature's value for each row in the group.
         for idx, row in df_copy.iterrows():
+            if filter_expr_node is not None and not self.ast_evaluator.eval(
+                filter_expr_node, dict(row)
+            ):
+                result.append(None)
+                continue
             max_timestamp = row[unix_time_column]
             window_size = transform.window_size
             min_timestamp = (
@@ -410,12 +424,30 @@ class LocalProcessor(Processor):
                 else max_timestamp - window_size.total_seconds()
             )
 
-            rows_in_group = df_copy.iloc[group_by_idx[idx]]
+            rows_in_group = (
+                # If group_by_idx is empty all rows in the same group.
+                df_copy.iloc[group_by_idx[idx]]
+                if len(group_by_idx) > 0
+                else df_copy
+            )
             predicate = rows_in_group[unix_time_column].transform(
                 lambda timestamp: min_timestamp <= timestamp <= max_timestamp
             )
-            # TODO: Support OverWindowTransform with limit.
+            if filter_expr_node is not None:
+                predicate = predicate & rows_in_group.apply(
+                    lambda r: self.ast_evaluator.eval(filter_expr_node, r.to_dict()),
+                    axis=1,
+                )
             rows_in_group_and_window = rows_in_group[predicate]
+            limit = transform.limit
+            if limit is not None:
+                rows_in_group_and_window.sort_values(
+                    by=[unix_time_column],
+                    ascending=True,
+                    inplace=True,
+                    ignore_index=True,
+                )
+                rows_in_group_and_window = rows_in_group_and_window.iloc[-limit:]
             result.append(agg_func(rows_in_group_and_window[temp_column].tolist()))
 
         return result

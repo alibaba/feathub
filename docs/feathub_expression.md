@@ -40,7 +40,7 @@ Comparison functions take numeric values as inputs and outputs a boolean value.
 | x >= y | Returns TRUE iff `x >= y`. Returns NULL if in case of error. |
 | x < y | Returns TRUE iff `x < y`. Returns NULL if in case of error. |
 | x <= y | Returns TRUE iff `x <= y`. Returns NULL if in case of error. |
-| x == y | Returns TRUE iff `x` is equal to `y`. Returns NULL if in case of error. |
+| x = y | Returns TRUE iff `x` is equal to `y`. Returns NULL if in case of error. |
 | x <> y | Returns TRUE iff `x` is not equal to `y`. Returns NULL if in case of error. |
 
 ## Logical Functions

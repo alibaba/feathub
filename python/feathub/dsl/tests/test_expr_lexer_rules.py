@@ -59,7 +59,7 @@ class TestExprLexerRules(unittest.TestCase):
 
     def test_lexer_complex(self):
         expr = """
-        cast ("0.1" AS FLOAT) + CAST("1" AS INTEGER) || "abc" == "abc" && `integer` <> 1
+        cast ("0.1" AS FLOAT) + CAST("1" AS INTEGER) || "abc" = "abc" && `integer` <> 1
         """
         token_types = (
             "CAST LPAREN STRING AS DTYPE RPAREN + CAST LPAREN STRING "
@@ -67,7 +67,7 @@ class TestExprLexerRules(unittest.TestCase):
         ).split(" ")
         token_values: List[Any] = (
             'CAST ( "0.1" AS FLOAT ) + CAST ( "1" AS INTEGER ) || '
-            '"abc" == "abc" && integer <>'
+            '"abc" = "abc" && integer <>'
         ).split(" ")
         token_values.append(1)
         self.check_token_types_values(

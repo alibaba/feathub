@@ -18,6 +18,7 @@ from string import Template
 from typing import Union, Any, Optional, cast
 
 from feathub.common import types
+from feathub.common.exceptions import FeathubException
 from feathub.common.protobuf import value_pb2
 
 
@@ -43,7 +44,7 @@ def to_java_date_format(python_format: str) -> str:
 
 
 def to_unix_timestamp(
-    time: Union[datetime, str], format: str = "%Y-%m-%d %H:%M:%S"
+    time: Union[int, datetime, str], format: str = "%Y-%m-%d %H:%M:%S"
 ) -> float:
     """
     Returns POSIX timestamp corresponding to date_string, parsed according to format.
@@ -51,12 +52,22 @@ def to_unix_timestamp(
     """
     if isinstance(time, str):
         time = datetime.strptime(time, format)
+    elif isinstance(time, int):
+        if format == "epoch":
+            time = datetime.fromtimestamp(time, tz=timezone.utc)
+        elif format == "epoch_millis":
+            time = datetime.fromtimestamp(time / 1000, tz=timezone.utc)
+        else:
+            raise FeathubException(
+                f"Unknown type {type(time)} of timestamp with timestamp "
+                f"format {format}."
+            )
     if time.tzinfo is None:
         time = time.replace(tzinfo=timezone.utc)
     return time.timestamp()
 
 
-def append_and_sort_unix_time_column(
+def append_unix_time_column(
     df: pd.DataFrame, timestamp_field: str, timestamp_format: str
 ) -> str:
     unix_time_column = "_unix_time"
@@ -68,6 +79,14 @@ def append_and_sort_unix_time_column(
         lambda row: to_unix_timestamp(row[timestamp_field], timestamp_format),
         axis=1,
     )
+    return unix_time_column
+
+
+def append_and_sort_unix_time_column(
+    df: pd.DataFrame, timestamp_field: str, timestamp_format: str
+) -> str:
+    unix_time_column = append_unix_time_column(df, timestamp_field, timestamp_format)
+
     df.sort_values(
         by=[unix_time_column],
         ascending=True,
