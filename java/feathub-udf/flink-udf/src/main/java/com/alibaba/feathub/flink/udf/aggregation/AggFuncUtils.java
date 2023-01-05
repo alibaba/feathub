@@ -20,22 +20,29 @@ import org.apache.flink.table.types.DataType;
 
 /** Utility of aggregation functions. */
 public class AggFuncUtils {
-    public static AggFunc<?, ?> getAggFunc(String aggFunc, DataType inDataType) {
+
+    /**
+     * Get the AggFunc implementation by the given function name and input data type.
+     *
+     * @param aggFunc The name of the aggregation function.
+     * @param inDataType The input data type of the aggregation function.
+     */
+    public static AggFunc<?, ?, ?> getAggFunc(String aggFunc, DataType inDataType) {
         if ("SUM".equals(aggFunc)) {
             return getSumAggFunc(inDataType);
-        } else if ("AVG".equals(aggFunc)) {
+        } else if ("ROW_AVG".equals(aggFunc)) {
             return new RowAvgAggFunc(inDataType);
         } else if ("FIRST_VALUE".equals(aggFunc)) {
-            return new FirstValueAggFunc<>(inDataType);
+            return new FirstLastValueAggFunc<>(inDataType, true);
         } else if ("LAST_VALUE".equals(aggFunc)) {
-            return new LastValueAggFunc<>(inDataType);
+            return new FirstLastValueAggFunc<>(inDataType, false);
         } else if ("MAX".equals(aggFunc)) {
-            return new MaxAggFunc<>(inDataType);
+            return new MinMaxAggFunc<>(inDataType, false);
         } else if ("MIN".equals(aggFunc)) {
-            return new MinAggFunc<>(inDataType);
+            return new MinMaxAggFunc<>(inDataType, true);
         } else if ("COUNT".equals(aggFunc) || "ROW_NUMBER".equals(aggFunc)) {
             return new CountAggFunc();
-        } else if ("VALUE_COUNTS".equals(aggFunc)) {
+        } else if ("MERGE_VALUE_COUNTS".equals(aggFunc)) {
             return new MergeValueCountsAggFunc(inDataType);
         }
 
@@ -43,16 +50,16 @@ public class AggFuncUtils {
     }
 
     @SuppressWarnings({"unchecked"})
-    private static <IN_T> SumAggFunc<IN_T> getSumAggFunc(DataType inDataType) {
+    private static <IN_T> SumAggFunc<IN_T, ?> getSumAggFunc(DataType inDataType) {
         final Class<?> inClass = inDataType.getConversionClass();
         if (inClass.equals(Integer.class)) {
-            return (SumAggFunc<IN_T>) new SumAggFunc.IntSumAggFunc();
+            return (SumAggFunc<IN_T, ?>) new SumAggFunc.IntSumAggFunc();
         } else if (inClass.equals(Long.class)) {
-            return (SumAggFunc<IN_T>) new SumAggFunc.LongSumAggFunc();
+            return (SumAggFunc<IN_T, ?>) new SumAggFunc.LongSumAggFunc();
         } else if (inClass.equals(Float.class)) {
-            return (SumAggFunc<IN_T>) new SumAggFunc.FloatSumAggFunc();
+            return (SumAggFunc<IN_T, ?>) new SumAggFunc.FloatSumAggFunc();
         } else if (inClass.equals(Double.class)) {
-            return (SumAggFunc<IN_T>) new SumAggFunc.DoubleSumAggFunc();
+            return (SumAggFunc<IN_T, ?>) new SumAggFunc.DoubleSumAggFunc();
         }
         throw new RuntimeException(
                 String.format("Unsupported type for AvgAggregationFunction %s.", inDataType));

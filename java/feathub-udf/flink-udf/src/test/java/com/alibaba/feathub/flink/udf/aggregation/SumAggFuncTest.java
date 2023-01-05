@@ -26,20 +26,26 @@ class SumAggFuncTest {
 
     @Test
     void testSumAggregationFunctions() {
-        innerTest(Arrays.array(1, 2, 3), 6, 0, new SumAggFunc.IntSumAggFunc());
-        innerTest(Arrays.array(1L, 2L, 3L), 6L, 0L, new SumAggFunc.LongSumAggFunc());
-        innerTest(Arrays.array(1.0f, 2.0f, 3.0f), 6.0f, 0.0f, new SumAggFunc.FloatSumAggFunc());
-        innerTest(Arrays.array(1.0, 2.0, 3.0), 6.0, 0.0, new SumAggFunc.DoubleSumAggFunc());
+        innerTest(Arrays.array(1, 2, 3), 6, 0, 5, new SumAggFunc.IntSumAggFunc());
+        innerTest(Arrays.array(1L, 2L, 3L), 6L, 0L, 5L, new SumAggFunc.LongSumAggFunc());
+        innerTest(
+                Arrays.array(1.0f, 2.0f, 3.0f), 6.0f, 0.0f, 5.0f, new SumAggFunc.FloatSumAggFunc());
+        innerTest(Arrays.array(1.0, 2.0, 3.0), 6.0, 0.0, 5.0, new SumAggFunc.DoubleSumAggFunc());
     }
 
-    private <T> void innerTest(
-            T[] inputs, T expectedResult, T expectedInitRes, SumAggFunc<T> aggFunc) {
-        assertThat(aggFunc.getResult()).isEqualTo(expectedInitRes);
+    private <T, ACC_T> void innerTest(
+            T[] inputs,
+            T expectedResult,
+            T expectedInitRes,
+            T expectedResultAfterRetract,
+            SumAggFunc<T, ACC_T> aggFunc) {
+        final ACC_T accumulator = aggFunc.createAccumulator();
+        assertThat(aggFunc.getResult(accumulator)).isEqualTo(expectedInitRes);
         for (T input : inputs) {
-            aggFunc.aggregate(input, 0);
+            aggFunc.add(accumulator, input, 0);
         }
-        assertThat(aggFunc.getResult()).isEqualTo(expectedResult);
-        aggFunc.reset();
-        assertThat(aggFunc.getResult()).isEqualTo(expectedInitRes);
+        assertThat(aggFunc.getResult(accumulator)).isEqualTo(expectedResult);
+        aggFunc.retract(accumulator, inputs[0]);
+        assertThat(aggFunc.getResult(accumulator)).isEqualTo(expectedResultAfterRetract);
     }
 }

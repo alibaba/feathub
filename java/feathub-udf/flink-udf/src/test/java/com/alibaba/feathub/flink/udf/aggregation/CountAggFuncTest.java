@@ -25,11 +25,12 @@ class CountAggFuncTest {
     @Test
     void testCountAggregationFunction() {
         final CountAggFunc aggFunc = new CountAggFunc();
-        assertThat(aggFunc.getResult()).isEqualTo(0);
-        aggFunc.aggregate(0, 0);
-        aggFunc.aggregate(0, 0);
-        assertThat(aggFunc.getResult()).isEqualTo(2);
-        aggFunc.reset();
-        assertThat(aggFunc.getResult()).isEqualTo(0);
+        final CountAggFunc.CountAccumulator accumulator = aggFunc.createAccumulator();
+        assertThat(aggFunc.getResult(accumulator)).isEqualTo(0);
+        aggFunc.add(accumulator, 0, 0);
+        aggFunc.add(accumulator, 0, 0);
+        assertThat(aggFunc.getResult(accumulator)).isEqualTo(2);
+        aggFunc.retract(accumulator, 0);
+        assertThat(aggFunc.getResult(accumulator)).isEqualTo(1);
     }
 }

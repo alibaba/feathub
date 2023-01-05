@@ -32,28 +32,37 @@ class RowAvgAggFuncTest {
         innerTest(
                 Arrays.array(1, 2, 3, 4),
                 2.5,
+                3.0,
                 new RowAvgAggFunc(DataTypes.ROW(DataTypes.INT(), DataTypes.BIGINT())));
         innerTest(
                 Arrays.array(1L, 2L, 3L),
                 2.0,
+                2.5,
                 new RowAvgAggFunc(DataTypes.ROW(DataTypes.BIGINT(), DataTypes.BIGINT())));
         innerTest(
                 Arrays.array(1.0f, 2.0f, 3.0f),
                 2.0,
+                2.5,
                 new RowAvgAggFunc(DataTypes.ROW(DataTypes.FLOAT(), DataTypes.BIGINT())));
         innerTest(
                 Arrays.array(1.0, 2.0, 3.0),
                 2.0,
+                2.5,
                 new RowAvgAggFunc(DataTypes.ROW(DataTypes.DOUBLE(), DataTypes.BIGINT())));
     }
 
-    private void innerTest(Object[] inputs, Double expectedResult, RowAvgAggFunc aggFunc) {
-        assertThat(aggFunc.getResult()).isEqualTo(null);
+    private void innerTest(
+            Object[] inputs,
+            Double expectedResult,
+            Double expectedResultAfterRetract,
+            RowAvgAggFunc aggFunc) {
+        final RowAvgAggFunc.RowAvgAccumulator accumulator = aggFunc.createAccumulator();
+        assertThat(aggFunc.getResult(accumulator)).isEqualTo(null);
         for (Object input : inputs) {
-            aggFunc.aggregate(Row.of(input, 1L), 0);
+            aggFunc.add(accumulator, Row.of(input, 1L), 0);
         }
-        assertThat(aggFunc.getResult()).isEqualTo(expectedResult);
-        aggFunc.reset();
-        assertThat(aggFunc.getResult()).isEqualTo(null);
+        assertThat(aggFunc.getResult(accumulator)).isEqualTo(expectedResult);
+        aggFunc.retract(accumulator, Row.of(inputs[0], 1L));
+        assertThat(aggFunc.getResult(accumulator)).isEqualTo(expectedResultAfterRetract);
     }
 }

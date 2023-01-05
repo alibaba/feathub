@@ -48,7 +48,7 @@ public class PostSlidingWindowKeyedProcessFunctionTest {
     }
 
     @Test
-    void testPostSlidingDefaultValueExpiredRow() {
+    void testPostSlidingZeroValueExpiredRow() {
         final DataStream<Row> data =
                 env.fromElements(
                         Row.of(0, 1, Instant.ofEpochMilli(0)),
@@ -77,9 +77,9 @@ public class PostSlidingWindowKeyedProcessFunctionTest {
                                 + "       SLIDE => INTERVAL '1' SECOND,"
                                 + "       SIZE => INTERVAL '2' SECOND))"
                                 + "GROUP BY id, window_start, window_end, window_time");
-        final Row defaultRow = Row.withNames();
-        defaultRow.setField("val_sum", 0);
-        table = postSlidingWindow(tEnv, table, 1000, defaultRow, false, "ts", "id");
+        final Row zeroValuedRow = Row.withNames();
+        zeroValuedRow.setField("val_sum", 0);
+        table = postSlidingWindow(tEnv, table, 1000, zeroValuedRow, false, "ts", "id");
 
         List<Row> expected =
                 Arrays.asList(
@@ -100,7 +100,7 @@ public class PostSlidingWindowKeyedProcessFunctionTest {
     }
 
     @Test
-    void testPostSlidingWindowDefaultValueExpireRowAndSkipSameWindowOutput() {
+    void testPostSlidingWindowZeroValueExpireRowAndSkipSameWindowOutput() {
         final DataStream<Row> data =
                 env.fromElements(
                         Row.of(0, 1, Instant.ofEpochMilli(0)),
@@ -129,9 +129,9 @@ public class PostSlidingWindowKeyedProcessFunctionTest {
                                 + "       SLIDE => INTERVAL '1' SECOND,"
                                 + "       SIZE => INTERVAL '2' SECOND))"
                                 + "GROUP BY id, window_start, window_end, window_time");
-        final Row defaultRow = Row.withNames();
-        defaultRow.setField("val_sum", 0);
-        table = postSlidingWindow(tEnv, table, 1000, defaultRow, true, "ts", "id");
+        final Row zeroValuedRow = Row.withNames();
+        zeroValuedRow.setField("val_sum", 0);
+        table = postSlidingWindow(tEnv, table, 1000, zeroValuedRow, true, "ts", "id");
 
         List<Row> expected =
                 Arrays.asList(

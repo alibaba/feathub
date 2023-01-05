@@ -25,15 +25,15 @@ import org.apache.flink.table.catalog.Column;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.types.DataType;
-import org.apache.flink.table.types.logical.LogicalTypeRoot;
 import org.apache.flink.types.Row;
 
-import com.alibaba.feathub.flink.udf.processfunction.PostSlidingWindowDefaultRowExpiredRowHandler;
 import com.alibaba.feathub.flink.udf.processfunction.PostSlidingWindowKeyedProcessFunction;
+import com.alibaba.feathub.flink.udf.processfunction.PostSlidingWindowZeroValuedRowExpiredRowHandler;
 
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Objects;
+
+import static com.alibaba.feathub.flink.udf.SlidingWindowUtils.updateZeroValuedRow;
 
 /** Utility method to be used by Feathub after sliding window. */
 public class PostSlidingWindowUtils {
@@ -47,8 +47,8 @@ public class PostSlidingWindowUtils {
      * @param table The input table.
      * @param windowStepSizeMs The step size of the sliding window that the input table has been
      *     applied.
-     * @param defaultRow The default row that contains default values of the all the fields, except
-     *     row time field and key fields.
+     * @param zeroValuedRow The zero valued row that contains zero values of the all the fields,
+     *     except row time field and key fields.
      * @param skipSameWindowOutput Whether to output if the sliding window output the same result.
      * @param rowTimeFieldName The name of the row time field.
      * @param keyFieldNames The names of the group by keys of the sliding window that the input
@@ -59,7 +59,7 @@ public class PostSlidingWindowUtils {
             StreamTableEnvironment tEnv,
             Table table,
             long windowStepSizeMs,
-            Row defaultRow,
+            Row zeroValuedRow,
             boolean skipSameWindowOutput,
             String rowTimeFieldName,
             String... keyFieldNames) {
@@ -70,62 +70,10 @@ public class PostSlidingWindowUtils {
                         Schema.newBuilder().fromResolvedSchema(resolvedSchema).build(),
                         ChangelogMode.all());
 
-        for (String fieldName : Objects.requireNonNull(defaultRow.getFieldNames(true))) {
-            final Object defaultValue = defaultRow.getFieldAs(fieldName);
-            if (defaultValue == null) {
-                continue;
-            }
-
-            final DataType dataType =
-                    resolvedSchema
-                            .getColumn(fieldName)
-                            .orElseThrow(
-                                    () ->
-                                            new RuntimeException(
-                                                    String.format(
-                                                            "The given default value of field %s doesn't exist.",
-                                                            fieldName)))
-                            .getDataType();
-            final LogicalTypeRoot defaultValueType = dataType.getLogicalType().getTypeRoot();
-
-            // Integer value pass as Integer type with PY4J from python to Java if the value is less
-            // than Integer.MAX_VALUE. Floating point value pass as Double from python to Java.
-            // Therefore, we need to cast to the corresponding data type of the column.
-            switch (defaultValueType) {
-                case INTEGER:
-                case DOUBLE:
-                    break;
-                case BIGINT:
-                    if (defaultValue instanceof Integer) {
-                        final Integer intValue = (Integer) defaultValue;
-                        defaultRow.setField(fieldName, intValue.longValue());
-                        break;
-                    } else if (defaultValue instanceof Long) {
-                        break;
-                    } else {
-                        throw new RuntimeException(
-                                String.format(
-                                        "Unknown default value type %s for BIGINT column.",
-                                        defaultValue.getClass().getName()));
-                    }
-                case FLOAT:
-                    if (defaultValue instanceof Double) {
-                        final Double doubleValue = (Double) defaultValue;
-                        defaultRow.setField(fieldName, doubleValue.floatValue());
-                    } else if (defaultValue instanceof Float) {
-                        break;
-                    } else {
-                        throw new RuntimeException(
-                                String.format(
-                                        "Unknown default value type %s for FLOAT column.",
-                                        defaultValue.getClass().getName()));
-                    }
-                    break;
-                default:
-                    throw new RuntimeException(
-                            String.format("Unknown default value type %s", defaultValueType));
-            }
-        }
+        updateZeroValuedRow(
+                zeroValuedRow,
+                resolvedSchema.getColumnNames(),
+                resolvedSchema.getColumnDataTypes());
 
         rowDataStream =
                 rowDataStream
@@ -136,8 +84,8 @@ public class PostSlidingWindowUtils {
                                         windowStepSizeMs,
                                         keyFieldNames,
                                         rowTimeFieldName,
-                                        new PostSlidingWindowDefaultRowExpiredRowHandler(
-                                                defaultRow, rowTimeFieldName, keyFieldNames),
+                                        new PostSlidingWindowZeroValuedRowExpiredRowHandler(
+                                                zeroValuedRow, rowTimeFieldName, keyFieldNames),
                                         skipSameWindowOutput))
                         .name(
                                 String.format(

@@ -22,16 +22,27 @@ import com.alibaba.feathub.flink.udf.aggregation.AggFunc;
 import com.alibaba.feathub.flink.udf.aggregation.AggFuncUtils;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /** The descriptor of aggregation fields in the window operator. */
 public class AggregationFieldsDescriptor implements Serializable {
     private final List<AggregationFieldDescriptor> aggregationFieldDescriptors;
 
+    private final Map<String, Integer> outFieldNameToIdx = new HashMap<>();
+
+    private Long maxWindowSizeMs;
+
     private AggregationFieldsDescriptor(
             List<AggregationFieldDescriptor> aggregationFieldDescriptors) {
         this.aggregationFieldDescriptors = aggregationFieldDescriptors;
+        int idx = 0;
+        for (AggregationFieldDescriptor descriptor : this.aggregationFieldDescriptors) {
+            outFieldNameToIdx.put(descriptor.outFieldName, idx);
+            idx += 1;
+        }
     }
 
     public static Builder builder() {
@@ -43,10 +54,25 @@ public class AggregationFieldsDescriptor implements Serializable {
     }
 
     public long getMaxWindowSizeMs() {
-        return aggregationFieldDescriptors.stream()
-                .mapToLong(descriptor -> descriptor.windowSizeMs)
-                .max()
-                .orElseThrow(() -> new RuntimeException("Fail to get max window size."));
+        if (maxWindowSizeMs == null) {
+            maxWindowSizeMs =
+                    aggregationFieldDescriptors.stream()
+                            .mapToLong(descriptor -> descriptor.windowSizeMs)
+                            .max()
+                            .orElseThrow(
+                                    () -> new RuntimeException("Fail to get max window size."));
+        }
+        return maxWindowSizeMs;
+    }
+
+    /** Get the index of the given {@link AggregationFieldDescriptor} in the list. */
+    public int getAggFieldIdx(AggregationFieldDescriptor descriptor) {
+        if (!outFieldNameToIdx.containsKey(descriptor.outFieldName)) {
+            throw new RuntimeException(
+                    String.format(
+                            "The given outFieldName %s doesn't exists.", descriptor.outFieldName));
+        }
+        return outFieldNameToIdx.get(descriptor.outFieldName);
     }
 
     /** Builder for {@link AggregationFieldsDescriptor}. */
@@ -86,7 +112,7 @@ public class AggregationFieldsDescriptor implements Serializable {
         public String outFieldName;
         public DataType outDataType;
         public Long windowSizeMs;
-        public AggFunc<Object, ?> aggFunc;
+        public AggFunc<Object, ?, Object> aggFunc;
 
         @SuppressWarnings({"unchecked"})
         public AggregationFieldDescriptor(
@@ -100,7 +126,8 @@ public class AggregationFieldsDescriptor implements Serializable {
             this.outFieldName = outFieldNames;
             this.outDataType = outDataType;
             this.windowSizeMs = windowSizeMs;
-            this.aggFunc = (AggFunc<Object, ?>) AggFuncUtils.getAggFunc(aggFunc, inDataType);
+            this.aggFunc =
+                    (AggFunc<Object, ?, Object>) AggFuncUtils.getAggFunc(aggFunc, inDataType);
         }
     }
 }
