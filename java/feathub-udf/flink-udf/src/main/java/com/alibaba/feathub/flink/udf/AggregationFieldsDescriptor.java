@@ -29,6 +29,8 @@ import java.util.List;
 public class AggregationFieldsDescriptor implements Serializable {
     private final List<AggregationFieldDescriptor> aggregationFieldDescriptors;
 
+    private Long maxWindowSizeMs;
+
     private AggregationFieldsDescriptor(
             List<AggregationFieldDescriptor> aggregationFieldDescriptors) {
         this.aggregationFieldDescriptors = aggregationFieldDescriptors;
@@ -43,10 +45,15 @@ public class AggregationFieldsDescriptor implements Serializable {
     }
 
     public long getMaxWindowSizeMs() {
-        return aggregationFieldDescriptors.stream()
-                .mapToLong(descriptor -> descriptor.windowSizeMs)
-                .max()
-                .orElseThrow(() -> new RuntimeException("Fail to get max window size."));
+        if (maxWindowSizeMs == null) {
+            maxWindowSizeMs =
+                    aggregationFieldDescriptors.stream()
+                            .mapToLong(descriptor -> descriptor.windowSizeMs)
+                            .max()
+                            .orElseThrow(
+                                    () -> new RuntimeException("Fail to get max window size."));
+        }
+        return maxWindowSizeMs;
     }
 
     /** Builder for {@link AggregationFieldsDescriptor}. */
