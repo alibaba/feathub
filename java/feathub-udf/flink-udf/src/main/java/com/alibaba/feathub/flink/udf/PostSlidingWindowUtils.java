@@ -25,7 +25,6 @@ import org.apache.flink.table.catalog.Column;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.types.DataType;
-import org.apache.flink.table.types.logical.LogicalTypeRoot;
 import org.apache.flink.types.Row;
 
 import com.alibaba.feathub.flink.udf.processfunction.PostSlidingWindowDefaultRowExpiredRowHandler;
@@ -33,7 +32,8 @@ import com.alibaba.feathub.flink.udf.processfunction.PostSlidingWindowKeyedProce
 
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Objects;
+
+import static com.alibaba.feathub.flink.udf.SlidingWindowUtils.updateDefaultRow;
 
 /** Utility method to be used by Feathub after sliding window. */
 public class PostSlidingWindowUtils {
@@ -70,62 +70,8 @@ public class PostSlidingWindowUtils {
                         Schema.newBuilder().fromResolvedSchema(resolvedSchema).build(),
                         ChangelogMode.all());
 
-        for (String fieldName : Objects.requireNonNull(defaultRow.getFieldNames(true))) {
-            final Object defaultValue = defaultRow.getFieldAs(fieldName);
-            if (defaultValue == null) {
-                continue;
-            }
-
-            final DataType dataType =
-                    resolvedSchema
-                            .getColumn(fieldName)
-                            .orElseThrow(
-                                    () ->
-                                            new RuntimeException(
-                                                    String.format(
-                                                            "The given default value of field %s doesn't exist.",
-                                                            fieldName)))
-                            .getDataType();
-            final LogicalTypeRoot defaultValueType = dataType.getLogicalType().getTypeRoot();
-
-            // Integer value pass as Integer type with PY4J from python to Java if the value is less
-            // than Integer.MAX_VALUE. Floating point value pass as Double from python to Java.
-            // Therefore, we need to cast to the corresponding data type of the column.
-            switch (defaultValueType) {
-                case INTEGER:
-                case DOUBLE:
-                    break;
-                case BIGINT:
-                    if (defaultValue instanceof Integer) {
-                        final Integer intValue = (Integer) defaultValue;
-                        defaultRow.setField(fieldName, intValue.longValue());
-                        break;
-                    } else if (defaultValue instanceof Long) {
-                        break;
-                    } else {
-                        throw new RuntimeException(
-                                String.format(
-                                        "Unknown default value type %s for BIGINT column.",
-                                        defaultValue.getClass().getName()));
-                    }
-                case FLOAT:
-                    if (defaultValue instanceof Double) {
-                        final Double doubleValue = (Double) defaultValue;
-                        defaultRow.setField(fieldName, doubleValue.floatValue());
-                    } else if (defaultValue instanceof Float) {
-                        break;
-                    } else {
-                        throw new RuntimeException(
-                                String.format(
-                                        "Unknown default value type %s for FLOAT column.",
-                                        defaultValue.getClass().getName()));
-                    }
-                    break;
-                default:
-                    throw new RuntimeException(
-                            String.format("Unknown default value type %s", defaultValueType));
-            }
-        }
+        updateDefaultRow(
+                defaultRow, resolvedSchema.getColumnNames(), resolvedSchema.getColumnDataTypes());
 
         rowDataStream =
                 rowDataStream
