@@ -47,7 +47,10 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
 
           python -m pip install -r python/dev-requirements.txt
+          # TODO: Add workflow to seperately test each processor.
           python -m pip install ./python
+          python -m pip install ./python[flink]
+          python -m pip install ./python[spark]
           
           # Re-install black here because its pip dependency conflicts with
           # apache-flink 1.15.2.

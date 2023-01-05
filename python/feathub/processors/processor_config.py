@@ -21,6 +21,7 @@ from feathub.common.validators import in_list
 class ProcessorType(Enum):
     LOCAL = "local"
     FLINK = "flink"
+    SPARK = "spark"
 
 
 PROCESSOR_TYPE_CONFIG = "processor.type"

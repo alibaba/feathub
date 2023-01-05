@@ -113,7 +113,7 @@ class FlinkTableBuilder:
         If the given features is a FeatureView, it must be resolved, otherwise
         exception will be thrown.
 
-        :param features: The feature to converts to native Flink table.
+        :param features: The feature to convert to native Flink table.
         :param keys: Optional. If it is not none, then the returned table only includes
                      rows whose key fields match at least one row of the keys.
         :param start_datetime: Optional. If it is not None, the `features` table should
@@ -131,7 +131,7 @@ class FlinkTableBuilder:
         """
         if isinstance(features, FeatureView) and features.is_unresolved():
             raise FeathubException(
-                "Trying to convert a unresolved FeatureView to native Flink table."
+                "Trying to convert an unresolved FeatureView to native Flink table."
             )
 
         table = self._get_table(features)

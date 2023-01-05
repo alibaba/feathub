@@ -84,8 +84,6 @@ class FlinkProcessor(Processor):
                                 the Kubernetes cluster. Default to "~/.kube/config".
     """
 
-    PROCESSOR_TYPE = "flink"
-
     def __init__(self, props: Dict, registry: Registry) -> None:
         """
         Instantiate the FlinkProcessor.
