@@ -93,7 +93,7 @@ public class AggregationFieldsDescriptor implements Serializable {
         public String outFieldName;
         public DataType outDataType;
         public Long windowSizeMs;
-        public AggFunc<Object, ?> aggFunc;
+        public AggFunc<Object, ?, Object> aggFunc;
 
         @SuppressWarnings({"unchecked"})
         public AggregationFieldDescriptor(
@@ -107,7 +107,8 @@ public class AggregationFieldsDescriptor implements Serializable {
             this.outFieldName = outFieldNames;
             this.outDataType = outDataType;
             this.windowSizeMs = windowSizeMs;
-            this.aggFunc = (AggFunc<Object, ?>) AggFuncUtils.getAggFunc(aggFunc, inDataType);
+            this.aggFunc =
+                    (AggFunc<Object, ?, Object>) AggFuncUtils.getAggFunc(aggFunc, inDataType);
         }
     }
 }

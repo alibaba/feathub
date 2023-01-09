@@ -203,12 +203,7 @@ def evaluate_sliding_window_transform(
     )
 
     for agg_descriptor in agg_descriptors:
-        if agg_descriptor.agg_func == AggFunc.COUNT:
-            # We need to use sum aggregation function after the table is pre-aggregated
-            # with count aggregation.
-            agg_func_name = AggFunc.SUM.value
-        else:
-            agg_func_name = agg_descriptor.agg_func.value
+        agg_func_name = _get_agg_func_name_after_pre_agg(agg_descriptor.agg_func)
         descriptor_builder.addField(
             agg_descriptor.field_name,
             _to_java_data_type(
@@ -247,6 +242,26 @@ def evaluate_sliding_window_transform(
         config.get(SKIP_SAME_WINDOW_OUTPUT_CONFIG),
     )
     return NativeFlinkTable(j_table, flink_table._t_env)
+
+
+def _get_agg_func_name_after_pre_agg(agg_func: AggFunc) -> str:
+    """
+    Get the aggregation function name used by the Java AggregationFieldDescriptor after
+    the table is pre-aggregated. For example, COUNT should be SUM after pre-aggregated.
+
+    :param agg_func: The aggregation function.
+    """
+    if agg_func == AggFunc.COUNT:
+        # We need to use sum aggregation function after the table is pre-aggregated
+        # with count aggregation.
+        agg_func_name = AggFunc.SUM.value
+    elif agg_func == AggFunc.AVG:
+        agg_func_name = "ROW_AVG"
+    elif agg_func == AggFunc.VALUE_COUNTS:
+        agg_func_name = "MERGE_VALUE_COUNTS"
+    else:
+        agg_func_name = agg_func.value
+    return agg_func_name
 
 
 def _apply_post_sliding_window(

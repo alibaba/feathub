@@ -16,14 +16,19 @@
 
 package com.alibaba.feathub.flink.udf.aggregation;
 
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.table.types.DataType;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /** Aggregate function that merge value counts. */
-public class MergeValueCountsAggFunc implements AggFunc<Map<Object, Long>, Map<Object, Long>> {
-    private final Map<Object, Long> valueCounts = new HashMap<>();
+public class MergeValueCountsAggFunc
+        implements AggFunc<
+                Map<Object, Long>,
+                Map<Object, Long>,
+                MergeValueCountsAggFunc.MergeValueCountsAccumulator> {
     private final DataType inDataType;
 
     public MergeValueCountsAggFunc(DataType inDataType) {
@@ -31,28 +36,53 @@ public class MergeValueCountsAggFunc implements AggFunc<Map<Object, Long>, Map<O
     }
 
     @Override
-    public void reset() {
-        valueCounts.clear();
-    }
-
-    @Override
-    public void aggregate(Map<Object, Long> value, long timestamp) {
+    public void add(
+            MergeValueCountsAccumulator accumulator, Map<Object, Long> value, long timestamp) {
         for (Map.Entry<Object, Long> entry : value.entrySet()) {
             final Object key = entry.getKey();
-            valueCounts.put(key, valueCounts.getOrDefault(key, 0L) + entry.getValue());
+            accumulator.valueCounts.put(
+                    key, accumulator.valueCounts.getOrDefault(key, 0L) + entry.getValue());
         }
     }
 
     @Override
-    public Map<Object, Long> getResult() {
-        if (valueCounts.isEmpty()) {
+    public void retract(MergeValueCountsAccumulator accumulator, Map<Object, Long> value) {
+        for (Map.Entry<Object, Long> entry : value.entrySet()) {
+            final Object key = entry.getKey();
+            long newCnt = accumulator.valueCounts.get(key) - entry.getValue();
+            if (newCnt == 0) {
+                accumulator.valueCounts.remove(key);
+                return;
+            }
+            accumulator.valueCounts.put(key, newCnt);
+        }
+    }
+
+    @Override
+    public Map<Object, Long> getResult(MergeValueCountsAccumulator accumulator) {
+        if (accumulator.valueCounts.isEmpty()) {
             return null;
         }
-        return valueCounts;
+        return accumulator.valueCounts;
     }
 
     @Override
     public DataType getResultDatatype() {
         return inDataType;
+    }
+
+    @Override
+    public MergeValueCountsAccumulator createAccumulator() {
+        return new MergeValueCountsAccumulator();
+    }
+
+    @Override
+    public TypeInformation<MergeValueCountsAccumulator> getAccumulatorTypeInformation() {
+        return Types.POJO(MergeValueCountsAccumulator.class);
+    }
+
+    /** Accumulator for {@link MergeValueCountsAccumulator}. */
+    public static class MergeValueCountsAccumulator {
+        public final Map<Object, Long> valueCounts = new HashMap<>();
     }
 }

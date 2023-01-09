@@ -32,15 +32,17 @@ class MergeValueCountsAggFuncTest {
     void testMergeValueCountsAggregationFunction() {
         final MergeValueCountsAggFunc aggFunc =
                 new MergeValueCountsAggFunc(DataTypes.MAP(DataTypes.STRING(), DataTypes.BIGINT()));
-        assertThat(aggFunc.getResult()).isNull();
-        aggFunc.aggregate(Collections.singletonMap("a", 1L), 0);
-        aggFunc.aggregate(Collections.singletonMap("a", 1L), 0);
-        aggFunc.aggregate(Collections.singletonMap("b", 1L), 0);
+        final MergeValueCountsAggFunc.MergeValueCountsAccumulator accumulator =
+                aggFunc.createAccumulator();
+        assertThat(aggFunc.getResult(accumulator)).isNull();
+        aggFunc.add(accumulator, Collections.singletonMap("a", 1L), 0);
+        aggFunc.add(accumulator, Collections.singletonMap("a", 1L), 0);
+        aggFunc.add(accumulator, Collections.singletonMap("b", 1L), 0);
         Map<Object, Long> expectedResult = new HashMap<>();
         expectedResult.put("a", 2L);
         expectedResult.put("b", 1L);
-        assertThat(aggFunc.getResult()).isEqualTo(expectedResult);
-        aggFunc.reset();
-        assertThat(aggFunc.getResult()).isNull();
+        assertThat(aggFunc.getResult(accumulator)).isEqualTo(expectedResult);
+        aggFunc.retract(accumulator, Collections.singletonMap("b", 1L));
+        assertThat(aggFunc.getResult(accumulator)).isEqualTo(Collections.singletonMap("a", 2L));
     }
 }

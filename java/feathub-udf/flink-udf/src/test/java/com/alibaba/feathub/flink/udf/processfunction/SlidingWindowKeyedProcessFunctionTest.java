@@ -16,7 +16,6 @@
 
 package com.alibaba.feathub.flink.udf.processfunction;
 
-import org.apache.flink.contrib.streaming.state.EmbeddedRocksDBStateBackend;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.DataTypes;
@@ -49,7 +48,6 @@ public class SlidingWindowKeyedProcessFunctionTest {
     @BeforeEach
     void setUp() {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setStateBackend(new EmbeddedRocksDBStateBackend());
         tEnv = StreamTableEnvironment.create(env);
         final DataStream<Row> data =
                 env.fromElements(
