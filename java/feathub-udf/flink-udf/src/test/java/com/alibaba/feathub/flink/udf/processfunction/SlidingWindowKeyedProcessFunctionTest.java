@@ -123,7 +123,7 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                         "val_avg_1",
                                         DataTypes.FLOAT(),
                                         1000L,
-                                        "AVG")
+                                        "ROW_AVG")
                                 .addField(
                                         "val_avg",
                                         table.getResolvedSchema()
@@ -133,14 +133,14 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                         "val_avg_2",
                                         DataTypes.DOUBLE(),
                                         2000L,
-                                        "AVG")
+                                        "ROW_AVG")
                                 .addField(
                                         "val_value_counts",
                                         DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
                                         "val_value_counts_2",
                                         DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
                                         2000L,
-                                        "VALUE_COUNTS")
+                                        "MERGE_VALUE_COUNTS")
                                 .build());
 
         List<Row> expected =
@@ -313,14 +313,14 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                         "val_avg_2",
                                         DataTypes.DOUBLE(),
                                         2000L,
-                                        "AVG")
+                                        "ROW_AVG")
                                 .addField(
                                         "val_value_counts",
                                         DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
                                         "val_value_counts_2",
                                         DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
                                         2000L,
-                                        "VALUE_COUNTS")
+                                        "MERGE_VALUE_COUNTS")
                                 .build(),
                         defaultRow,
                         true);
@@ -470,14 +470,14 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                         "val_avg_2",
                                         DataTypes.DOUBLE(),
                                         2000L,
-                                        "AVG")
+                                        "ROW_AVG")
                                 .addField(
                                         "val_value_counts",
                                         DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
                                         "val_value_counts_2",
                                         DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
                                         2000L,
-                                        "VALUE_COUNTS")
+                                        "MERGE_VALUE_COUNTS")
                                 .build(),
                         defaultRow,
                         false);

@@ -146,28 +146,27 @@ public class SlidingWindowKeyedProcessFunction extends KeyedProcessFunction<Row,
         boolean hasRow = false;
 
         final List<Long> timestampList = state.getTimestampList();
+        final int timestampListSize = timestampList.size();
 
         Row outputRow = Row.withNames();
         for (int i = 0; i < keyFieldNames.length; i++) {
             outputRow.setField(keyFieldNames[i], ctx.getCurrentKey().getField(i));
         }
 
+        Row rowToAdd = state.timestampToRow.get(timestamp);
         for (AggregationFieldsDescriptor.AggregationFieldDescriptor descriptor :
                 aggregationFieldsDescriptor.getAggFieldDescriptors()) {
 
             final Object accumulator = state.getAccumulator(descriptor);
 
-            Row rowToAdd = state.timestampToRow.get(timestamp);
             if (rowToAdd != null) {
                 descriptor.aggFunc.add(
                         accumulator, rowToAdd.getField(descriptor.inFieldName), timestamp);
             }
 
             // Advance left idx and retract values
-            int leftIdx;
-            for (leftIdx = state.getLeftTimestampIdx(descriptor);
-                    leftIdx < timestampList.size();
-                    ++leftIdx) {
+            int leftIdx = state.getLeftTimestampIdx(descriptor);
+            for (; leftIdx < timestampListSize; ++leftIdx) {
                 long rowTime = timestampList.get(leftIdx);
                 if (timestamp - descriptor.windowSizeMs < rowTime) {
                     if (rowTime <= timestamp) {

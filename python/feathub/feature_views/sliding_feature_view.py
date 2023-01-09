@@ -202,6 +202,8 @@ class SlidingFeatureView(FeatureView):
         for feature in self.features:
             if isinstance(feature, str):
                 feature = source.get_feature(feature_name=feature)
+            if feature.name == self.timestamp_field:
+                continue
             features.append(feature)
 
         props = {} if props is None else props
