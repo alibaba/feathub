@@ -16,7 +16,6 @@
 
 package com.alibaba.feathub.flink.udf.processfunction;
 
-import org.apache.flink.contrib.streaming.state.EmbeddedRocksDBStateBackend;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.DataTypes;
@@ -49,7 +48,6 @@ public class SlidingWindowKeyedProcessFunctionTest {
     @BeforeEach
     void setUp() {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setStateBackend(new EmbeddedRocksDBStateBackend());
         tEnv = StreamTableEnvironment.create(env);
         final DataStream<Row> data =
                 env.fromElements(
@@ -125,7 +123,7 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                         "val_avg_1",
                                         DataTypes.FLOAT(),
                                         1000L,
-                                        "AVG")
+                                        "ROW_AVG")
                                 .addField(
                                         "val_avg",
                                         table.getResolvedSchema()
@@ -135,14 +133,14 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                         "val_avg_2",
                                         DataTypes.DOUBLE(),
                                         2000L,
-                                        "AVG")
+                                        "ROW_AVG")
                                 .addField(
                                         "val_value_counts",
                                         DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
                                         "val_value_counts_2",
                                         DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
                                         2000L,
-                                        "VALUE_COUNTS")
+                                        "MERGE_VALUE_COUNTS")
                                 .build());
 
         List<Row> expected =
@@ -315,14 +313,14 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                         "val_avg_2",
                                         DataTypes.DOUBLE(),
                                         2000L,
-                                        "AVG")
+                                        "ROW_AVG")
                                 .addField(
                                         "val_value_counts",
                                         DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
                                         "val_value_counts_2",
                                         DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
                                         2000L,
-                                        "VALUE_COUNTS")
+                                        "MERGE_VALUE_COUNTS")
                                 .build(),
                         defaultRow,
                         true);
@@ -472,14 +470,14 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                         "val_avg_2",
                                         DataTypes.DOUBLE(),
                                         2000L,
-                                        "AVG")
+                                        "ROW_AVG")
                                 .addField(
                                         "val_value_counts",
                                         DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
                                         "val_value_counts_2",
                                         DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
                                         2000L,
-                                        "VALUE_COUNTS")
+                                        "MERGE_VALUE_COUNTS")
                                 .build(),
                         defaultRow,
                         false);

@@ -16,109 +16,166 @@
 
 package com.alibaba.feathub.flink.udf.aggregation;
 
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.types.DataType;
 
 /** Aggregation functions that calculates the sum of values. */
-public abstract class SumAggFunc<IN_T> implements AggFunc<IN_T, IN_T> {
+public abstract class SumAggFunc<IN_T, ACC_T> implements AggFunc<IN_T, IN_T, ACC_T> {
 
     /** Aggregation functions that calculates the sum of Integer values. */
-    public static class IntSumAggFunc extends SumAggFunc<Integer> {
-        private int agg = 0;
+    public static class IntSumAggFunc extends SumAggFunc<Integer, IntSumAggFunc.IntSumAccumulator> {
 
         @Override
-        public void reset() {
-            agg = 0;
+        public void add(IntSumAccumulator accumulator, Integer value, long timestamp) {
+            accumulator.agg += value;
         }
 
         @Override
-        public void aggregate(Integer value, long timestamp) {
-            agg += value;
+        public void retract(IntSumAccumulator accumulator, Integer value) {
+            accumulator.agg -= value;
         }
 
         @Override
-        public Integer getResult() {
-            return agg;
+        public Integer getResult(IntSumAccumulator accumulator) {
+            return accumulator.agg;
         }
 
         @Override
         public DataType getResultDatatype() {
             return DataTypes.INT();
         }
+
+        @Override
+        public IntSumAccumulator createAccumulator() {
+            return new IntSumAccumulator();
+        }
+
+        @Override
+        public TypeInformation<IntSumAccumulator> getAccumulatorTypeInformation() {
+            return Types.POJO(IntSumAccumulator.class);
+        }
+
+        /** Accumulator for {@link IntSumAggFunc}. */
+        public static class IntSumAccumulator {
+            public int agg = 0;
+        }
     }
 
     /** Aggregation functions that calculates the sum of Long values. */
-    public static class LongSumAggFunc extends SumAggFunc<Long> {
-        private long agg = 0;
-
+    public static class LongSumAggFunc extends SumAggFunc<Long, LongSumAggFunc.LongSumAccumulator> {
         @Override
-        public void reset() {
-            agg = 0;
+        public void add(LongSumAccumulator accumulator, Long value, long timestamp) {
+            accumulator.agg += value;
         }
 
         @Override
-        public void aggregate(Long value, long timestamp) {
-            agg += value;
+        public void retract(LongSumAccumulator accumulator, Long value) {
+            accumulator.agg -= value;
         }
 
         @Override
-        public Long getResult() {
-            return agg;
+        public Long getResult(LongSumAccumulator accumulator) {
+            return accumulator.agg;
         }
 
         @Override
         public DataType getResultDatatype() {
             return DataTypes.BIGINT();
         }
+
+        @Override
+        public LongSumAccumulator createAccumulator() {
+            return new LongSumAccumulator();
+        }
+
+        @Override
+        public TypeInformation<LongSumAccumulator> getAccumulatorTypeInformation() {
+            return Types.POJO(LongSumAccumulator.class);
+        }
+
+        /** Accumulator for {@link LongSumAggFunc}. */
+        public static class LongSumAccumulator {
+            public long agg = 0L;
+        }
     }
 
     /** Aggregation functions that calculates the sum of Float values. */
-    public static class FloatSumAggFunc extends SumAggFunc<Float> {
-        private float agg = 0.0f;
-
+    public static class FloatSumAggFunc
+            extends SumAggFunc<Float, FloatSumAggFunc.FloatSumAccumulator> {
         @Override
-        public void reset() {
-            agg = 0;
+        public void add(FloatSumAccumulator accumulator, Float value, long timestamp) {
+            accumulator.agg += value;
         }
 
         @Override
-        public void aggregate(Float value, long timestamp) {
-            agg += value;
+        public void retract(FloatSumAccumulator accumulator, Float value) {
+            accumulator.agg -= value;
         }
 
         @Override
-        public Float getResult() {
-            return agg;
+        public Float getResult(FloatSumAccumulator accumulator) {
+            return accumulator.agg;
         }
 
         @Override
         public DataType getResultDatatype() {
             return DataTypes.FLOAT();
         }
+
+        @Override
+        public FloatSumAccumulator createAccumulator() {
+            return new FloatSumAccumulator();
+        }
+
+        @Override
+        public TypeInformation<FloatSumAccumulator> getAccumulatorTypeInformation() {
+            return Types.POJO(FloatSumAccumulator.class);
+        }
+
+        /** Accumulator for {@link FloatSumAggFunc}. */
+        public static class FloatSumAccumulator {
+            public float agg = 0.0f;
+        }
     }
 
     /** Aggregation functions that calculates the sum of Double values. */
-    public static class DoubleSumAggFunc extends SumAggFunc<Double> {
-        private double agg = 0.0;
-
+    public static class DoubleSumAggFunc
+            extends SumAggFunc<Double, DoubleSumAggFunc.DoubleSumAccumulator> {
         @Override
-        public void reset() {
-            agg = 0;
+        public void add(DoubleSumAccumulator accumulator, Double value, long timestamp) {
+            accumulator.agg += value;
         }
 
         @Override
-        public void aggregate(Double value, long timestamp) {
-            agg += value;
+        public void retract(DoubleSumAccumulator accumulator, Double value) {
+            accumulator.agg -= value;
         }
 
         @Override
-        public Double getResult() {
-            return agg;
+        public Double getResult(DoubleSumAccumulator accumulator) {
+            return accumulator.agg;
         }
 
         @Override
         public DataType getResultDatatype() {
             return DataTypes.DOUBLE();
+        }
+
+        @Override
+        public DoubleSumAccumulator createAccumulator() {
+            return new DoubleSumAccumulator();
+        }
+
+        @Override
+        public TypeInformation<DoubleSumAccumulator> getAccumulatorTypeInformation() {
+            return Types.POJO(DoubleSumAccumulator.class);
+        }
+
+        /** Accumulator for {@link DoubleSumAggFunc}. */
+        public static class DoubleSumAccumulator {
+            public double agg = 0.0;
         }
     }
 }
