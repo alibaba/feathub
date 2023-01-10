@@ -11,21 +11,32 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
-from pyspark.sql import DataFrame as NativeSparkDataFrame
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import expr as native_spark_expr
-
-from feathub.common.exceptions import FeathubException
+from feathub.common.exceptions import (
+    FeathubException,
+    FeathubTransformationException,
+)
 from feathub.common.types import DType
+from feathub.common.utils import to_java_date_format
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature_view import FeatureView
+from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
+from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
+from feathub.processors.spark.dataframe_builder.aggregation_utils import (
+    AggregationFieldDescriptor,
+)
+from feathub.processors.spark.dataframe_builder.over_window_utils import (
+    OverWindowDescriptor,
+    evaluate_over_window_transform,
+)
 from feathub.processors.spark.dataframe_builder.source_sink_utils import (
     get_dataframe_from_source,
 )
+from feathub.processors.spark.dataframe_builder.spark_dataframe_builder_constants \
+    import TIME_ATTRIBUTE_NAME
 from feathub.processors.spark.dataframe_builder.spark_sql_expr_utils import (
     to_spark_sql_expr,
 )
@@ -34,6 +45,9 @@ from feathub.processors.spark.spark_types_utils import (
 )
 from feathub.registries.registry import Registry
 from feathub.table.table_descriptor import TableDescriptor
+from pyspark.sql import DataFrame as NativeSparkDataFrame, DataFrame, functions
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import expr as native_spark_expr
 
 
 class SparkDataFrameBuilder:
@@ -44,6 +58,7 @@ class SparkDataFrameBuilder:
         Instantiate the SparkDataFrameBuilder.
 
         :param spark_session: The SparkSession where the DataFrames are created.
+        :param registry: The Feathub registry.
         """
         self._spark_session = spark_session
         self._registry = registry
@@ -72,6 +87,9 @@ class SparkDataFrameBuilder:
             )
 
         dataframe = self._get_spark_dataframe(features)
+
+        if TIME_ATTRIBUTE_NAME in dataframe.columns:
+            dataframe = dataframe.drop(TIME_ATTRIBUTE_NAME)
 
         self._built_dataframes.clear()
 
@@ -105,6 +123,11 @@ class SparkDataFrameBuilder:
         tmp_dataframe = self._get_spark_dataframe(feature_view.get_resolved_source())
 
         dependent_features = []
+        window_agg_map: Dict[
+            OverWindowDescriptor, List[AggregationFieldDescriptor]
+        ] = {}
+        unix_time_attribute_column_append = False
+
         for feature in feature_view.get_resolved_features():
             for input_feature in feature.input_features:
                 if input_feature not in dependent_features:
@@ -112,7 +135,60 @@ class SparkDataFrameBuilder:
             if feature not in dependent_features:
                 dependent_features.append(feature)
 
+        # This list contains all per-row transform features listed after the first
+        # OverWindowTransform feature in the dependent_features.
+        # These features are evaluated after all over windows.
+        per_row_transform_features_following_first_over_window = []
+
         for feature in dependent_features:
+            if isinstance(feature.transform, ExpressionTransform):
+                if len(window_agg_map) > 0:
+                    per_row_transform_features_following_first_over_window.append(
+                        feature
+                    )
+                else:
+                    tmp_dataframe = self._evaluate_expression_transform(
+                        tmp_dataframe,
+                        feature.transform,
+                        feature.name,
+                        feature.dtype,
+                    )
+            elif isinstance(feature.transform, OverWindowTransform):
+                transform = feature.transform
+
+                if not unix_time_attribute_column_append:
+                    tmp_dataframe = self._append_unix_time_attribute_column(
+                        tmp_dataframe,
+                        feature_view.timestamp_field,
+                        feature_view.timestamp_format
+                    )
+                    unix_time_attribute_column_append = True
+
+                if transform.window_size is not None or transform.limit is not None:
+                    if transform.agg_func == AggFunc.ROW_NUMBER:
+                        raise FeathubTransformationException(
+                            "ROW_NUMBER can only work without window_size and limit."
+                        )
+
+                window_aggs = window_agg_map.setdefault(
+                    OverWindowDescriptor.from_over_window_transform(transform),
+                    [],
+                )
+                window_aggs.append(AggregationFieldDescriptor.from_feature(feature))
+            else:
+                raise RuntimeError(
+                    f"Unsupported transformation type "
+                    f"{type(feature.transform).__name__} for feature {feature.name}."
+                )
+
+        for over_window_descriptor, agg_descriptor in window_agg_map.items():
+            tmp_dataframe = evaluate_over_window_transform(
+                tmp_dataframe,
+                over_window_descriptor,
+                agg_descriptor,
+            )
+
+        for feature in per_row_transform_features_following_first_over_window:
             if isinstance(feature.transform, ExpressionTransform):
                 tmp_dataframe = self._evaluate_expression_transform(
                     tmp_dataframe,
@@ -121,12 +197,51 @@ class SparkDataFrameBuilder:
                     feature.dtype,
                 )
             else:
-                raise RuntimeError(
-                    f"Unsupported transformation type "
-                    f"{type(feature.transform).__name__} for feature {feature.name}."
+                raise FeathubTransformationException(
+                    f"Unsupported transformation type: {type(feature.transform)}."
                 )
 
-        return tmp_dataframe
+        source_fields = list(tmp_dataframe.columns)
+        output_fields = feature_view.get_output_fields(source_fields)
+        return tmp_dataframe.select(
+            *[functions.col(field) for field in output_fields]
+        )
+
+    @staticmethod
+    def _append_unix_time_attribute_column(
+        df: DataFrame,
+        timestamp_field: str,
+        timestamp_format: str,
+    ) -> str:
+        if TIME_ATTRIBUTE_NAME in df.columns:
+            raise RuntimeError(
+                f"The DataFrame already has column with name {TIME_ATTRIBUTE_NAME}."
+            )
+        if timestamp_field is None or timestamp_field is None:
+            raise FeathubException(
+                "Timestamp filed and format are necessary to "
+                "append time attribute column for SparkProcessor."
+            )
+
+        if timestamp_format == "epoch":
+            return df.withColumn(
+                TIME_ATTRIBUTE_NAME,
+                functions.col(timestamp_field) * functions.lit(1000)
+            )
+        elif timestamp_format == "epoch_millis":
+            return df.withColumn(
+                TIME_ATTRIBUTE_NAME,
+                functions.col(timestamp_field)
+            )
+        else:
+            java_datetime_format = to_java_date_format(timestamp_format)
+            return df.withColumn(
+                TIME_ATTRIBUTE_NAME,
+                functions.expr(
+                    f"unix_millis(to_timestamp("
+                    f"`{timestamp_field}`,'{java_datetime_format}'))"
+                )
+            )
 
     @staticmethod
     def _evaluate_expression_transform(
