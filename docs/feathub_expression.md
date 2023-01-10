@@ -81,8 +81,8 @@ NULL.
 
 ## Temporal Functions
 
-| Function               | Description                                                                                                                         |
-|------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| UNIX_TIMESTAMP(sring1) | Converts dateime string string1 in the format yyyy-MM-dd HH:mm:ss to Unix timestamp (in seconds). Returns NULL if in case of error. |
+| Function                | Description                                                                                                                         |
+|-------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| UNIX_TIMESTAMP(string1) | Converts dateime string string1 in the format yyyy-MM-dd HH:mm:ss to Unix timestamp (in seconds). Returns NULL if in case of error. |
 
 

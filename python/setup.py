@@ -132,11 +132,19 @@ try:
         "ply>=3.11",
         "pandas>=1.1.5",
         "numpy>=1.14.3,<1.20",
-        "apache-flink==1.15.2",
         "kubernetes~=24.2",
         "protobuf~=3.17.3",
         "redis==4.3.0",
     ]
+
+    extras_require = {
+        "flink": [
+            "apache-flink==1.15.2",
+        ],
+        "spark": [
+            "pyspark==3.3.1",
+        ],
+    }
 
     setup(
         name=PACKAGE_NAME,
@@ -162,6 +170,7 @@ try:
         author="Feathub Authors",
         python_requires=">=3.6",
         install_requires=install_requires,
+        extras_require=extras_require,
         tests_require=["pytest==4.4.1"],
         zip_safe=True,
     )

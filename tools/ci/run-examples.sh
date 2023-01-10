@@ -25,7 +25,10 @@ FLINK_VERSION=1.15.2
 
 cd "${PROJECT_DIR}"
 
-python -m pip install ./wheels/*
+wheel_files=`ls ./wheels/*`
+wheel_file=${wheel_files[0]}
+python -m pip install "${wheel_file}"
+python -m pip install "${wheel_file}[flink]"
 
 echo "Running local processor quickstart."
 python python/feathub/examples/nyc_taxi.py
@@ -59,3 +62,5 @@ done
 
 echo "Stopping standalone Flink cluster."
 ./flink-"${FLINK_VERSION}"/bin/stop-cluster.sh
+
+# TODO: Add execution for Spark processor quickstart

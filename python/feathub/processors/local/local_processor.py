@@ -49,8 +49,6 @@ class LocalProcessor(Processor):
     DataFrame to store tabular data in memory.
     """
 
-    PROCESSOR_TYPE = "local"
-
     # TODO: Support agg function LAST_VALUE, FIRST_VALUE, ROW_NUMBER, VALUE_COUNTS
     _AGG_FUNCTIONS = {
         AggFunc.AVG: np.mean,

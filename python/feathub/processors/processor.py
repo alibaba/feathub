@@ -125,5 +125,9 @@ class Processor(ABC):
             from feathub.processors.flink.flink_processor import FlinkProcessor
 
             return FlinkProcessor(props=props, registry=registry)
+        elif processor_type == ProcessorType.SPARK:
+            from feathub.processors.spark.spark_processor import SparkProcessor
+
+            return SparkProcessor(props=props, registry=registry)
 
         raise RuntimeError(f"Failed to instantiate processor with props={props}.")
