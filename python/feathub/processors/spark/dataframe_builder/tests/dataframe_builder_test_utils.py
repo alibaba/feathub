@@ -39,8 +39,7 @@ class SparkDataframeBuilderTestBase(unittest.TestCase):
         self.spark = SparkSession.builder.appName(class_name).getOrCreate()
         self.registry = LocalRegistry(props={})
         self.spark_dataframe_builder = SparkDataFrameBuilder(
-            spark_session=self.spark,
-            registry=self.registry
+            spark_session=self.spark, registry=self.registry
         )
         self.temp_dir = tempfile.mkdtemp()
         self.input_data = pd.DataFrame(
@@ -85,21 +84,21 @@ class SparkDataframeBuilderTestBase(unittest.TestCase):
         )
 
     def _compare_dataframes(
-            self,
-            df1: Union[pd.DataFrame, PandasOnSparkDataFrame],
-            df2: Union[pd.DataFrame, PandasOnSparkDataFrame]
+        self,
+        df1: Union[pd.DataFrame, PandasOnSparkDataFrame],
+        df2: Union[pd.DataFrame, PandasOnSparkDataFrame],
     ):
         self.assertEqual(
             df1.shape[0],
             df2.shape[0],
             f"The left dataframe has {df1.shape[0]} rows while "
-            f"the right dataframe has {df2.shape[0]} rows."
+            f"the right dataframe has {df2.shape[0]} rows.",
         )
         self.assertEqual(
             df1.shape[1],
             df2.shape[1],
             f"The left dataframe has {df1.shape[0]} columns while "
-            f"the right dataframe has {df2.shape[0]} columns."
+            f"the right dataframe has {df2.shape[0]} columns.",
         )
 
         for rowIndex, row in df1.iterrows():

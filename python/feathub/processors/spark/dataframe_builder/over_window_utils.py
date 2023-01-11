@@ -17,8 +17,9 @@ from typing import Optional, Sequence, List, Dict
 from feathub.common.exceptions import FeathubTransformationException, FeathubException
 from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
-from feathub.processors.spark.dataframe_builder.spark_dataframe_builder_constants \
-    import TIME_ATTRIBUTE_NAME
+from feathub.processors.spark.dataframe_builder.spark_dataframe_builder_constants import (  # noqa
+    TIME_ATTRIBUTE_NAME,
+)
 from feathub.processors.spark.dataframe_builder.spark_sql_expr_utils import (
     to_spark_sql_expr,
 )
@@ -33,6 +34,7 @@ class OverWindowDescriptor:
     """
     Descriptor of an over window.
     """
+
     def __init__(
         self,
         window_size: Optional[timedelta],
@@ -47,7 +49,7 @@ class OverWindowDescriptor:
 
     @staticmethod
     def from_over_window_transform(
-            window_agg_transform: OverWindowTransform,
+        window_agg_transform: OverWindowTransform,
     ) -> "OverWindowDescriptor":
         filter_expr = (
             to_spark_sql_expr(window_agg_transform.filter_expr)
@@ -79,11 +81,10 @@ class OverWindowDescriptor:
 def _get_over_window_agg_column_list(
     window_descriptor: "OverWindowDescriptor",
     agg_descriptors: List["AggregationFieldDescriptor"],
-    window_spec: WindowSpec
+    window_spec: WindowSpec,
 ) -> Dict[str, Column]:
     return {
-        descriptor.field_name:
-        _get_over_window_agg_select_expr(
+        descriptor.field_name: _get_over_window_agg_select_expr(
             descriptor.expr,
             window_descriptor,
             descriptor.agg_func,
@@ -96,14 +97,16 @@ def _get_over_window_agg_column_list(
 
 
 def _get_over_window_agg_select_expr(
-    expr: Column,
+    expr: str,
     over_window_descriptor: "OverWindowDescriptor",
     agg_func: AggFunc,
     window_spec: WindowSpec,
 ) -> Column:
 
-    if over_window_descriptor.limit is not None \
-            and over_window_descriptor.window_size is not None:
+    if (
+        over_window_descriptor.limit is not None
+        and over_window_descriptor.window_size is not None
+    ):
         # TODO Adds aggregations on both limited and timed window
         ...
 
@@ -145,13 +148,13 @@ def evaluate_over_window_transform(
     window_spec = _get_spark_over_window(window_descriptor)
 
     if window_descriptor.filter_expr is not None:
-        agg_table = dataframe\
-            .filter(functions.expr(window_descriptor.filter_expr))\
-            .withColumns(
-                _get_over_window_agg_column_list(
-                    window_descriptor, agg_descriptors, window_spec
-                )
+        agg_table = dataframe.filter(
+            functions.expr(window_descriptor.filter_expr)
+        ).withColumns(
+            _get_over_window_agg_column_list(
+                window_descriptor, agg_descriptors, window_spec
             )
+        )
 
         # For rows that do not satisfy the filter predicate, set the feature col
         # to NULL.
@@ -179,8 +182,10 @@ def evaluate_over_window_transform(
 def _get_spark_over_window(
     over_window_descriptor: "OverWindowDescriptor",
 ) -> WindowSpec:
-    if over_window_descriptor.limit is not None and \
-            over_window_descriptor.window_size is not None:
+    if (
+        over_window_descriptor.limit is not None
+        and over_window_descriptor.window_size is not None
+    ):
         raise FeathubException(
             "You cannot set window_size and limit of over window at the same time."
         )
@@ -188,21 +193,15 @@ def _get_spark_over_window(
     if len(over_window_descriptor.group_by_keys) == 0:
         window = Window.orderBy(TIME_ATTRIBUTE_NAME)
     else:
-        window = Window\
-            .partitionBy(*over_window_descriptor.group_by_keys) \
-            .orderBy(TIME_ATTRIBUTE_NAME)
+        window = Window.partitionBy(*over_window_descriptor.group_by_keys).orderBy(
+            TIME_ATTRIBUTE_NAME
+        )
 
     if over_window_descriptor.limit is not None:
-        return window.rowsBetween(
-            1 - over_window_descriptor.limit,
-            Window.currentRow
-        )
+        return window.rowsBetween(1 - over_window_descriptor.limit, Window.currentRow)
 
     if over_window_descriptor.window_size is not None:
         preceding = int(over_window_descriptor.window_size / timedelta(milliseconds=1))
-        return window.rangeBetween(
-            -preceding,
-            Window.currentRow
-        )
+        return window.rangeBetween(-preceding, Window.currentRow)
 
     return window.rowsBetween(Window.unboundedPreceding, Window.currentRow)

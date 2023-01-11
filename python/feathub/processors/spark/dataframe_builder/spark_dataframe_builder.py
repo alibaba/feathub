@@ -13,6 +13,9 @@
 #  limitations under the License.
 from typing import Dict, Tuple, List
 
+from pyspark.sql import DataFrame as NativeSparkDataFrame, DataFrame, functions
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import expr as native_spark_expr
 from feathub.common.exceptions import (
     FeathubException,
     FeathubTransformationException,
@@ -35,8 +38,9 @@ from feathub.processors.spark.dataframe_builder.over_window_utils import (
 from feathub.processors.spark.dataframe_builder.source_sink_utils import (
     get_dataframe_from_source,
 )
-from feathub.processors.spark.dataframe_builder.spark_dataframe_builder_constants \
-    import TIME_ATTRIBUTE_NAME
+from feathub.processors.spark.dataframe_builder.spark_dataframe_builder_constants import (  # noqa
+    TIME_ATTRIBUTE_NAME,
+)
 from feathub.processors.spark.dataframe_builder.spark_sql_expr_utils import (
     to_spark_sql_expr,
 )
@@ -45,9 +49,6 @@ from feathub.processors.spark.spark_types_utils import (
 )
 from feathub.registries.registry import Registry
 from feathub.table.table_descriptor import TableDescriptor
-from pyspark.sql import DataFrame as NativeSparkDataFrame, DataFrame, functions
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import expr as native_spark_expr
 
 
 class SparkDataFrameBuilder:
@@ -126,7 +127,7 @@ class SparkDataFrameBuilder:
         window_agg_map: Dict[
             OverWindowDescriptor, List[AggregationFieldDescriptor]
         ] = {}
-        unix_time_attribute_column_append = False
+        unix_time_attribute_column_appended = False
 
         for feature in feature_view.get_resolved_features():
             for input_feature in feature.input_features:
@@ -136,8 +137,8 @@ class SparkDataFrameBuilder:
                 dependent_features.append(feature)
 
         # This list contains all per-row transform features listed after the first
-        # OverWindowTransform feature in the dependent_features.
-        # These features are evaluated after all over windows.
+        # OverWindowTransform feature in the dependent_features. These features
+        # are evaluated after all over windows.
         per_row_transform_features_following_first_over_window = []
 
         for feature in dependent_features:
@@ -156,13 +157,13 @@ class SparkDataFrameBuilder:
             elif isinstance(feature.transform, OverWindowTransform):
                 transform = feature.transform
 
-                if not unix_time_attribute_column_append:
+                if not unix_time_attribute_column_appended:
                     tmp_dataframe = self._append_unix_time_attribute_column(
                         tmp_dataframe,
                         feature_view.timestamp_field,
-                        feature_view.timestamp_format
+                        feature_view.timestamp_format,
                     )
-                    unix_time_attribute_column_append = True
+                    unix_time_attribute_column_appended = True
 
                 if transform.window_size is not None or transform.limit is not None:
                     if transform.agg_func == AggFunc.ROW_NUMBER:
@@ -197,22 +198,21 @@ class SparkDataFrameBuilder:
                     feature.dtype,
                 )
             else:
-                raise FeathubTransformationException(
-                    f"Unsupported transformation type: {type(feature.transform)}."
+                raise RuntimeError(
+                    f"Unsupported transformation type "
+                    f"{type(feature.transform).__name__} for feature {feature.name}."
                 )
 
         source_fields = list(tmp_dataframe.columns)
         output_fields = feature_view.get_output_fields(source_fields)
-        return tmp_dataframe.select(
-            *[functions.col(field) for field in output_fields]
-        )
+        return tmp_dataframe.select(*[functions.col(field) for field in output_fields])
 
     @staticmethod
     def _append_unix_time_attribute_column(
         df: DataFrame,
         timestamp_field: str,
         timestamp_format: str,
-    ) -> str:
+    ) -> DataFrame:
         if TIME_ATTRIBUTE_NAME in df.columns:
             raise RuntimeError(
                 f"The DataFrame already has column with name {TIME_ATTRIBUTE_NAME}."
@@ -226,13 +226,10 @@ class SparkDataFrameBuilder:
         if timestamp_format == "epoch":
             return df.withColumn(
                 TIME_ATTRIBUTE_NAME,
-                functions.col(timestamp_field) * functions.lit(1000)
+                functions.col(timestamp_field) * functions.lit(1000),
             )
         elif timestamp_format == "epoch_millis":
-            return df.withColumn(
-                TIME_ATTRIBUTE_NAME,
-                functions.col(timestamp_field)
-            )
+            return df.withColumn(TIME_ATTRIBUTE_NAME, functions.col(timestamp_field))
         else:
             java_datetime_format = to_java_date_format(timestamp_format)
             return df.withColumn(
@@ -240,7 +237,7 @@ class SparkDataFrameBuilder:
                 functions.expr(
                     f"unix_millis(to_timestamp("
                     f"`{timestamp_field}`,'{java_datetime_format}'))"
-                )
+                ),
             )
 
     @staticmethod

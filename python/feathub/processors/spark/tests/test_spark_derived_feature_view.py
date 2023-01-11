@@ -41,7 +41,7 @@ class SparkDerivedFeatureViewTest(SparkProcessorTestBase):
             features=[
                 f_cost_per_mile,
             ],
-            keep_source_fields=False,
+            keep_source_fields=True,
         )
 
         result_df = (

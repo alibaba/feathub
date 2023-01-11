@@ -20,13 +20,13 @@ from feathub.common.types import Int64, String, Float64
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
-from feathub.processors.spark.dataframe_builder.tests.dataframe_builder_test_utils \
-    import SparkDataframeBuilderTestBase
+from feathub.processors.spark.dataframe_builder.tests.dataframe_builder_test_utils import (  # noqa
+    SparkDataframeBuilderTestBase,
+)
 from feathub.table.schema import Schema
 
 
 class SparkDataframeBuilderOverWindowTransformTest(SparkDataframeBuilderTestBase):
-
     def test_over_window_transform_with_unsupported_agg_func(self):
         with self.assertRaises(ValueError):
             Feature(
@@ -84,9 +84,7 @@ class SparkDataframeBuilderOverWindowTransformTest(SparkDataframeBuilderTestBase
                     name="total_cost",
                     dtype=Int64,
                     transform=OverWindowTransform(
-                        expr="cost",
-                        agg_func="SUM",
-                        group_by_keys=["name"]
+                        expr="cost", agg_func="SUM", group_by_keys=["name"]
                     ),
                 )
             ],
@@ -120,10 +118,7 @@ class SparkDataframeBuilderOverWindowTransformTest(SparkDataframeBuilderTestBase
                     name="total_cost",
                     dtype=Int64,
                     transform=OverWindowTransform(
-                        expr="cost",
-                        agg_func="SUM",
-                        group_by_keys=["name"],
-                        limit=2
+                        expr="cost", agg_func="SUM", group_by_keys=["name"], limit=2
                     ),
                 )
             ],
@@ -138,9 +133,9 @@ class SparkDataframeBuilderOverWindowTransformTest(SparkDataframeBuilderTestBase
 
         result_df = (
             self.spark_dataframe_builder.build(features=features)
-                .pandas_api()
-                .sort_values(by=["name", "time"])
-                .reset_index(drop=True)
+            .pandas_api()
+            .sort_values(by=["name", "time"])
+            .reset_index(drop=True)
         )
         self._compare_dataframes(expected_result_df, result_df)
 
@@ -350,9 +345,9 @@ class SparkDataframeBuilderOverWindowTransformTest(SparkDataframeBuilderTestBase
 
         result_df = (
             self.spark_dataframe_builder.build(features=features)
-                .pandas_api()
-                .sort_values(by=["name", "time"])
-                .reset_index(drop=True)
+            .pandas_api()
+            .sort_values(by=["name", "time"])
+            .reset_index(drop=True)
         )
 
         self._compare_dataframes(expected_result_df, result_df)
@@ -474,14 +469,14 @@ class SparkDataframeBuilderOverWindowTransformTest(SparkDataframeBuilderTestBase
                         expr="cost",
                         agg_func="ROW_NUMBER",
                         group_by_keys=["name"],
-                        window_size=timedelta(days=2)
+                        window_size=timedelta(days=2),
                     ),
                 ),
             ],
         )
         with self.assertRaisesRegex(
-                FeathubTransformationException,
-                "ROW_NUMBER can only work without window_size and limit."
+            FeathubTransformationException,
+            "ROW_NUMBER can only work without window_size and limit.",
         ):
             self.spark_dataframe_builder.build(
                 feature_view_with_window_size
@@ -498,14 +493,14 @@ class SparkDataframeBuilderOverWindowTransformTest(SparkDataframeBuilderTestBase
                         expr="cost",
                         agg_func="ROW_NUMBER",
                         group_by_keys=["name"],
-                        limit=2
+                        limit=2,
                     ),
                 ),
             ],
         )
         with self.assertRaisesRegex(
-                FeathubTransformationException,
-                "ROW_NUMBER can only work without window_size and limit."
+            FeathubTransformationException,
+            "ROW_NUMBER can only work without window_size and limit.",
         ):
             self.spark_dataframe_builder.build(feature_view_with_limit).pandas_api()
 
@@ -559,9 +554,9 @@ class SparkDataframeBuilderOverWindowTransformTest(SparkDataframeBuilderTestBase
 
         result_df = (
             self.spark_dataframe_builder.build(feature_view)
-                .pandas_api()
-                .sort_values(by=["name", "time"])
-                .reset_index(drop=True)
+            .pandas_api()
+            .sort_values(by=["name", "time"])
+            .reset_index(drop=True)
         )
 
         self._compare_dataframes(expected_result_df, result_df)
@@ -635,9 +630,9 @@ class SparkDataframeBuilderOverWindowTransformTest(SparkDataframeBuilderTestBase
 
         result_df = (
             self.spark_dataframe_builder.build(features)
-                .pandas_api()
-                .sort_values(by=["name", "time"])
-                .reset_index(drop=True)
+            .pandas_api()
+            .sort_values(by=["name", "time"])
+            .reset_index(drop=True)
         )
 
         self._compare_dataframes(expected_result_df, result_df)
