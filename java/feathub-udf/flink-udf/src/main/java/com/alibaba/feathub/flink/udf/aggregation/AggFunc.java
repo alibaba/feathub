@@ -16,6 +16,7 @@
 
 package com.alibaba.feathub.flink.udf.aggregation;
 
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.table.types.DataType;
 
 import java.io.Serializable;
@@ -26,10 +27,7 @@ import java.io.Serializable;
  * with its timestamp and get the aggregation result. It also has a reset method to reset the
  * aggregation function to its initial state.
  */
-public interface AggFunc<IN_T, OUT_T> extends Serializable {
-
-    /** Reset the aggregation function. */
-    void reset();
+public interface AggFunc<IN_T, OUT_T, ACC_T> extends Serializable {
 
     /**
      * Aggregate the value with the timestamp.
@@ -37,11 +35,24 @@ public interface AggFunc<IN_T, OUT_T> extends Serializable {
      * @param value The value.
      * @param timestamp The timestamp of the value.
      */
-    void aggregate(IN_T value, long timestamp);
+    void add(ACC_T accumulator, IN_T value, long timestamp);
+
+    /**
+     * Retract the given value.
+     *
+     * @param value The value to be retracted.
+     */
+    void retract(ACC_T accumulator, IN_T value);
 
     /** @return The aggregation result. */
-    OUT_T getResult();
+    OUT_T getResult(ACC_T accumulator);
 
     /** @return The DataType of the aggregation result. */
     DataType getResultDatatype();
+
+    /** @return The new accumulator of the aggregation function. */
+    ACC_T createAccumulator();
+
+    /** @return The type info of the accumulator. */
+    TypeInformation<ACC_T> getAccumulatorTypeInformation();
 }

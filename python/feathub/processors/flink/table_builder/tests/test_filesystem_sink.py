@@ -21,7 +21,7 @@ from feathub.processors.flink.table_builder.tests.table_builder_test_utils impor
 from feathub.table.table_descriptor import TableDescriptor
 
 
-class SinkUtilTest(FlinkTableBuilderTestBase):
+class FileSystemSinkTest(FlinkTableBuilderTestBase):
     def test_unsupported_file_format(self):
         sink = FileSystemSink("s3://dummy-bucket/path", "csv")
         table = self.t_env.from_elements([(1,)])

@@ -127,44 +127,20 @@ def evaluate_sliding_window_transform(
                    belongs to.
     :return: The result table.
     """
-    result = _apply_sliding_window(
-        t_env, flink_table, window_descriptor, agg_descriptors
-    )
-
-    if config.get(ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG):
-        result = _apply_post_sliding_window_process_function(
-            result,
-            window_descriptor,
-            agg_descriptors,
-            config.get(SKIP_SAME_WINDOW_OUTPUT_CONFIG),
-        )
-    else:
-        assert config.get(SKIP_SAME_WINDOW_OUTPUT_CONFIG) is False
-        # Setting ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG to False and
-        # SKIP_SAME_WINDOW_OUTPUT_CONFIG to True is forbidden, and it is checked in
-        # SlidingFeatureView.
-        # The default behavior the Flink SlidingWindow is the same as
-        # ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG == False and
-        # SKIP_SAME_WINDOW_OUTPUT_CONFIG == False, so we don't apply the post process
-        # function.
-
-    return result
-
-
-def _apply_sliding_window(
-    t_env: StreamTableEnvironment,
-    table: NativeFlinkTable,
-    window_descriptor: SlidingWindowDescriptor,
-    agg_descriptors: List[AggregationFieldDescriptor],
-) -> NativeFlinkTable:
-
     window_sizes = set(
         [agg_descriptor.window_size for agg_descriptor in agg_descriptors]
     )
 
     if len(window_sizes) == 1:
-        return _apply_sliding_window_with_same_size(
-            t_env, table, window_descriptor, window_sizes.pop(), agg_descriptors
+        flink_table = _apply_sliding_window_with_same_size(
+            t_env, flink_table, window_descriptor, window_sizes.pop(), agg_descriptors
+        )
+        return _apply_post_sliding_window(
+            flink_table,
+            window_descriptor,
+            agg_descriptors,
+            config.get(ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG),
+            config.get(SKIP_SAME_WINDOW_OUTPUT_CONFIG),
         )
 
     pre_agg_descriptors = []
@@ -195,24 +171,31 @@ def _apply_sliding_window(
             pre_agg_descriptor.window_size = window_descriptor.step_size
             pre_agg_descriptors.append(pre_agg_descriptor)
 
-    table = _apply_sliding_window(
+    flink_table = evaluate_sliding_window_transform(
         t_env,
-        table,
+        flink_table,
         window_descriptor,
         pre_agg_descriptors,
+        SlidingFeatureViewConfig(
+            {
+                **config.original_props,
+                ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: False,
+                SKIP_SAME_WINDOW_OUTPUT_CONFIG: False,
+            }
+        ),
     )
 
     for avg_field in avg_fields:
-        table = table.add_columns(
+        flink_table = flink_table.add_columns(
             native_flink_expr.row(
                 native_flink_expr.col(avg_field + "_SUM__"),
                 native_flink_expr.col(avg_field + "_COUNT__"),
             ).alias(avg_field)
         )
-        table = table.drop_columns(avg_field + "_SUM__")
-        table = table.drop_columns(avg_field + "_COUNT__")
+        flink_table = flink_table.drop_columns(avg_field + "_SUM__")
+        flink_table = flink_table.drop_columns(avg_field + "_COUNT__")
 
-    table_schema = table.get_schema()
+    table_schema = flink_table.get_schema()
 
     gateway = get_gateway()
     descriptor_builder = (
@@ -220,6 +203,7 @@ def _apply_sliding_window(
     )
 
     for agg_descriptor in agg_descriptors:
+        agg_func_name = _get_agg_func_name_after_pre_agg(agg_descriptor.agg_func)
         descriptor_builder.addField(
             agg_descriptor.field_name,
             _to_java_data_type(
@@ -228,7 +212,7 @@ def _apply_sliding_window(
             agg_descriptor.field_name,
             _to_java_data_type(agg_descriptor.field_data_type),
             int(agg_descriptor.window_size.total_seconds() * 1000),
-            agg_descriptor.agg_func.value,
+            agg_func_name,
         )
 
     group_by_keys = gateway.new_array(
@@ -236,16 +220,104 @@ def _apply_sliding_window(
     )
     for idx, key in enumerate(window_descriptor.group_by_keys):
         group_by_keys[idx] = key
+
+    default_row = None
+    if config.get(ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG):
+        default_row = gateway.jvm.org.apache.flink.types.Row.withNames()
+        for agg_descriptor in agg_descriptors:
+            default_value, data_type = get_default_value_and_type(agg_descriptor)
+            default_row.setField(agg_descriptor.field_name, default_value)
+
+    # Java call to apply the SlidingWindowKeyedProcessorFunction to the table, the
+    # SlidingWindowKeyedProcessorFunction also takes care of the
+    # enable_empty_window_output and skip_same_window_output options
     j_table = gateway.jvm.com.alibaba.feathub.flink.udf.SlidingWindowUtils.applySlidingWindowKeyedProcessFunction(  # noqa
-        table._t_env._j_tenv,
-        table._j_table,
+        flink_table._t_env._j_tenv,
+        flink_table._j_table,
         group_by_keys,
         EVENT_TIME_ATTRIBUTE_NAME,
         int(window_descriptor.step_size.total_seconds() * 1000),
         descriptor_builder.build(),
+        default_row,
+        config.get(SKIP_SAME_WINDOW_OUTPUT_CONFIG),
     )
-    table = NativeFlinkTable(j_table, table._t_env)
+    return NativeFlinkTable(j_table, flink_table._t_env)
 
+
+def _get_agg_func_name_after_pre_agg(agg_func: AggFunc) -> str:
+    """
+    Get the aggregation function name used by the Java AggregationFieldDescriptor after
+    the table is pre-aggregated. For example, COUNT should be SUM after pre-aggregated.
+
+    :param agg_func: The aggregation function.
+    """
+    if agg_func == AggFunc.COUNT:
+        # We need to use sum aggregation function after the table is pre-aggregated
+        # with count aggregation.
+        agg_func_name = AggFunc.SUM.value
+    elif agg_func == AggFunc.AVG:
+        agg_func_name = "ROW_AVG"
+    elif agg_func == AggFunc.VALUE_COUNTS:
+        agg_func_name = "MERGE_VALUE_COUNTS"
+    else:
+        agg_func_name = agg_func.value
+    return agg_func_name
+
+
+def _apply_post_sliding_window(
+    table: NativeFlinkTable,
+    window_descriptor: SlidingWindowDescriptor,
+    agg_descriptors: List[AggregationFieldDescriptor],
+    enable_empty_window_output: bool,
+    skip_same_window_output: bool,
+) -> NativeFlinkTable:
+    """
+    Apply the post sliding window operator to the table. This method should be called
+    right after the table is applied the sliding window with the window_descriptor and
+    agg_descriptors.
+
+    :param table: The table that just applied with sliding window.
+    :param window_descriptor: The window descriptor of the sliding window applied
+                              to the table.
+    :param agg_descriptors: The aggregation field descriptor of the sliding window
+                            applied to the table.
+    :param enable_empty_window_output: Whether to enable output on empty window.
+    :param skip_same_window_output: Whether to skip the same window output.
+    :return: The table after applying the post sliding window operator.
+    """
+    if enable_empty_window_output:
+        gateway = get_gateway()
+        object_class = gateway.jvm.String
+        key_array = gateway.new_array(
+            object_class, len(window_descriptor.group_by_keys)
+        )
+        for idx, key in enumerate(window_descriptor.group_by_keys):
+            key_array[idx] = key
+        default_row = gateway.jvm.org.apache.flink.types.Row.withNames()
+        for agg_descriptor in agg_descriptors:
+            default_value, data_type = get_default_value_and_type(agg_descriptor)
+            default_row.setField(agg_descriptor.field_name, default_value)
+
+        # Java call to apply the post sliding operator to the table.
+        j_table = gateway.jvm.com.alibaba.feathub.flink.udf.PostSlidingWindowUtils.postSlidingWindow(  # noqa
+            table._t_env._j_tenv,
+            table._j_table,
+            int(window_descriptor.step_size.total_seconds() * 1000),
+            default_row,
+            skip_same_window_output,
+            EVENT_TIME_ATTRIBUTE_NAME,
+            key_array,
+        )
+        table = NativeFlinkTable(j_table, table._t_env)
+    else:
+        assert skip_same_window_output is False
+        # Setting ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG to False and
+        # SKIP_SAME_WINDOW_OUTPUT_CONFIG to True is forbidden, and it is checked in
+        # SlidingFeatureView.
+        # The default behavior the Flink SlidingWindow is the same as
+        # ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG == False and
+        # SKIP_SAME_WINDOW_OUTPUT_CONFIG == False, so we don't apply the post process
+        # function.
     return table
 
 
@@ -256,6 +328,18 @@ def _apply_sliding_window_with_same_size(
     window_size: timedelta,
     agg_descriptors: List[AggregationFieldDescriptor],
 ) -> NativeFlinkTable:
+    """
+    When all the aggregations have the same window size, we apply the native Flink
+    sliding window to the given flink table.
+
+    :param t_env: The StreamTableEnvironment of the `flink_table`.
+    :param flink_table: The input flink table.
+    :param window_descriptor: The descriptor of the sliding window to be applied to the
+                              input table.
+    :param window_size: The window size of the sliding window.
+    :param agg_descriptors: The aggregation field descriptor of the sliding window.
+    :return:
+    """
     step_interval = timedelta_to_flink_sql_interval(window_descriptor.step_size)
     window_size_interval = timedelta_to_flink_sql_interval(window_size)
     if window_descriptor.filter_expr is not None:
@@ -446,32 +530,4 @@ def _window_top_n_by_time(
     )
     table = table.drop_columns("rownum")
     t_env.drop_temporary_view("windowed_table")
-    return table
-
-
-def _apply_post_sliding_window_process_function(
-    table: NativeFlinkTable,
-    window_descriptor: SlidingWindowDescriptor,
-    agg_descriptors: List[AggregationFieldDescriptor],
-    skip_same_window_output: bool,
-) -> NativeFlinkTable:
-    gateway = get_gateway()
-    object_class = gateway.jvm.String
-    key_array = gateway.new_array(object_class, len(window_descriptor.group_by_keys))
-    for idx, key in enumerate(window_descriptor.group_by_keys):
-        key_array[idx] = key
-    default_row = gateway.jvm.org.apache.flink.types.Row.withNames()
-    for agg_descriptor in agg_descriptors:
-        default_value, data_type = get_default_value_and_type(agg_descriptor)
-        default_row.setField(agg_descriptor.field_name, default_value)
-    j_table = gateway.jvm.com.alibaba.feathub.flink.udf.PostSlidingWindowUtils.postSlidingWindow(  # noqa
-        table._t_env._j_tenv,
-        table._j_table,
-        int(window_descriptor.step_size.total_seconds() * 1000),
-        default_row,
-        skip_same_window_output,
-        EVENT_TIME_ATTRIBUTE_NAME,
-        key_array,
-    )
-    table = NativeFlinkTable(j_table, table._t_env)
     return table

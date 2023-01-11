@@ -11,16 +11,20 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from typing import Dict
 
-from feathub.processors.flink.table_builder.print_utils import insert_into_print_sink
-from feathub.processors.flink.table_builder.tests.table_builder_test_utils import (
-    FlinkTableBuilderTestBase,
-)
+from feathub.feature_tables.sinks.sink import Sink
 
 
-class PrintSinkTest(FlinkTableBuilderTestBase):
-    def test_print_sink(self):
-        table = self.t_env.from_elements([(1,), (2,)], ["val"])
+class BlackHoleSink(Sink):
+    """
+    BlackHole sink consume and discard all the records.
 
-        table_result = insert_into_print_sink(self.t_env, table)
-        table_result.wait()
+    It is mainly used for debugging and performance testing.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(name="", system_name="blackhole", properties={})
+
+    def to_json(self) -> Dict:
+        return {"type": "BlackHoleSink"}

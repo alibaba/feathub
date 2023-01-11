@@ -36,7 +36,7 @@ from feathub.processors.flink.table_builder.tests.table_builder_test_utils impor
 from feathub.table.table_descriptor import TableDescriptor
 
 
-class SinkUtilTest(unittest.TestCase):
+class RedisSinkTest(unittest.TestCase):
     def test_redis_sink(self):
         env = StreamExecutionEnvironment.get_execution_environment()
         t_env = StreamTableEnvironment.create(env)
@@ -73,7 +73,7 @@ class SinkUtilTest(unittest.TestCase):
             )
 
 
-class SourceSinkITTest(FlinkTableBuilderTestBase):
+class RedisSourceSinkITTest(FlinkTableBuilderTestBase):
     redis_container: RedisContainer = None
 
     @classmethod
@@ -89,11 +89,11 @@ class SourceSinkITTest(FlinkTableBuilderTestBase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.host = SourceSinkITTest.redis_container.get_container_host_ip()
+        self.host = RedisSourceSinkITTest.redis_container.get_container_host_ip()
         if self.host == "localhost":
             self.host = "127.0.0.1"
-        self.port = SourceSinkITTest.redis_container.get_exposed_port(
-            SourceSinkITTest.redis_container.port_to_expose
+        self.port = RedisSourceSinkITTest.redis_container.get_exposed_port(
+            RedisSourceSinkITTest.redis_container.port_to_expose
         )
 
         self.env = StreamExecutionEnvironment.get_execution_environment()
