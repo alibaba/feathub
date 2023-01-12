@@ -20,7 +20,7 @@ from feathub.processors.processor import Processor
 from feathub.registries.local_registry import LocalRegistry
 
 
-class ProcessorTest(unittest.TestCase):
+class ProcessorInstantiateTest(unittest.TestCase):
     def test_instantiate(self):
         config = flatten_dict(
             {

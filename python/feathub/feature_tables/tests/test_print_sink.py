@@ -11,16 +11,20 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from abc import ABC
 
-from feathub.processors.flink.table_builder.print_utils import insert_into_print_sink
-from feathub.processors.flink.table_builder.tests.table_builder_test_utils import (
-    FlinkTableBuilderTestBase,
-)
+from feathub.feature_tables.sinks.print_sink import PrintSink
+from feathub.tests.feathub_it_test_base import FeathubITTestBase
 
 
-class PrintSinkTest(FlinkTableBuilderTestBase):
+class PrintSinkITTest(ABC, FeathubITTestBase):
     def test_print_sink(self):
-        table = self.t_env.from_elements([(1,), (2,)], ["val"])
+        source = self.create_file_source(self.input_data.copy())
 
-        table_result = insert_into_print_sink(self.t_env, table)
-        table_result.wait()
+        sink = PrintSink()
+
+        self.client.materialize_features(
+            features=source,
+            sink=sink,
+            allow_overwrite=True,
+        ).wait()

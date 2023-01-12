@@ -111,18 +111,15 @@ class SparkProcessor(Processor):
                 "Spark processor does not support inserting features with ttl."
             )
 
-        if allow_overwrite:
-            # TODO: Add support for sinks that allow overwrite.
-            raise FeathubException(
-                "Spark processor does not support overwriting features."
-            )
-
         resolved_features = self._resolve_table_descriptor(features)
 
         dataframe = self.get_spark_dataframe(resolved_features)
 
         future = insert_into_sink(
-            executor=self._executor, dataframe=dataframe, sink=sink
+            executor=self._executor,
+            dataframe=dataframe,
+            sink=sink,
+            allow_overwrite=allow_overwrite,
         )
 
         return SparkJob(future)

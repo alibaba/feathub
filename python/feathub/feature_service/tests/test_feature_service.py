@@ -11,25 +11,34 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import shutil
+import tempfile
+import unittest
+from typing import List, Optional
 
 import pandas as pd
-from typing import List
 
 from feathub.common import types
 from feathub.common.config import flatten_dict
+from feathub.common.types import from_numpy_dtype
 from feathub.feature_service.feature_service import FeatureService
-from feathub.feature_views.feature import Feature
-from feathub.common.test_utils import LocalProcessorTestCase
 from feathub.feature_service.local_feature_service import LocalFeatureService
 from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
+from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_tables.sources.memory_store_source import MemoryStoreSource
+from feathub.feature_views.feature import Feature
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
+from feathub.processors.local.local_processor import LocalProcessor
+from feathub.registries.local_registry import LocalRegistry
+from feathub.table.schema import Schema
 
 
-class FeatureServiceTest(LocalProcessorTestCase):
+class FeatureServiceTest(unittest.TestCase):
     def setUp(self):
-        super().setUp()
+        self.registry = LocalRegistry(props={})
+        self.processor = LocalProcessor(props={}, registry=self.registry)
+        self.temp_dir = tempfile.mkdtemp()
         self.feature_service = LocalFeatureService(props={}, registry=self.registry)
         input_data_1 = pd.DataFrame(
             [
@@ -63,8 +72,32 @@ class FeatureServiceTest(LocalProcessorTestCase):
         )
 
     def tearDown(self):
-        super().tearDown()
         MemoryOnlineStore.get_instance().reset()
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def _create_file_source(
+        self,
+        df: pd.DataFrame,
+        keys: Optional[List[str]] = None,
+        timestamp_field: str = "time",
+        timestamp_format: str = "%Y-%m-%d %H:%M:%S",
+    ) -> FileSystemSource:
+        path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
+        schema = Schema(
+            field_names=df.keys().tolist(),
+            field_types=[from_numpy_dtype(dtype) for dtype in df.dtypes],
+        )
+        df.to_csv(path, index=False, header=False)
+
+        return FileSystemSource(
+            name="source",
+            path=path,
+            data_format="csv",
+            schema=schema,
+            keys=keys,
+            timestamp_field=timestamp_field,
+            timestamp_format=timestamp_format,
+        )
 
     def _materialize_and_get_online_store_source(
         self,
