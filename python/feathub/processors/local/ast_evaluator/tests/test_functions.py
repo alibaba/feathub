@@ -17,7 +17,7 @@ import unittest
 from feathub.processors.local.ast_evaluator.functions import get_predefined_function
 
 
-class FunctionTest(unittest.TestCase):
+class FunctionsTest(unittest.TestCase):
     def test_unix_timestamp(self):
         func = get_predefined_function("unix_timestamp")
         self.assertEqual(1.0, func("1970-01-01 00:00:01"))

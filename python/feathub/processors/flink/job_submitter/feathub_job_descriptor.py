@@ -57,7 +57,7 @@ class FeathubJobDescriptor:
         :param local_registry_tables: All the table descriptors registered in the local
                                       registry that are required to compute the given
                                       table.
-        :param allow_overwrite: If it is true, throw error if the features collide with
+        :param allow_overwrite: If it is false, throw error if the features collide with
                                 existing data in the given sink.
         :param props: All properties of Feathub.
         """

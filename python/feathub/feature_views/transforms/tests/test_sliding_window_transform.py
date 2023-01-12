@@ -11,13 +11,14 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from abc import ABC
 from datetime import timedelta
 from math import sqrt
 
 import pandas as pd
 
-from feathub.common.types import Int64, String, Float64, MapType, Float32
 from feathub.common.test_utils import to_epoch_millis, to_epoch
+from feathub.common.types import Int64, String, Float64, MapType, Float32
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.sliding_feature_view import (
@@ -29,11 +30,8 @@ from feathub.feature_views.transforms.python_udf_transform import PythonUdfTrans
 from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
-from feathub.processors.flink.flink_table import flink_table_to_pandas
-from feathub.processors.flink.table_builder.tests.table_builder_test_utils import (
-    FlinkTableBuilderTestBase,
-)
 from feathub.table.schema import Schema
+from feathub.tests.feathub_it_test_base import FeathubITTestBase
 
 ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT = {
     ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: True,
@@ -49,10 +47,10 @@ ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT = {
 }
 
 
-class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
+class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
     def test_transform_without_key(self):
         df = self.input_data.copy()
-        source = self._create_file_source(df)
+        source = self.create_file_source(df)
 
         f_total_cost = Feature(
             name="total_cost",
@@ -115,7 +113,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
             )
 
             result_df = (
-                self.flink_table_builder.build(features=features)
+                self.client.get_features(features=features)
                 .to_pandas()
                 .sort_values(by=["window_time"])
                 .reset_index(drop=True)
@@ -129,7 +127,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
     def test_transform_with_limit(self):
         df = self.input_data.copy()
-        source = self._create_file_source(df)
+        source = self.create_file_source(df)
 
         f_total_cost = Feature(
             name="total_cost",
@@ -221,7 +219,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
             ).reset_index(drop=True)
 
             result_df = (
-                self.flink_table_builder.build(features=features)
+                self.client.get_features(features=features)
                 .to_pandas()
                 .sort_values(by=["name", "window_time"])
                 .reset_index(drop=True)
@@ -235,7 +233,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
     def test_transform_with_expression_as_group_by_key(self):
         df = self.input_data.copy()
-        source = self._create_file_source(df)
+        source = self.create_file_source(df)
 
         f_name_name = Feature(
             name="name_name", dtype=String, transform="name || '_' || name"
@@ -331,7 +329,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
             ).reset_index(drop=True)
 
             result_df = (
-                self.flink_table_builder.build(features=features)
+                self.client.get_features(features=features)
                 .to_pandas()
                 .sort_values(by=["name_name", "window_time"])
                 .reset_index(drop=True)
@@ -362,7 +360,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
         schema = Schema(
             ["name", "action", "cost", "time"], [String, String, Float64, String]
         )
-        source = self._create_file_source(df, schema=schema, keys=["name"])
+        source = self.create_file_source(df, schema=schema, keys=["name"])
 
         expected_results = [
             (
@@ -735,7 +733,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
             ).reset_index(drop=True)
 
             result_df = (
-                self.flink_table_builder.build(features=features)
+                self.client.get_features(features=features)
                 .to_pandas()
                 .sort_values(by=["name", "window_time"])
                 .reset_index(drop=True)
@@ -749,7 +747,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
     def test_transform_with_expr_feature_after_sliding_feature(self):
         df = self.input_data.copy()
-        source = self._create_file_source(df)
+        source = self.create_file_source(df)
 
         expected_results = [
             (
@@ -1151,7 +1149,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
             ).reset_index(drop=True)
 
             result_df = (
-                self.flink_table_builder.build(features=features)
+                self.client.get_features(features=features)
                 .to_pandas()
                 .sort_values(by=["name", "window_time"])
                 .reset_index(drop=True)
@@ -1174,7 +1172,9 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
         )
 
         schema = Schema(["name", "cost", "time"], [String, Float64, String])
-        source = self._create_file_source(df, schema=schema, keys=["name"])
+        source = self.create_file_source(
+            df, schema=schema, keys=["name"], name="source"
+        )
 
         df2 = pd.DataFrame(
             [
@@ -1185,8 +1185,11 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 ["Alex", "2022-01-01 09:09:00"],
             ]
         )
-        source2 = self._create_file_source(
-            df2, schema=Schema(["name", "time"], [String, String]), keys=["name"]
+        source2 = self.create_file_source(
+            df2,
+            schema=Schema(["name", "time"], [String, String]),
+            keys=["name"],
+            name="source2",
         )
 
         expected_results = [
@@ -1266,17 +1269,18 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 name="joined_feature",
                 source=source2,
                 features=["features.last_2_minute_total_cost", "features.cnt"],
+                keep_source_fields=True,
             )
-            self.registry.build_features([features])
+            self.client.build_features([features])
 
-            built_joined_feature = self.registry.build_features([joined_feature])[0]
+            built_joined_feature = self.client.build_features([joined_feature])[0]
 
             expected_result_df = expected_result_df.sort_values(
                 by=["name", "time"]
             ).reset_index(drop=True)
 
             result_df = (
-                self.flink_table_builder.build(features=built_joined_feature)
+                self.client.get_features(features=built_joined_feature)
                 .to_pandas()
                 .sort_values(by=["name", "time"])
                 .reset_index(drop=True)
@@ -1300,7 +1304,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
         )
 
         schema = Schema(["name", "cost", "time"], [String, Float64, String])
-        source = self._create_file_source(df, schema=schema, keys=["name"])
+        source = self.create_file_source(df, schema=schema, keys=["name"])
 
         expected_results = [
             (
@@ -1437,9 +1441,9 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 by=["name", "window_time"]
             ).reset_index(drop=True)
 
-            table = self.flink_table_builder.build(features)
             result_df = (
-                flink_table_to_pandas(table)
+                self.client.get_features(features)
+                .to_pandas()
                 .sort_values(by=["name", "window_time"])
                 .reset_index(drop=True)
             )
@@ -1462,7 +1466,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
         )
 
         schema = Schema(["name", "cost", "time"], [String, Float64, String])
-        source = self._create_file_source(
+        source = self.create_file_source(
             df, schema=schema, keys=["name"], timestamp_format="%Y-%m-%d %H:%M:%S"
         )
 
@@ -1606,9 +1610,9 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 by=["name", "sliding_window_timestamp"]
             ).reset_index(drop=True)
 
-            table = self.flink_table_builder.build(features)
             result_df = (
-                flink_table_to_pandas(table)
+                self.client.get_features(features)
+                .to_pandas()
                 .sort_values(by=["name", "sliding_window_timestamp"])
                 .reset_index(drop=True)
             )
@@ -1619,9 +1623,9 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 f"actual: {result_df}",
             )
 
-    def test_with_python_udf(self):
+    def test_sliding_window_with_python_udf(self):
         df = self.input_data.copy()
-        source = self._create_file_source(df)
+        source = self.create_file_source(df)
 
         def name_to_lower(row: pd.Series) -> str:
             return row["name"].lower()
@@ -1906,9 +1910,9 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
                 by=["lower_name", "window_time"]
             ).reset_index(drop=True)
 
-            table = self.flink_table_builder.build(features)
             result_df = (
-                flink_table_to_pandas(table)
+                self.client.get_features(features)
+                .to_pandas()
                 .sort_values(by=["lower_name", "window_time"])
                 .reset_index(drop=True)
             )
@@ -1920,7 +1924,7 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
 
     def test_multiple_window_size_with_same_step(self):
         df = self.input_data.copy()
-        source = self._create_file_source(df)
+        source = self.create_file_source(df)
 
         f_total_cost_two_days = Feature(
             name="total_cost_two_days",
@@ -2053,7 +2057,8 @@ class FlinkTableBuilderSlidingWindowTransformTest(FlinkTableBuilderTestBase):
         )
 
         result_df = (
-            flink_table_to_pandas(self.flink_table_builder.build(features=features))
+            self.client.get_features(features)
+            .to_pandas()
             .sort_values(by=["name", "window_time"])
             .reset_index(drop=True)
         )

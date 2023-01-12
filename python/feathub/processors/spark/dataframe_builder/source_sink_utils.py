@@ -48,6 +48,7 @@ def insert_into_sink(
     executor: Executor,
     dataframe: NativeSparkDataFrame,
     sink: FeatureTable,
+    allow_overwrite: bool,
 ) -> Future:
     """
     Insert the Spark DataFrame to the given sink. The process would be executed
@@ -57,14 +58,22 @@ def insert_into_sink(
                      asynchronously.
     :param dataframe: The Spark DataFrame to be inserted into a sink.
     :param sink: The FeatureTable describing the sink.
+    :param allow_overwrite: If it is false, throw error if the features collide with
+                            existing data in the given sink.
 
     :return: The Future holding the asynchronously executed Spark job.
     """
 
     if isinstance(sink, FileSystemSink):
-        future = executor.submit(
-            dataframe.write.format(sink.data_format).save, path=sink.path
-        )
+        writer = dataframe.write
+        writer = writer.format(sink.data_format)
+
+        if allow_overwrite:
+            writer = writer.mode("overwrite")
+        else:
+            writer = writer.mode("error")
+
+        future = executor.submit(writer.save, path=sink.path)
     elif isinstance(sink, PrintSink):
         future = executor.submit(dataframe.show)
     else:

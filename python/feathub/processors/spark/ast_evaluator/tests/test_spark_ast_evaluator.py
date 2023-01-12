@@ -17,7 +17,7 @@ from feathub.dsl.expr_parser import ExprParser
 from feathub.processors.spark.ast_evaluator.spark_ast_evaluator import SparkAstEvaluator
 
 
-class TestSparkAstEvaluator(unittest.TestCase):
+class SparkAstEvaluatorTest(unittest.TestCase):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.parser = ExprParser()

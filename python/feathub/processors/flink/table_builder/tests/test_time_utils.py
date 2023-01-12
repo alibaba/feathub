@@ -20,7 +20,7 @@ from feathub.processors.flink.table_builder.time_utils import (
 )
 
 
-class TimeDeltaToFlinkSQLIntervalTest(unittest.TestCase):
+class TimeUtilsTest(unittest.TestCase):
     def test_timedelta_to_flink_sql_interval(self):
         self.assertEqual(
             "INTERVAL '00 00:01:10.000' DAY(5) TO SECOND(3)",

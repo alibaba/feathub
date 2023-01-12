@@ -11,6 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import unittest
 from datetime import datetime
 
 import numpy as np
@@ -25,15 +26,15 @@ from feathub.feature_tables.sinks.redis_sink import RedisSink
 from feathub.feature_tables.sources.redis_source import RedisSource
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
 from feathub.processors.flink.table_builder.source_sink_utils import insert_into_sink
-from feathub.processors.flink.table_builder.tests.table_builder_test_utils import (
+from feathub.processors.flink.table_builder.tests.mock_table_descriptor import (
     MockTableDescriptor,
-    FlinkTableBuilderTestBase,
 )
 from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
 
 
-class RedisClientTest(FlinkTableBuilderTestBase):
+# TODO: Restructure these test cases in a way similar to ProcessorTestBase.
+class RedisClientTest(unittest.TestCase):
     redis_container: RedisContainer = None
 
     def __init__(self, method_name: str):

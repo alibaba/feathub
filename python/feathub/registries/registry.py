@@ -120,3 +120,10 @@ class Registry(ABC):
     @property
     def registry_type(self) -> str:
         return self._registry_type
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, self.__class__)
+            and self._config == other._config
+            and self._registry_type == other._registry_type
+        )

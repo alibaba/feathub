@@ -125,8 +125,13 @@ class FlinkTable(Table):
         return to_feathub_schema(schema)
 
     def to_pandas(self, force_bounded: bool = False) -> pd.DataFrame:
-        if self.flink_processor.deployment_mode != DeploymentMode.SESSION:
-            raise FeathubException("Table.to_pandas is only supported in session mode.")
+        if self.flink_processor.deployment_mode not in (
+            DeploymentMode.CLI,
+            DeploymentMode.SESSION,
+        ):
+            raise FeathubException(
+                "Table.to_pandas is only supported in cli mode and session mode."
+            )
 
         feature = self.feature
         if not feature.is_bounded():

@@ -17,7 +17,7 @@ from feathub.dsl.expr_parser import ExprParser
 from feathub.processors.flink.ast_evaluator.flink_ast_evaluator import FlinkAstEvaluator
 
 
-class TestFlinkAstEvaluator(unittest.TestCase):
+class FlinkAstEvaluatorTest(unittest.TestCase):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.parser = ExprParser()

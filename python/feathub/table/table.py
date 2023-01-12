@@ -71,7 +71,7 @@ class Table(ABC):
         :param sink: Describes the location to write the features.
         :param ttl: Optional. If it is not None, the features data should be purged from
                     the sink after the specified period of time.
-        :param allow_overwrite: If it is true, throw error if the features collide with
+        :param allow_overwrite: If it is false, throw error if the features collide with
                                 existing data in the given sink.
         :return: A processor job corresponding to this insertion operation.
         """

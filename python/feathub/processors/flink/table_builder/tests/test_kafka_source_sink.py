@@ -11,35 +11,54 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import os
+import unittest
 from datetime import datetime, timezone
 from typing import cast
 from unittest.mock import patch
 
-from pyflink.common import Row
+from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import (
     TableDescriptor as NativeFlinkTableDescriptor,
-    DataTypes,
+    StreamTableEnvironment,
 )
-from testcontainers.kafka import KafkaContainer
 
 from feathub.common.types import Int64, String
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sources.kafka_source import KafkaSource
-from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.processors.flink.table_builder.source_sink_utils import (
     get_table_from_source,
     insert_into_sink,
 )
-from feathub.processors.flink.table_builder.tests.table_builder_test_utils import (
-    FlinkTableBuilderTestBase,
+from feathub.processors.flink.table_builder.tests.mock_table_descriptor import (
     MockTableDescriptor,
 )
 from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
 
 
-class SourceUtilsTest(FlinkTableBuilderTestBase):
+class KafkaSourceSinkTest(unittest.TestCase):
+    env = None
+    t_env = None
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        # Due to the resource leak in PyFlink StreamExecutionEnvironment and
+        # StreamTableEnvironment https://issues.apache.org/jira/browse/FLINK-30258.
+        # We want to share env and t_env across all the tests in one class to mitigate
+        # the leak.
+        # TODO: After the ticket is resolved, we should clean up the resource in
+        #  StreamExecutionEnvironment and StreamTableEnvironment after every test to
+        #  fully avoid resource leak.
+        cls.env = StreamExecutionEnvironment.get_execution_environment()
+        cls.t_env = StreamTableEnvironment.create(cls.env)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        if "PYFLINK_GATEWAY_DISABLED" in os.environ:
+            os.environ.pop("PYFLINK_GATEWAY_DISABLED")
+
     def test_kafka_source(self):
         schema = Schema(["id", "val", "ts"], [String, Int64, Int64])
         source = KafkaSource(
@@ -132,8 +151,6 @@ class SourceUtilsTest(FlinkTableBuilderTestBase):
                 expected_options, dict(flink_table_descriptor.get_options())
             )
 
-
-class SinkUtilTest(FlinkTableBuilderTestBase):
     def test_kafka_sink(self):
         sink = KafkaSink(
             bootstrap_server="localhost:9092",
@@ -167,118 +184,3 @@ class SinkUtilTest(FlinkTableBuilderTestBase):
             self.assertEquals(
                 expected_options, dict(flink_table_descriptor.get_options())
             )
-
-
-class SourceSinkITTest(FlinkTableBuilderTestBase):
-    kafka_container: KafkaContainer = None
-
-    def __init__(self, methodName: str):
-        super().__init__(methodName)
-        self.kafka_bootstrap_servers = None
-        self.topic_name = methodName
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        super().setUpClass()
-        cls.kafka_container = KafkaContainer()
-        cls.kafka_container.start()
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        cls.kafka_container.stop()
-
-    def setUp(self) -> None:
-        super().setUp()
-        self.kafka_bootstrap_servers = (
-            SourceSinkITTest.kafka_container.get_bootstrap_server()
-        )
-
-        self.test_time = datetime.now()
-
-        self.row_data = self._produce_data_to_kafka(self.t_env)
-
-    def test_kafka_source_sink(self):
-        # Consume data with kafka source
-        source = KafkaSource(
-            "kafka_source",
-            bootstrap_server=self.kafka_bootstrap_servers,
-            topic=self.topic_name,
-            key_format="json",
-            value_format="json",
-            schema=Schema(["id", "val", "ts"], [Int64, Int64, String]),
-            consumer_group="test-group",
-            keys=["id"],
-            timestamp_field="ts",
-            timestamp_format="%Y-%m-%d %H:%M:%S",
-            startup_mode="timestamp",
-            startup_datetime=self.test_time,
-        )
-
-        expected_rows = {Row(*data) for data in self.row_data}
-        table = self.flink_table_builder.build(source)
-        table_result = table.execute()
-        result_rows = set()
-        with table_result.collect() as results:
-            for idx, row in enumerate(results):
-                result_rows.add(row)
-                if idx == len(self.row_data) - 1:
-                    table_result.get_job_client().cancel().result()
-                    break
-
-        self.assertEquals(expected_rows, result_rows)
-
-    def test_bounded_kafka_source(self):
-        # Consume data with kafka source
-        source = KafkaSource(
-            "kafka_source",
-            bootstrap_server=self.kafka_bootstrap_servers,
-            topic=self.topic_name,
-            key_format="json",
-            value_format="json",
-            schema=Schema(["id", "val", "ts"], [Int64, Int64, String]),
-            consumer_group="test-group",
-            keys=["id"],
-            timestamp_field="ts",
-            timestamp_format="%Y-%m-%d %H:%M:%S",
-            startup_mode="timestamp",
-            startup_datetime=self.test_time,
-            is_bounded=True,
-        )
-
-        features = DerivedFeatureView(
-            "feature_view", source, features=[], keep_source_fields=True
-        )
-        table = self.flink_table_builder.build(features)
-        expected_rows = {Row(*data) for data in self.row_data}
-        table_result = table.execute()
-        with table_result.collect() as results:
-            result_rows = set(results)
-        self.assertEquals(expected_rows, result_rows)
-
-    def _produce_data_to_kafka(self, t_env):
-        row_data = [
-            (1, 1, datetime(2022, 1, 1, 0, 0, 0).strftime("%Y-%m-%d %H:%M:%S")),
-            (2, 2, datetime(2022, 1, 1, 0, 0, 1).strftime("%Y-%m-%d %H:%M:%S")),
-            (3, 3, datetime(2022, 1, 1, 0, 0, 2).strftime("%Y-%m-%d %H:%M:%S")),
-        ]
-        table = t_env.from_elements(
-            row_data,
-            DataTypes.ROW(
-                [
-                    DataTypes.FIELD("id", DataTypes.BIGINT()),
-                    DataTypes.FIELD("val", DataTypes.BIGINT()),
-                    DataTypes.FIELD("ts", DataTypes.STRING()),
-                ]
-            ),
-        )
-        sink = KafkaSink(
-            bootstrap_server=self.kafka_bootstrap_servers,
-            topic=self.topic_name,
-            key_format="json",
-            value_format="json",
-        )
-
-        descriptor: TableDescriptor = MockTableDescriptor(keys=["id"])
-
-        insert_into_sink(t_env, table, descriptor, sink).wait()
-        return row_data

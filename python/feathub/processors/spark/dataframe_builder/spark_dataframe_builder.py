@@ -102,7 +102,8 @@ class SparkDataFrameBuilder:
     def _get_dataframe_from_derived_feature_view(
         self, feature_view: DerivedFeatureView
     ) -> NativeSparkDataFrame:
-        tmp_dataframe = self._get_spark_dataframe(feature_view.get_resolved_source())
+        source_dataframe = self._get_spark_dataframe(feature_view.get_resolved_source())
+        tmp_dataframe = source_dataframe
 
         dependent_features = []
         for feature in feature_view.get_resolved_features():
@@ -126,7 +127,10 @@ class SparkDataFrameBuilder:
                     f"{type(feature.transform).__name__} for feature {feature.name}."
                 )
 
-        return tmp_dataframe
+        output_fields = feature_view.get_output_fields(
+            source_fields=source_dataframe.schema.fieldNames()
+        )
+        return tmp_dataframe.select(output_fields)
 
     @staticmethod
     def _evaluate_expression_transform(

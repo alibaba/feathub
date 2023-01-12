@@ -107,7 +107,7 @@ class FeathubClient:
         :param end_datetime: Optional. If it is not None, the `features` table should
                              have a timestamp field. And only writes into sink those
                              features whose timestamp <= ceil(start_datetime).
-        :param allow_overwrite: If it is true, throw error if the features collide with
+        :param allow_overwrite: If it is false, throw error if the features collide with
                                 existing data in the given sink.
         :return: A processor job corresponding to this materialization operation.
         """

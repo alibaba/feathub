@@ -12,31 +12,27 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import unittest
+from abc import ABC
 
 from feathub.common.types import Int64
-from feathub.feature_tables.sources.kafka_source import KafkaSource
+from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.table.schema import Schema
+from feathub.tests.feathub_it_test_base import FeathubITTestBase
 
 
-class TestKafkaSource(unittest.TestCase):
+class FileSystemSourceTest(unittest.TestCase):
     def test_get_bounded_feature_table(self):
-        source = KafkaSource(
+        source = FileSystemSource(
             "source",
-            "bootstrap_server",
-            "topic",
-            None,
+            "./path",
             "csv",
             Schema.new_builder().column("x", Int64).column("y", Int64).build(),
-            "consumer_group",
         )
-        self.assertFalse(source.is_bounded())
+        self.assertTrue(source.is_bounded())
 
-        bounded_source = source.get_bounded_view()
-        self.assertTrue(bounded_source.is_bounded())
 
-        source_json = source.to_json()
-        source_json.pop("is_bounded")
-        bounded_source_json = bounded_source.to_json()
-        bounded_source_json.pop("is_bounded")
+class FileSystemSourceSinkITTest(ABC, FeathubITTestBase):
+    pass
+    # TODO: unify the structure of files written out by different processors.
 
-        self.assertEqual(source_json, bounded_source_json)
+    # TODO: Add test case to verify allow_overwrite.
