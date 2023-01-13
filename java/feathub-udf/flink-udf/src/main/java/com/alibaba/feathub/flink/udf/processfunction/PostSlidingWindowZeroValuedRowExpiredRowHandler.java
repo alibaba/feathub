@@ -22,26 +22,26 @@ import org.apache.flink.util.Collector;
 import java.time.Instant;
 
 /**
- * PostSlidingWindowDefaultRowExpiredRowHandler output a row with the default values when a row is
- * expired.
+ * PostSlidingWindowZeroValuedRowExpiredRowHandler output a row with the default values and the key
+ * from the expired row when a row is expired.
  */
-public class PostSlidingWindowDefaultRowExpiredRowHandler
+public class PostSlidingWindowZeroValuedRowExpiredRowHandler
         implements PostSlidingWindowExpiredRowHandler {
 
-    private final Row defaultRow;
+    private final Row zeroValuedRow;
     private final String rowTimeFieldName;
     private final String[] keyFieldNames;
 
-    public PostSlidingWindowDefaultRowExpiredRowHandler(
-            Row defaultRow, String rowTimeFieldName, String... keyFieldNames) {
-        this.defaultRow = defaultRow;
+    public PostSlidingWindowZeroValuedRowExpiredRowHandler(
+            Row zeroValuedRow, String rowTimeFieldName, String... keyFieldNames) {
+        this.zeroValuedRow = zeroValuedRow;
         this.rowTimeFieldName = rowTimeFieldName;
         this.keyFieldNames = keyFieldNames;
     }
 
     @Override
     public void handleExpiredRow(Collector<Row> out, Row expiredRow, long currentTimestamp) {
-        Row row = Row.copy(defaultRow);
+        Row row = Row.copy(zeroValuedRow);
         row.setField(rowTimeFieldName, Instant.ofEpochMilli(currentTimestamp));
         for (String keyFieldName : keyFieldNames) {
             row.setField(keyFieldName, expiredRow.getField(keyFieldName));

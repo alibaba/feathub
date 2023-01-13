@@ -30,7 +30,7 @@ import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.LogicalTypeRoot;
 import org.apache.flink.types.Row;
 
-import com.alibaba.feathub.flink.udf.processfunction.PostSlidingWindowDefaultRowExpiredRowHandler;
+import com.alibaba.feathub.flink.udf.processfunction.PostSlidingWindowZeroValuedRowExpiredRowHandler;
 import com.alibaba.feathub.flink.udf.processfunction.SlidingWindowKeyedProcessFunction;
 
 import java.util.Arrays;
@@ -97,9 +97,9 @@ public class SlidingWindowUtils {
      * @param stepSizeMs The step size of the sliding window in milliseconds.
      * @param aggregationFieldsDescriptor The descriptor of the aggregation field in the sliding
      *     window.
-     * @param defaultRow If the defaultRow is not null, the sliding window will output a row with
-     *     default value when the window is empty. The defaultRow contains default values of the all
-     *     the fields, except row time field and key fields.
+     * @param zeroValuedRow If the zeroValuedRow is not null, the sliding window will output a row
+     *     with default value when the window is empty. The zeroValuedRow contains zero values of
+     *     the all the fields, except row time field and key fields.
      * @param skipSameWindowOutput Whether to output if the sliding window output the same result.
      */
     public static Table applySlidingWindowKeyedProcessFunction(
@@ -109,7 +109,7 @@ public class SlidingWindowUtils {
             String rowTimeFieldName,
             long stepSizeMs,
             AggregationFieldsDescriptor aggregationFieldsDescriptor,
-            Row defaultRow,
+            Row zeroValuedRow,
             boolean skipSameWindowOutput) {
         final ResolvedSchema resolvedSchema = table.getResolvedSchema();
         DataStream<Row> rowDataStream =
@@ -139,12 +139,14 @@ public class SlidingWindowUtils {
         final ExternalTypeInfo<Row> resultRowTypeInfo =
                 ExternalTypeInfo.of(DataTypes.ROW(resultTableFields));
 
-        PostSlidingWindowDefaultRowExpiredRowHandler expiredRowHandler = null;
-        if (defaultRow != null) {
+        PostSlidingWindowZeroValuedRowExpiredRowHandler expiredRowHandler = null;
+        if (zeroValuedRow != null) {
             expiredRowHandler =
-                    new PostSlidingWindowDefaultRowExpiredRowHandler(
-                            updateDefaultRow(
-                                    defaultRow, resultTableFieldNames, resultTableFieldDataTypes),
+                    new PostSlidingWindowZeroValuedRowExpiredRowHandler(
+                            updateZeroValuedRow(
+                                    zeroValuedRow,
+                                    resultTableFieldNames,
+                                    resultTableFieldDataTypes),
                             rowTimeFieldName,
                             keyFieldNames);
         }
@@ -188,11 +190,11 @@ public class SlidingWindowUtils {
         return table;
     }
 
-    public static Row updateDefaultRow(
-            Row defaultRow, List<String> fieldNames, List<DataType> fieldDataType) {
-        for (String fieldName : Objects.requireNonNull(defaultRow.getFieldNames(true))) {
-            final Object defaultValue = defaultRow.getFieldAs(fieldName);
-            if (defaultValue == null) {
+    public static Row updateZeroValuedRow(
+            Row zeroValuedRow, List<String> fieldNames, List<DataType> fieldDataType) {
+        for (String fieldName : Objects.requireNonNull(zeroValuedRow.getFieldNames(true))) {
+            final Object zeroValue = zeroValuedRow.getFieldAs(fieldName);
+            if (zeroValue == null) {
                 continue;
             }
 
@@ -203,47 +205,47 @@ public class SlidingWindowUtils {
                                 "The given default value of field %s doesn't exist.", fieldName));
             }
             final DataType dataType = fieldDataType.get(idx);
-            final LogicalTypeRoot defaultValueType = dataType.getLogicalType().getTypeRoot();
+            final LogicalTypeRoot zeroValueType = dataType.getLogicalType().getTypeRoot();
 
             // Integer value pass as Integer type with PY4J from python to Java if the value is less
             // than Integer.MAX_VALUE. Floating point value pass as Double from python to Java.
             // Therefore, we need to cast to the corresponding data type of the column.
-            switch (defaultValueType) {
+            switch (zeroValueType) {
                 case INTEGER:
                 case DOUBLE:
                     break;
                 case BIGINT:
-                    if (defaultValue instanceof Integer) {
-                        final Integer intValue = (Integer) defaultValue;
-                        defaultRow.setField(fieldName, intValue.longValue());
+                    if (zeroValue instanceof Integer) {
+                        final Integer intValue = (Integer) zeroValue;
+                        zeroValuedRow.setField(fieldName, intValue.longValue());
                         break;
-                    } else if (defaultValue instanceof Long) {
+                    } else if (zeroValue instanceof Long) {
                         break;
                     } else {
                         throw new RuntimeException(
                                 String.format(
                                         "Unknown default value type %s for BIGINT column.",
-                                        defaultValue.getClass().getName()));
+                                        zeroValue.getClass().getName()));
                     }
                 case FLOAT:
-                    if (defaultValue instanceof Double) {
-                        final Double doubleValue = (Double) defaultValue;
-                        defaultRow.setField(fieldName, doubleValue.floatValue());
-                    } else if (defaultValue instanceof Float) {
+                    if (zeroValue instanceof Double) {
+                        final Double doubleValue = (Double) zeroValue;
+                        zeroValuedRow.setField(fieldName, doubleValue.floatValue());
+                    } else if (zeroValue instanceof Float) {
                         break;
                     } else {
                         throw new RuntimeException(
                                 String.format(
                                         "Unknown default value type %s for FLOAT column.",
-                                        defaultValue.getClass().getName()));
+                                        zeroValue.getClass().getName()));
                     }
                     break;
                 default:
                     throw new RuntimeException(
-                            String.format("Unknown default value type %s", defaultValueType));
+                            String.format("Unknown default value type %s", zeroValueType));
             }
         }
-        return defaultRow;
+        return zeroValuedRow;
     }
 
     private static List<DataTypes.Field> getResultTableFields(

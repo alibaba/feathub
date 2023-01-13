@@ -284,10 +284,10 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                         .as("val_value_counts"),
                                 $("window_time"));
 
-        final Row defaultRow = Row.withNames();
-        defaultRow.setField("val_sum_2", 0);
-        defaultRow.setField("val_avg_2", null);
-        defaultRow.setField("val_value_counts_2", null);
+        final Row zeroValuedRow = Row.withNames();
+        zeroValuedRow.setField("val_sum_2", 0);
+        zeroValuedRow.setField("val_avg_2", null);
+        zeroValuedRow.setField("val_value_counts_2", null);
 
         table =
                 SlidingWindowUtils.applySlidingWindowKeyedProcessFunction(
@@ -322,7 +322,7 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                         2000L,
                                         "MERGE_VALUE_COUNTS")
                                 .build(),
-                        defaultRow,
+                        zeroValuedRow,
                         true);
 
         List<Row> expected =
@@ -441,10 +441,10 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                         .as("val_value_counts"),
                                 $("window_time"));
 
-        final Row defaultRow = Row.withNames();
-        defaultRow.setField("val_sum_2", 0);
-        defaultRow.setField("val_avg_2", null);
-        defaultRow.setField("val_value_counts_2", null);
+        final Row zeroValuedRow = Row.withNames();
+        zeroValuedRow.setField("val_sum_2", 0);
+        zeroValuedRow.setField("val_avg_2", null);
+        zeroValuedRow.setField("val_value_counts_2", null);
 
         table =
                 SlidingWindowUtils.applySlidingWindowKeyedProcessFunction(
@@ -479,7 +479,7 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                         2000L,
                                         "MERGE_VALUE_COUNTS")
                                 .build(),
-                        defaultRow,
+                        zeroValuedRow,
                         false);
 
         List<Row> expected =

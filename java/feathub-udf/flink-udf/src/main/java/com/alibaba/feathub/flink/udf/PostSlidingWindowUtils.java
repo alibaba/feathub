@@ -27,13 +27,13 @@ import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.types.Row;
 
-import com.alibaba.feathub.flink.udf.processfunction.PostSlidingWindowDefaultRowExpiredRowHandler;
 import com.alibaba.feathub.flink.udf.processfunction.PostSlidingWindowKeyedProcessFunction;
+import com.alibaba.feathub.flink.udf.processfunction.PostSlidingWindowZeroValuedRowExpiredRowHandler;
 
 import java.util.Arrays;
 import java.util.HashSet;
 
-import static com.alibaba.feathub.flink.udf.SlidingWindowUtils.updateDefaultRow;
+import static com.alibaba.feathub.flink.udf.SlidingWindowUtils.updateZeroValuedRow;
 
 /** Utility method to be used by Feathub after sliding window. */
 public class PostSlidingWindowUtils {
@@ -47,8 +47,8 @@ public class PostSlidingWindowUtils {
      * @param table The input table.
      * @param windowStepSizeMs The step size of the sliding window that the input table has been
      *     applied.
-     * @param defaultRow The default row that contains default values of the all the fields, except
-     *     row time field and key fields.
+     * @param zeroValuedRow The zero valued row that contains zero values of the all the fields,
+     *     except row time field and key fields.
      * @param skipSameWindowOutput Whether to output if the sliding window output the same result.
      * @param rowTimeFieldName The name of the row time field.
      * @param keyFieldNames The names of the group by keys of the sliding window that the input
@@ -59,7 +59,7 @@ public class PostSlidingWindowUtils {
             StreamTableEnvironment tEnv,
             Table table,
             long windowStepSizeMs,
-            Row defaultRow,
+            Row zeroValuedRow,
             boolean skipSameWindowOutput,
             String rowTimeFieldName,
             String... keyFieldNames) {
@@ -70,8 +70,10 @@ public class PostSlidingWindowUtils {
                         Schema.newBuilder().fromResolvedSchema(resolvedSchema).build(),
                         ChangelogMode.all());
 
-        updateDefaultRow(
-                defaultRow, resolvedSchema.getColumnNames(), resolvedSchema.getColumnDataTypes());
+        updateZeroValuedRow(
+                zeroValuedRow,
+                resolvedSchema.getColumnNames(),
+                resolvedSchema.getColumnDataTypes());
 
         rowDataStream =
                 rowDataStream
@@ -82,8 +84,8 @@ public class PostSlidingWindowUtils {
                                         windowStepSizeMs,
                                         keyFieldNames,
                                         rowTimeFieldName,
-                                        new PostSlidingWindowDefaultRowExpiredRowHandler(
-                                                defaultRow, rowTimeFieldName, keyFieldNames),
+                                        new PostSlidingWindowZeroValuedRowExpiredRowHandler(
+                                                zeroValuedRow, rowTimeFieldName, keyFieldNames),
                                         skipSameWindowOutput))
                         .name(
                                 String.format(
