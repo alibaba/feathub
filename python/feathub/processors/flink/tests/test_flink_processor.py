@@ -31,6 +31,7 @@ from feathub.feathub_client import FeathubClient
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
+from feathub.feature_tables.tests.test_black_hole_sink import BlackHoleSinkITTest
 from feathub.feature_tables.tests.test_datagen_source import DataGenSourceITTest
 from feathub.feature_tables.tests.test_file_system_source_sink import (
     FileSystemSourceSinkITTest,
@@ -370,6 +371,7 @@ class FlinkProcessorITTest(
     PythonUDFTransformITTest,
     RedisSourceSinkITTest,
     SlidingWindowTransformITTest,
+    BlackHoleSinkITTest,
 ):
     __test__ = True
 
