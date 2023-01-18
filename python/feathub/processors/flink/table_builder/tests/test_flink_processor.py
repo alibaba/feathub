@@ -73,7 +73,10 @@ from feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster
 from feathub.processors.flink.table_builder.flink_table_builder import FlinkTableBuilder
 from feathub.registries.local_registry import LocalRegistry
 from feathub.table.schema import Schema
-from feathub.tests.test_get_features import GetFeaturesITTest
+
+
+# TODO: move this file to python/feathub/processors/flink/tests folder after
+#  the resource leak problem of other flink processor's tests is fixed.
 
 
 class FlinkProcessorTest(unittest.TestCase):
@@ -81,7 +84,9 @@ class FlinkProcessorTest(unittest.TestCase):
         self.registry = LocalRegistry(props={})
 
     def tearDown(self) -> None:
-        # clean up the java_gateway so that it won't affect other tests.
+        # TODO: replace the cleanup below with flink configuration after
+        #  pyflink dependency upgrades to 1.16.0 or higher. Related
+        #  ticket: FLINK-27297
         with java_gateway._lock:
             if java_gateway._gateway is not None:
                 java_gateway._gateway.shutdown()
@@ -363,7 +368,6 @@ class FlinkProcessorITTest(
     DataGenSourceITTest,
     ExpressionTransformITTest,
     FileSystemSourceSinkITTest,
-    GetFeaturesITTest,
     JoinTransformITTest,
     KafkaSourceSinkITTest,
     OverWindowTransformITTest,
@@ -379,6 +383,8 @@ class FlinkProcessorITTest(
 
     @classmethod
     def setUpClass(cls) -> None:
+        cls.invoke_all_base_class_setupclass()
+
         # Due to the resource leak in PyFlink StreamExecutionEnvironment and
         # StreamTableEnvironment https://issues.apache.org/jira/browse/FLINK-30258.
         # We want to share env and t_env across all the tests in one class to mitigate
@@ -396,17 +402,18 @@ class FlinkProcessorITTest(
         )
 
     def setUp(self):
+        self.invoke_base_class_setup()
         self.temp_dir = tempfile.mkdtemp()
         self.input_data, self.schema = self.create_input_data_and_schema()
 
     def tearDown(self) -> None:
+        self.invoke_base_class_teardown()
         MemoryOnlineStore.get_instance().reset()
         shutil.rmtree(self.temp_dir, ignore_errors=True)
-        KafkaSourceSinkITTest.tearDown(self)
-        RedisSourceSinkITTest.tearDown(self)
 
     @classmethod
     def tearDownClass(cls) -> None:
+        cls.invoke_all_base_class_teardownclass()
         if "PYFLINK_GATEWAY_DISABLED" in os.environ:
             os.environ.pop("PYFLINK_GATEWAY_DISABLED")
 
@@ -569,36 +576,12 @@ class FlinkProcessorITTest(
 
         self.client = prev_client
 
-    def test_get_table_with_non_exist_key(self):
-        pass
-
-    def test_get_table_with_multiple_keys(self):
-        pass
-
     # TODO: Fix the bug that FlinkProcessor to_pandas does not support none values.
     def test_join_sliding_feature(self):
         pass
 
     # TODO: Fix the bug that FlinkProcessor to_pandas does not support none values.
     def test_over_window_on_join_field(self):
-        pass
-
-    def test_python_udf_transform_on_over_window_transform(self):
-        pass
-
-    # TODO: Fix the bug that in test_redis_sink when column "val"
-    #  contains None, all values in this column are saved as None
-    #  to Redis.
-    def test_redis_sink(self):
-        pass
-
-    def test_sliding_window_with_millisecond_sliding_window_timestamp(self):
-        pass
-
-    def test_sliding_window_with_python_udf(self):
-        pass
-
-    def test_over_window_transform_value_counts(self):
         pass
 
     def test_random_field_max_past(self):

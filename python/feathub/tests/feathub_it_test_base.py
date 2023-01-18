@@ -16,11 +16,13 @@ import tempfile
 import unittest
 import uuid
 from abc import abstractmethod
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Type
+from unittest import TestLoader
 
 import pandas as pd
 
 from feathub.common import types
+from feathub.common.exceptions import FeathubException
 from feathub.feathub_client import FeathubClient
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
@@ -40,6 +42,9 @@ class FeathubITTestBase(unittest.TestCase):
     # By setting this attribute to false, it prevents pytest from discovering
     # this class as a test when searching up from its child classes.
     __test__ = False
+
+    # A dict holding the base test class for each inherited test method.
+    _base_class_mapping: Dict[str, Type[unittest.TestCase]] = None
 
     def setUp(self) -> None:
         self.temp_dir = tempfile.mkdtemp()
@@ -105,6 +110,49 @@ class FeathubITTestBase(unittest.TestCase):
             timestamp_field=timestamp_field,
             timestamp_format=timestamp_format,
         )
+
+    # TODO: only invoke the corresponding base class's setUpClass()
+    #  method to reduce resource consumption.
+    @classmethod
+    def invoke_all_base_class_setupclass(cls):
+        for base_class in cls.__bases__:
+            if issubclass(base_class, unittest.TestCase):
+                base_class.setUpClass()
+
+    @classmethod
+    def invoke_all_base_class_teardownclass(cls):
+        for base_class in cls.__bases__:
+            if issubclass(base_class, unittest.TestCase):
+                base_class.tearDownClass()
+
+    def invoke_base_class_setup(self):
+        self._get_base_test_class().setUp(self)
+
+    def invoke_base_class_teardown(self):
+        self._get_base_test_class().tearDown(self)
+
+    def _get_base_test_class(self) -> Type[unittest.TestCase]:
+        if self._base_class_mapping is None:
+            self._base_class_mapping = dict()
+            for base_class in self.__class__.__bases__:
+                if not issubclass(base_class, unittest.TestCase):
+                    continue
+                for func in dir(base_class):
+                    if not (
+                        callable(getattr(base_class, func))
+                        and func.startswith(TestLoader.testMethodPrefix)
+                    ):
+                        continue
+                    if func in self._base_class_mapping:
+                        raise FeathubException(
+                            f"Duplicated test case name {func} detected in integration "
+                            f"test base class {self._base_class_mapping[func]} and "
+                            f"{base_class}."
+                        )
+                    self._base_class_mapping[func] = base_class
+        if self._testMethodName in self._base_class_mapping:
+            return self._base_class_mapping[self._testMethodName]
+        return FeathubITTestBase
 
     @classmethod
     def generate_random_name(cls, root_name: str) -> str:
