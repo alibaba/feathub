@@ -19,7 +19,7 @@ the script.
 $ bash tools/vvp-dep/build-vvp-dep.sh
 ```
 
-The dependencies zip will be available at `tools/vvp-dep/deps.zip`. 
+The dependencies zip will be available at `tools/cli-deps/deps.zip`. 
 
 You can modify the script to include any additional Python dependencies to the 
 `deps.zip`. Or you can package your own zip that only includes the additional 
@@ -28,8 +28,8 @@ step.
 
 ## Create a PyFlink job
 
-1. Upload and use the python script at `python/feathub/examples/feathub_flink_cli.py` as
-   the entrypoint of the job.
+1. Upload and use the python script at `python/feathub/examples/streaming_average_flink_cli.py`
+   as the entrypoint of the job.
 2. Upload and add the `deps.zip` and any additional python dependencies built in the 
    last step to the Python Library.
 3. Publish and start the job.
