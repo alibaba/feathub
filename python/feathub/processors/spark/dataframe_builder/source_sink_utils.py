@@ -13,13 +13,19 @@
 #  limitations under the License.
 from concurrent.futures import Executor, Future
 
+from pyspark import Row
 from pyspark.sql import DataFrame as NativeSparkDataFrame, SparkSession
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sinks.black_hole_sink import BlackHoleSink
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.feature_tables.sinks.print_sink import PrintSink
+from feathub.feature_tables.sources.datagen_source import DataGenSource
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
+from feathub.processors.spark.dataframe_builder.datagen_utils import (
+    get_dataframe_from_data_gen_source,
+)
 from feathub.processors.spark.spark_types_utils import to_spark_struct_type
 
 
@@ -40,6 +46,8 @@ def get_dataframe_from_source(
             .schema(to_spark_struct_type(source.schema))
             .load(source.path)
         )
+    elif isinstance(source, DataGenSource):
+        return get_dataframe_from_data_gen_source(spark_session, source)
     else:
         raise FeathubException(f"Unsupported source type {type(source)}.")
 
@@ -76,6 +84,12 @@ def insert_into_sink(
         future = executor.submit(writer.save, path=sink.path)
     elif isinstance(sink, PrintSink):
         future = executor.submit(dataframe.show)
+    elif isinstance(sink, BlackHoleSink):
+
+        def nop(_: Row) -> None:
+            pass
+
+        future = executor.submit(dataframe.foreach, f=nop)
     else:
         raise FeathubException(f"Unsupported sink type {type(sink)}.")
 

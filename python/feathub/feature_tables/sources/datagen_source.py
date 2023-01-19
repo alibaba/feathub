@@ -43,7 +43,7 @@ class RandomField:
                         random generated field, work for numeric types. If it is None,
                         it uses the maximum value of the field type.
         :param max_past: It specifies the maximum past of a timestamp field,
-                         only works for timestamp types.
+                         only works for Timestamp type.
         :param length: Size or length of field type String or VectorType. Default to
                        100.
         """
@@ -69,8 +69,8 @@ class SequenceField:
 
     def __init__(self, start: Any, end: Any) -> None:
         """
-        :param start: Start value of sequence generator.
-        :param end: End value of sequence generator.
+        :param start: Start value of sequence generator(inclusive).
+        :param end: End value of sequence generator(inclusive).
         """
         self.start = start
         self.end = end
@@ -82,6 +82,24 @@ class SequenceField:
 class DataGenSource(FeatureTable):
     """
     DataGenSource generates table with random data or sequential data.
+
+    This source is bounded if number_of_rows is not None, or any field is a
+    SequenceField. If number_of_rows is set and the source also contains
+    SequenceFields, the actually generated number of rows would be decided
+    by the minimum span among these configurations.
+
+    Feathub types that can be used in DataGenSource's schema and their
+    supported field config:
+
+    - String:       RandomField / SequenceField
+    - Bool:         RandomField
+    - Int32:        RandomField / SequenceField
+    - Int64:        RandomField / SequenceField
+    - Float32:      RandomField / SequenceField
+    - Float64:      RandomField / SequenceField
+    - Timestamp:    RandomField
+    - VectorType:   RandomField
+    - MapType:      RandomField
     """
 
     def __init__(
@@ -99,10 +117,9 @@ class DataGenSource(FeatureTable):
         """
         :param name: The name that uniquely identifies this source in a registry.
         :param schema: The schema of the data.
-        :param rows_per_second: Rows per second to control the emit rate.
-        :param number_of_rows: Optional. If it is None, unlimited number of rows will be
-                               generated. If it is not None, it specifies the total
-                               number of rows to emit.
+        :param rows_per_second: Rows per second to control the emit rate when the source
+                                is unbounded.
+        :param number_of_rows: The number of rows that would be generated.
         :param field_configs: A Map of field to the config of the field. The config
                               can be either RandomField or SequenceField. Every field
                               should be in the schema of the DataGenSource. If a field
@@ -135,23 +152,24 @@ class DataGenSource(FeatureTable):
         self.max_out_of_orderness = max_out_of_orderness
 
         # TODO: Add validation of field type and field config.
-        for field, _ in self.field_configs.items():
-            if field not in schema.field_names:
-                raise FeathubException(f"Field {field} is not in the schema.")
+        for field_name, _ in self.field_configs.items():
+            if field_name not in schema.field_names:
+                raise FeathubException(f"Field {field_name} is not in the schema.")
 
-        for field in schema.field_names:
-            if field not in self.field_configs:
-                self.field_configs[field] = RandomField()
+        for field_name in schema.field_names:
+            if field_name not in self.field_configs:
+                self.field_configs[field_name] = RandomField()
+
+        for _, field in self.field_configs.items():
+            if isinstance(field, SequenceField):
+                field_size = field.end - field.start + 1
+                if self.number_of_rows is None:
+                    self.number_of_rows = field_size
+                else:
+                    self.number_of_rows = min(self.number_of_rows, field_size)
 
     def is_bounded(self) -> bool:
-        if self.number_of_rows is not None:
-            return True
-
-        for field_config in self.field_configs.values():
-            if isinstance(field_config, SequenceField):
-                return True
-
-        return False
+        return self.number_of_rows is not None
 
     def get_bounded_view(self) -> TableDescriptor:
         if self.is_bounded():

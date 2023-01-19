@@ -600,3 +600,9 @@ class FlinkProcessorITTest(
 
     def test_over_window_transform_value_counts(self):
         pass
+
+    def test_random_field_max_past(self):
+        pass
+
+    def test_random_field_length(self):
+        pass
