@@ -11,11 +11,13 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import os
 import unittest
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
+from pyflink import java_gateway
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import DataTypes, StreamTableEnvironment
 from testcontainers.redis import RedisContainer
@@ -34,6 +36,8 @@ from feathub.table.table_descriptor import TableDescriptor
 
 
 # TODO: Restructure these test cases in a way similar to ProcessorTestBase.
+# TODO: move this class to python/feathub/online_stores/tests folder after
+#  the resource leak problem of other flink processor's tests is fixed.
 class RedisClientTest(unittest.TestCase):
     redis_container: RedisContainer = None
 
@@ -50,6 +54,15 @@ class RedisClientTest(unittest.TestCase):
     def tearDownClass(cls) -> None:
         super().tearDownClass()
         cls.redis_container.stop()
+        # TODO: replace the cleanup below with flink configuration after
+        #  pyflink dependency upgrades to 1.16.0 or higher. Related
+        #  ticket: FLINK-27297
+        with java_gateway._lock:
+            if java_gateway._gateway is not None:
+                java_gateway._gateway.shutdown()
+                java_gateway._gateway = None
+        if "PYFLINK_GATEWAY_DISABLED" in os.environ:
+            os.environ.pop("PYFLINK_GATEWAY_DISABLED")
 
     def setUp(self) -> None:
         super().setUp()

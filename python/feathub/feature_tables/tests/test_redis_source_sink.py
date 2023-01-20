@@ -31,7 +31,21 @@ from feathub.tests.feathub_it_test_base import FeathubITTestBase
 class RedisSourceSinkITTest(ABC, FeathubITTestBase):
     redis_container = None
 
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        cls.redis_container = RedisContainer()
+        cls.redis_container.start()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        super().tearDownClass()
+        cls.redis_container.stop()
+
     def test_redis_sink(self):
+        # TODO: Fix the bug that in flink processor when column "val"
+        #  contains None, all values in this column are saved as None
+        #  to Redis.
         input_data = pd.DataFrame(
             [
                 [1, 1, datetime(2022, 1, 1, 0, 0, 0).strftime("%Y-%m-%d %H:%M:%S")],
@@ -93,23 +107,11 @@ class RedisSourceSinkITTest(ABC, FeathubITTestBase):
                 redis_client.hgetall(key.decode("utf-8")),
             )
 
-        self._tear_down_redis()
-
     @classmethod
     def _get_redis_host_port_and_client(cls):
-        if cls.redis_container is None:
-            cls.redis_container = RedisContainer()
-            cls.redis_container.start()
-
         host = cls.redis_container.get_container_host_ip()
         if host == "localhost":
             host = "127.0.0.1"
         port = cls.redis_container.get_exposed_port(cls.redis_container.port_to_expose)
         client = cls.redis_container.get_client()
         return host, int(port), client
-
-    @classmethod
-    def _tear_down_redis(cls) -> None:
-        if cls.redis_container is not None:
-            cls.redis_container.stop()
-            cls.redis_container = None

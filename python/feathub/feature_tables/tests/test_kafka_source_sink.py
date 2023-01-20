@@ -54,6 +54,17 @@ class KafkaSourceTest(unittest.TestCase):
 class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
     kafka_container = None
 
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        cls.kafka_container = KafkaContainer()
+        cls.kafka_container.start()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        super().tearDownClass()
+        cls.kafka_container.stop()
+
     def test_kafka_source_sink(self):
         input_data = pd.DataFrame(
             [
@@ -77,7 +88,7 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
         # Consume data with kafka source
         source = KafkaSource(
             "kafka_source",
-            bootstrap_server=self._get_kafka_bootstrap_servers(),
+            bootstrap_server=self.kafka_container.get_bootstrap_server(),
             topic=topic_name,
             key_format="json",
             value_format="json",
@@ -125,7 +136,7 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
         # Consume data with kafka source
         source = KafkaSource(
             "kafka_source",
-            bootstrap_server=self._get_kafka_bootstrap_servers(),
+            bootstrap_server=self.kafka_container.get_bootstrap_server(),
             topic=topic_name,
             key_format="json",
             value_format="json",
@@ -155,19 +166,6 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
         )
         self.assertTrue(expected_result_df.equals(result_df))
 
-    @classmethod
-    def _get_kafka_bootstrap_servers(cls):
-        if cls.kafka_container is None:
-            cls.kafka_container = KafkaContainer()
-            cls.kafka_container.start()
-        return cls.kafka_container.get_bootstrap_server()
-
-    @classmethod
-    def _tear_down_kafka(cls) -> None:
-        if cls.kafka_container is not None:
-            cls.kafka_container.stop()
-            cls.kafka_container = None
-
     def _produce_data_to_kafka(self, input_data: pd.DataFrame, schema: Schema):
         source = self.create_file_source(
             input_data,
@@ -180,7 +178,7 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
         topic_name = self.generate_random_name("kafka")
 
         sink = KafkaSink(
-            bootstrap_server=self._get_kafka_bootstrap_servers(),
+            bootstrap_server=self.kafka_container.get_bootstrap_server(),
             topic=topic_name,
             key_format="json",
             value_format="json",

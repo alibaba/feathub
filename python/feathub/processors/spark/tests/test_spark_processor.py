@@ -38,6 +38,20 @@ class SparkProcessorITTest(
 ):
     __test__ = True
 
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.invoke_all_base_class_setupclass()
+
+    def setUp(self):
+        self.invoke_base_class_setup()
+
+    def tearDown(self) -> None:
+        self.invoke_base_class_teardown()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.invoke_all_base_class_teardownclass()
+
     def get_client(self) -> FeathubClient:
         return self.get_local_client(
             {
