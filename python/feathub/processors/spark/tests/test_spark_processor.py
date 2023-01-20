@@ -26,6 +26,9 @@ from feathub.feature_views.transforms.tests.test_expression_transform import (
 from feathub.feature_tables.tests.test_file_system_source_sink import (
     FileSystemSourceSinkITTest,
 )
+from feathub.feature_views.transforms.tests.test_over_window_transform import (
+    OverWindowTransformITTest,
+)
 from feathub.feature_tables.tests.test_print_sink import PrintSinkITTest
 
 
@@ -35,6 +38,7 @@ class SparkProcessorITTest(
     ExpressionTransformITTest,
     FileSystemSourceSinkITTest,
     PrintSinkITTest,
+    OverWindowTransformITTest,
 ):
     __test__ = True
 
@@ -82,3 +86,27 @@ class SparkProcessorITTest(
             df = df.append(csv)
         df = df.sort_values(by=["time"]).reset_index(drop=True)
         self.assertTrue(self.input_data.equals(df))
+
+    def test_over_window_on_join_field(self):
+        pass
+
+    def test_python_udf_transform_on_over_window_transform(self):
+        pass
+
+    def test_over_window_transform_value_counts(self):
+        pass
+
+    def test_over_window_transform_row_num(self):
+        pass
+
+    def test_over_window_transform_with_different_criteria(self):
+        pass
+
+    def test_over_window_transform_with_window_size_and_limit(self):
+        pass
+
+    def test_over_window_transform_first_last_value_with_window_size_and_limit(self):
+        pass
+
+    def test_over_window_transform_filter_expr_with_window_size_and_limit(self):
+        pass
