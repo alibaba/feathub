@@ -30,11 +30,9 @@ from feathub.common.exceptions import FeathubException
 from feathub.common.utils import to_java_date_format
 from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sources.kafka_source import KafkaSource
+from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_env
 from feathub.processors.flink.flink_types_utils import to_flink_schema
-from feathub.processors.flink.table_builder.flink_table_builder_constants import (
-    EVENT_TIME_ATTRIBUTE_NAME,
-)
 from feathub.processors.flink.table_builder.source_sink_utils_common import (
     define_watermark,
     generate_random_table_name,

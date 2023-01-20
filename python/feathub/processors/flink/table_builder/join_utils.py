@@ -28,13 +28,11 @@ from feathub.feature_views.sliding_feature_view import (
 from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
+from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from feathub.processors.flink.flink_types_utils import to_flink_type
 from feathub.processors.flink.table_builder.aggregation_utils import (
     get_default_value_and_type,
     AggregationFieldDescriptor,
-)
-from feathub.processors.flink.table_builder.flink_table_builder_constants import (
-    EVENT_TIME_ATTRIBUTE_NAME,
 )
 from feathub.processors.flink.table_builder.time_utils import (
     timedelta_to_flink_sql_interval,

@@ -33,15 +33,13 @@ from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
+from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
     get_default_value_and_type,
 )
 from feathub.processors.flink.table_builder.flink_sql_expr_utils import (
     to_flink_sql_expr,
-)
-from feathub.processors.flink.table_builder.flink_table_builder_constants import (
-    EVENT_TIME_ATTRIBUTE_NAME,
 )
 from feathub.processors.flink.table_builder.join_utils import join_table_on_key
 from feathub.processors.flink.table_builder.time_utils import (

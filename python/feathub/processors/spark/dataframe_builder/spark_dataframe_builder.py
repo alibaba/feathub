@@ -11,18 +11,29 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
-from pyspark.sql import DataFrame as NativeSparkDataFrame
+from pyspark.sql import DataFrame as NativeSparkDataFrame, functions
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import expr as native_spark_expr
-
-from feathub.common.exceptions import FeathubException
+from feathub.common.exceptions import (
+    FeathubException,
+    FeathubTransformationException,
+)
 from feathub.common.types import DType
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature_view import FeatureView
+from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
+from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
+from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
+from feathub.processors.spark.dataframe_builder.aggregation_utils import (
+    AggregationFieldDescriptor,
+)
+from feathub.processors.spark.dataframe_builder.over_window_utils import (
+    OverWindowDescriptor,
+    evaluate_over_window_transform,
+)
 from feathub.processors.spark.dataframe_builder.source_sink_utils import (
     get_dataframe_from_source,
 )
@@ -44,6 +55,7 @@ class SparkDataFrameBuilder:
         Instantiate the SparkDataFrameBuilder.
 
         :param spark_session: The SparkSession where the DataFrames are created.
+        :param registry: The Feathub registry.
         """
         self._spark_session = spark_session
         self._registry = registry
@@ -72,6 +84,9 @@ class SparkDataFrameBuilder:
             )
 
         dataframe = self._get_spark_dataframe(features)
+
+        if EVENT_TIME_ATTRIBUTE_NAME in dataframe.columns:
+            dataframe = dataframe.drop(EVENT_TIME_ATTRIBUTE_NAME)
 
         self._built_dataframes.clear()
 
@@ -106,6 +121,10 @@ class SparkDataFrameBuilder:
         tmp_dataframe = source_dataframe
 
         dependent_features = []
+        window_agg_map: Dict[
+            OverWindowDescriptor, List[AggregationFieldDescriptor]
+        ] = {}
+
         for feature in feature_view.get_resolved_features():
             for input_feature in feature.input_features:
                 if input_feature not in dependent_features:
@@ -113,7 +132,52 @@ class SparkDataFrameBuilder:
             if feature not in dependent_features:
                 dependent_features.append(feature)
 
+        # This list contains all per-row transform features listed after the first
+        # OverWindowTransform feature in the dependent_features. These features
+        # are evaluated after all over windows.
+        per_row_transform_features_following_first_over_window = []
+
         for feature in dependent_features:
+            if isinstance(feature.transform, ExpressionTransform):
+                if len(window_agg_map) > 0:
+                    per_row_transform_features_following_first_over_window.append(
+                        feature
+                    )
+                else:
+                    tmp_dataframe = self._evaluate_expression_transform(
+                        tmp_dataframe,
+                        feature.transform,
+                        feature.name,
+                        feature.dtype,
+                    )
+            elif isinstance(feature.transform, OverWindowTransform):
+                transform = feature.transform
+
+                if transform.window_size is not None or transform.limit is not None:
+                    if transform.agg_func == AggFunc.ROW_NUMBER:
+                        raise FeathubTransformationException(
+                            "ROW_NUMBER can only work without window_size and limit."
+                        )
+
+                window_aggs = window_agg_map.setdefault(
+                    OverWindowDescriptor.from_over_window_transform(transform),
+                    [],
+                )
+                window_aggs.append(AggregationFieldDescriptor.from_feature(feature))
+            else:
+                raise RuntimeError(
+                    f"Unsupported transformation type "
+                    f"{type(feature.transform).__name__} for feature {feature.name}."
+                )
+
+        for over_window_descriptor, agg_descriptor in window_agg_map.items():
+            tmp_dataframe = evaluate_over_window_transform(
+                tmp_dataframe,
+                over_window_descriptor,
+                agg_descriptor,
+            )
+
+        for feature in per_row_transform_features_following_first_over_window:
             if isinstance(feature.transform, ExpressionTransform):
                 tmp_dataframe = self._evaluate_expression_transform(
                     tmp_dataframe,
@@ -143,5 +207,5 @@ class SparkDataFrameBuilder:
         result_spark_type = to_spark_type(result_type)
 
         return source_dataframe.withColumn(
-            result_field_name, native_spark_expr(spark_sql_expr).cast(result_spark_type)
+            result_field_name, functions.expr(spark_sql_expr).cast(result_spark_type)
         )

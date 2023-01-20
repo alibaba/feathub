@@ -24,14 +24,12 @@ from pyflink.table.window import OverWindowPartitionedOrderedPreceding, Over
 from feathub.common.exceptions import FeathubTransformationException
 from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
+from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
 )
 from feathub.processors.flink.table_builder.flink_sql_expr_utils import (
     to_flink_sql_expr,
-)
-from feathub.processors.flink.table_builder.flink_table_builder_constants import (
-    EVENT_TIME_ATTRIBUTE_NAME,
 )
 from feathub.processors.flink.table_builder.time_utils import (
     timedelta_to_flink_sql_interval,

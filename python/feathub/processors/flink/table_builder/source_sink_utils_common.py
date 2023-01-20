@@ -24,9 +24,7 @@ from feathub.common import types
 from feathub.common.exceptions import FeathubException
 from feathub.common.types import DType
 from feathub.common.utils import to_java_date_format
-from feathub.processors.flink.table_builder.flink_table_builder_constants import (
-    EVENT_TIME_ATTRIBUTE_NAME,
-)
+from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from feathub.processors.flink.table_builder.time_utils import (
     timedelta_to_flink_sql_interval,
 )

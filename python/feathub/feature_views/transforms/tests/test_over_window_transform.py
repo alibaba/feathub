@@ -568,40 +568,40 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
 
         self.assertTrue(expected_df.equals(result_df))
 
-    def test_over_window_transform_first_last_value(self):
-        df = self.input_data.copy()
-        source = self.create_file_source(df)
-
-        feature_view = DerivedFeatureView(
-            name="feature_view",
-            source=source,
-            features=[
-                Feature(
-                    name="first_time",
-                    dtype=String,
-                    transform=OverWindowTransform(
-                        expr="`time`",
-                        agg_func="FIRST_VALUE",
-                        group_by_keys=["name"],
-                        window_size=timedelta(days=2),
-                        limit=2,
-                    ),
-                ),
-                Feature(
-                    name="last_time",
-                    dtype=String,
-                    transform=OverWindowTransform(
-                        expr="`time`",
-                        agg_func="LAST_VALUE",
-                        group_by_keys=["name"],
-                        window_size=timedelta(days=2),
-                        limit=2,
-                    ),
-                ),
-            ],
+    def test_over_window_transform_first_last_value_with_window_size(self):
+        result_df = self._over_window_transform_first_last_value(
+            window_size=timedelta(days=3)
         )
+        expected_df = self.input_data.copy()
+        expected_df["first_time"] = pd.Series(
+            [
+                "2022-01-01 08:01:00",
+                "2022-01-01 08:02:00",
+                "2022-01-01 08:01:00",
+                "2022-01-01 08:02:00",
+                "2022-01-03 08:05:00",
+                "2022-01-01 08:01:00",
+            ]
+        )
+        expected_df["last_time"] = pd.Series(
+            [
+                "2022-01-01 08:01:00",
+                "2022-01-01 08:02:00",
+                "2022-01-02 08:03:00",
+                "2022-01-02 08:04:00",
+                "2022-01-03 08:05:00",
+                "2022-01-03 08:06:00",
+            ]
+        )
+        expected_df.drop(["cost", "distance"], axis=1, inplace=True)
+        expected_df = expected_df.sort_values(by=["name", "time"]).reset_index(
+            drop=True
+        )
+        self.assertTrue(expected_df.equals(result_df))
 
-        expected_df = df.copy()
+    def test_over_window_transform_first_last_value_with_limit(self):
+        result_df = self._over_window_transform_first_last_value(limit=2)
+        expected_df = self.input_data.copy()
         expected_df["first_time"] = pd.Series(
             [
                 "2022-01-01 08:01:00",
@@ -626,12 +626,36 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         expected_df = expected_df.sort_values(by=["name", "time"]).reset_index(
             drop=True
         )
+        self.assertTrue(expected_df.equals(result_df))
 
-        result_df = (
-            self.client.get_features(feature_view)
-            .to_pandas()
-            .sort_values(by=["name", "time"])
-            .reset_index(drop=True)
+    def test_over_window_transform_first_last_value_with_window_size_and_limit(self):
+        result_df = self._over_window_transform_first_last_value(
+            window_size=timedelta(days=2), limit=2
+        )
+        expected_df = self.input_data.copy()
+        expected_df["first_time"] = pd.Series(
+            [
+                "2022-01-01 08:01:00",
+                "2022-01-01 08:02:00",
+                "2022-01-01 08:01:00",
+                "2022-01-01 08:02:00",
+                "2022-01-03 08:05:00",
+                "2022-01-02 08:03:00",
+            ]
+        )
+        expected_df["last_time"] = pd.Series(
+            [
+                "2022-01-01 08:01:00",
+                "2022-01-01 08:02:00",
+                "2022-01-02 08:03:00",
+                "2022-01-02 08:04:00",
+                "2022-01-03 08:05:00",
+                "2022-01-03 08:06:00",
+            ]
+        )
+        expected_df.drop(["cost", "distance"], axis=1, inplace=True)
+        expected_df = expected_df.sort_values(by=["name", "time"]).reset_index(
+            drop=True
         )
         self.assertTrue(expected_df.equals(result_df))
 
@@ -752,27 +776,10 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
 
         self.assertTrue(expected_df.equals(result_df))
 
-    def test_over_window_transform_filter_expr(self):
-        df = pd.DataFrame(
-            [
-                ["Alex", "pay", 100.0, "2022-01-01 09:01:00"],
-                ["Alex", "receive", 300.0, "2022-01-01 09:01:30"],
-                ["Alex", "pay", 200.0, "2022-01-01 09:01:20"],
-                ["Emma", "receive", 500.0, "2022-01-01 09:02:30"],
-                ["Emma", "pay", 400.0, "2022-01-01 09:02:00"],
-                ["Alex", "receive", 200.0, "2022-01-01 09:03:00"],
-                ["Emma", "pay", 300.0, "2022-01-01 09:04:00"],
-                ["Jack", "receive", 500.0, "2022-01-01 09:05:00"],
-                ["Alex", "pay", 450.0, "2022-01-01 09:06:00"],
-            ],
-            columns=["name", "action", "cost", "time"],
+    def test_over_window_transform_filter_expr_with_window_size(self):
+        df, result_df = self._over_window_transform_filter_expr(
+            window_size=timedelta(minutes=2)
         )
-
-        schema = Schema(
-            ["name", "action", "cost", "time"], [String, String, Float64, String]
-        )
-        source = self.create_file_source(df, schema=schema, keys=["name"])
-
         expected_df = df.copy()
         expected_df["last_2_pay_last_2_minute_total_cost"] = pd.Series(
             [100.0, None, 300.0, None, 400.0, None, 700.0, None, 450.0]
@@ -781,31 +788,32 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         expected_df = expected_df.sort_values(by=["name", "time"]).reset_index(
             drop=True
         )
+        self.assertTrue(expected_df.equals(result_df))
 
-        features = DerivedFeatureView(
-            name="features",
-            source=source,
-            features=[
-                Feature(
-                    name="last_2_pay_last_2_minute_total_cost",
-                    dtype=Float64,
-                    transform=OverWindowTransform(
-                        expr="cost",
-                        agg_func="SUM",
-                        group_by_keys=["name"],
-                        window_size=timedelta(minutes=2),
-                        filter_expr="action='pay'",
-                        limit=2,
-                    ),
-                ),
-            ],
+    def test_over_window_transform_filter_expr_with_limit(self):
+        df, result_df = self._over_window_transform_filter_expr(limit=2)
+        expected_df = df.copy()
+        expected_df["last_2_pay_last_2_minute_total_cost"] = pd.Series(
+            [100.0, None, 300.0, None, 400.0, None, 700.0, None, 650.0]
         )
-
-        table = self.client.get_features(features=features)
-        result_df = (
-            table.to_pandas().sort_values(by=["name", "time"]).reset_index(drop=True)
+        expected_df.drop(["cost", "action"], axis=1, inplace=True)
+        expected_df = expected_df.sort_values(by=["name", "time"]).reset_index(
+            drop=True
         )
+        self.assertTrue(expected_df.equals(result_df))
 
+    def test_over_window_transform_filter_expr_with_window_size_and_limit(self):
+        df, result_df = self._over_window_transform_filter_expr(
+            window_size=timedelta(minutes=2), limit=2
+        )
+        expected_df = df.copy()
+        expected_df["last_2_pay_last_2_minute_total_cost"] = pd.Series(
+            [100.0, None, 300.0, None, 400.0, None, 700.0, None, 450.0]
+        )
+        expected_df.drop(["cost", "action"], axis=1, inplace=True)
+        expected_df = expected_df.sort_values(by=["name", "time"]).reset_index(
+            drop=True
+        )
         self.assertTrue(expected_df.equals(result_df))
 
     def test_over_window_transform_with_different_criteria(self):
@@ -985,3 +993,96 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
 
         self.assertListEqual(["name"], built_feature_view_2.keys)
         self.assertTrue(expected_result_df.equals(result_df))
+
+    def _over_window_transform_first_last_value(
+        self,
+        window_size=None,
+        limit=None,
+    ):
+        df = self.input_data.copy()
+        source = self.create_file_source(df)
+
+        feature_view = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                Feature(
+                    name="first_time",
+                    dtype=String,
+                    transform=OverWindowTransform(
+                        expr="`time`",
+                        agg_func="FIRST_VALUE",
+                        group_by_keys=["name"],
+                        window_size=window_size,
+                        limit=limit,
+                    ),
+                ),
+                Feature(
+                    name="last_time",
+                    dtype=String,
+                    transform=OverWindowTransform(
+                        expr="`time`",
+                        agg_func="LAST_VALUE",
+                        group_by_keys=["name"],
+                        window_size=window_size,
+                        limit=limit,
+                    ),
+                ),
+            ],
+        )
+        result_df = (
+            self.client.get_features(feature_view)
+            .to_pandas()
+            .sort_values(by=["name", "time"])
+            .reset_index(drop=True)
+        )
+        return result_df
+
+    def _over_window_transform_filter_expr(
+        self,
+        window_size=None,
+        limit=None,
+    ):
+        df = pd.DataFrame(
+            [
+                ["Alex", "pay", 100.0, "2022-01-01 09:01:00"],
+                ["Alex", "receive", 300.0, "2022-01-01 09:01:30"],
+                ["Alex", "pay", 200.0, "2022-01-01 09:01:20"],
+                ["Emma", "receive", 500.0, "2022-01-01 09:02:30"],
+                ["Emma", "pay", 400.0, "2022-01-01 09:02:00"],
+                ["Alex", "receive", 200.0, "2022-01-01 09:03:00"],
+                ["Emma", "pay", 300.0, "2022-01-01 09:04:00"],
+                ["Jack", "receive", 500.0, "2022-01-01 09:05:00"],
+                ["Alex", "pay", 450.0, "2022-01-01 09:06:00"],
+            ],
+            columns=["name", "action", "cost", "time"],
+        )
+
+        schema = Schema(
+            ["name", "action", "cost", "time"], [String, String, Float64, String]
+        )
+        source = self.create_file_source(df, schema=schema, keys=["name"])
+        features = DerivedFeatureView(
+            name="features",
+            source=source,
+            features=[
+                Feature(
+                    name="last_2_pay_last_2_minute_total_cost",
+                    dtype=Float64,
+                    transform=OverWindowTransform(
+                        expr="cost",
+                        agg_func="SUM",
+                        group_by_keys=["name"],
+                        window_size=window_size,
+                        filter_expr="action='pay'",
+                        limit=limit,
+                    ),
+                ),
+            ],
+        )
+
+        table = self.client.get_features(features=features)
+        result_df = (
+            table.to_pandas().sort_values(by=["name", "time"]).reset_index(drop=True)
+        )
+        return df, result_df
