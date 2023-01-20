@@ -14,7 +14,9 @@
 from concurrent.futures import Executor, Future
 
 from pyspark import Row
-from pyspark.sql import DataFrame as NativeSparkDataFrame, SparkSession
+from feathub.common.utils import to_java_date_format
+from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
+from pyspark.sql import DataFrame as NativeSparkDataFrame, SparkSession, functions
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_tables.feature_table import FeatureTable
@@ -41,15 +43,55 @@ def get_dataframe_from_source(
     :return: The Spark DataFrame.
     """
     if isinstance(source, FileSystemSource):
-        return (
+        source_dataframe = (
             spark_session.read.format(source.data_format)
             .schema(to_spark_struct_type(source.schema))
             .load(source.path)
+        )
+
+        return _append_unix_time_attribute_column(
+            source_dataframe,
+            source.timestamp_field,
+            source.timestamp_format,
         )
     elif isinstance(source, DataGenSource):
         return get_dataframe_from_data_gen_source(spark_session, source)
     else:
         raise FeathubException(f"Unsupported source type {type(source)}.")
+
+
+def _append_unix_time_attribute_column(
+    df: NativeSparkDataFrame,
+    timestamp_field: str,
+    timestamp_format: str,
+) -> NativeSparkDataFrame:
+    if EVENT_TIME_ATTRIBUTE_NAME in df.columns:
+        raise RuntimeError(
+            f"The DataFrame already has column with name "
+            f"{EVENT_TIME_ATTRIBUTE_NAME}."
+        )
+    if timestamp_field is None or timestamp_field is None:
+        raise FeathubException(
+            "Timestamp filed and format are necessary to "
+            "append time attribute column for SparkProcessor."
+        )
+
+    if timestamp_format == "epoch":
+        return df.withColumn(
+            EVENT_TIME_ATTRIBUTE_NAME,
+            functions.col(timestamp_field) * functions.lit(1000),
+        )
+    elif timestamp_format == "epoch_millis":
+        return df.withColumn(EVENT_TIME_ATTRIBUTE_NAME, functions.col(timestamp_field))
+    else:
+        java_datetime_format = to_java_date_format(timestamp_format)
+        return df.withColumn(
+            EVENT_TIME_ATTRIBUTE_NAME,
+            functions.expr(
+                f"unix_millis(to_timestamp("
+                f"`{timestamp_field}`,'{java_datetime_format}'))"
+            ),
+        )
 
 
 def insert_into_sink(

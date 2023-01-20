@@ -24,10 +24,8 @@ from pyflink.table.udf import udf
 from feathub.common.exceptions import FeathubException
 from feathub.common.types import DType
 from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
+from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from feathub.processors.flink.flink_types_utils import to_flink_type
-from feathub.processors.flink.table_builder.flink_table_builder_constants import (
-    EVENT_TIME_ATTRIBUTE_NAME,
-)
 
 
 def evaluate_python_udf_transform(
