@@ -68,8 +68,8 @@ class SparkAstEvaluatorTest(unittest.TestCase):
         UNIX_TIMESTAMP("2020-01-01 00:24:39") - UNIX_TIMESTAMP("2020-01-01 00:23:40")
         """
         self.assertEqual(
-            "UNIX_TIMESTAMP('2020-01-01 00:24:39') "
-            "- UNIX_TIMESTAMP('2020-01-01 00:23:40')",
+            "TO_UNIX_TIMESTAMP('2020-01-01 00:24:39') "
+            "- TO_UNIX_TIMESTAMP('2020-01-01 00:23:40')",
             self._eval(expr),
         )
 
@@ -77,7 +77,7 @@ class SparkAstEvaluatorTest(unittest.TestCase):
         UNIX_TIMESTAMP("2020-01-01 00:24:39") - UNIX_TIMESTAMP(ts)
         """
         self.assertEqual(
-            "UNIX_TIMESTAMP('2020-01-01 00:24:39') - UNIX_TIMESTAMP(`ts`)",
+            "TO_UNIX_TIMESTAMP('2020-01-01 00:24:39') - TO_UNIX_TIMESTAMP(`ts`)",
             self._eval(expr, {"ts": "2020-01-01 00:23:40"}),
         )
 

@@ -134,7 +134,9 @@ try:
         "numpy>=1.14.3,<1.20",
         "kubernetes~=24.2",
         "protobuf~=3.17.3",
+        "python-dateutil~=2.8",
         "redis==4.3.0",
+        "tzlocal~=4.2",
     ]
 
     extras_require = {

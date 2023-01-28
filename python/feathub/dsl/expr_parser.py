@@ -120,7 +120,8 @@ class ExprParser:
                 | expression
         """
         if len(p) == 4:
-            p[0] = p[1].values.append(p[3])
+            p[0] = ArgListNode(p[1].values.copy())
+            p[0].values.append(p[3])
         else:
             p[0] = ArgListNode([p[1]])
 

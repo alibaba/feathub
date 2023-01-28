@@ -13,6 +13,7 @@
 # limitations under the License.
 import glob
 import tempfile
+from typing import Optional, Dict
 
 import pandas as pd
 
@@ -52,14 +53,15 @@ class SparkProcessorITTest(
     def tearDownClass(cls) -> None:
         cls.invoke_all_base_class_teardownclass()
 
-    def get_client(self) -> FeathubClient:
-        return self.get_local_client(
+    def get_client(self, extra_config: Optional[Dict] = None) -> FeathubClient:
+        return self.get_client_with_local_registry(
             {
                 "type": "spark",
                 "spark": {
                     "master": "local[1]",
                 },
-            }
+            },
+            extra_config,
         )
 
     def test_file_system_source_sink(self):

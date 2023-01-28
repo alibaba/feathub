@@ -13,10 +13,15 @@
 #  limitations under the License.
 from typing import List, Dict, Any
 
-from feathub.common.config import ConfigDef, BaseConfig
+from feathub.common.config import ConfigDef
+from feathub.processors.processor_config import ProcessorConfig, PROCESSOR_PREFIX
 
-MASTER_CONFIG = "processor.spark.master"
+SPARK_PROCESSOR_PREFIX = PROCESSOR_PREFIX + "spark."
+
+MASTER_CONFIG = SPARK_PROCESSOR_PREFIX + "master"
 MASTER_DOC = "The Spark master URL to connect to."
+
+NATIVE_CONFIG_PREFIX = SPARK_PROCESSOR_PREFIX + "native."
 
 # TODO: Add a validator class that are used to validate the legality of
 #  configuration values, and validate that spark master is not None.
@@ -29,6 +34,7 @@ spark_processor_config_defs: List[ConfigDef] = [
 ]
 
 
-class SparkProcessorConfig(BaseConfig):
+class SparkProcessorConfig(ProcessorConfig):
     def __init__(self, props: Dict[str, Any]) -> None:
-        super().__init__(spark_processor_config_defs, props)
+        super().__init__(props)
+        self.update_config_values(spark_processor_config_defs)

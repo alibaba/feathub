@@ -24,21 +24,23 @@ class ProcessorType(Enum):
     SPARK = "spark"
 
 
-PROCESSOR_TYPE_CONFIG = "processor.type"
+PROCESSOR_PREFIX = "processor."
+
+PROCESSOR_TYPE_CONFIG = PROCESSOR_PREFIX + "type"
 PROCESSOR_TYPE_DOC = "The type of the processor to use."
+
+processor_config_defs = [
+    ConfigDef(
+        name=PROCESSOR_TYPE_CONFIG,
+        value_type=str,
+        description=PROCESSOR_TYPE_DOC,
+        default_value="local",
+        validator=in_list(*[t.value for t in ProcessorType]),
+    ),
+]
 
 
 class ProcessorConfig(BaseConfig):
-    def __init__(self, props: Dict[str, Any]):
-        super().__init__(
-            [
-                ConfigDef(
-                    name=PROCESSOR_TYPE_CONFIG,
-                    value_type=str,
-                    description=PROCESSOR_TYPE_DOC,
-                    default_value="local",
-                    validator=in_list(*[t.value for t in ProcessorType]),
-                )
-            ],
-            props,
-        )
+    def __init__(self, props: Dict[str, Any]) -> None:
+        super().__init__(props)
+        self.update_config_values(processor_config_defs)

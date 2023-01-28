@@ -23,21 +23,23 @@ class RegistryType(Enum):
     LOCAL = "local"
 
 
-REGISTRY_TYPE_CONFIG = "registry.type"
+REGISTRY_PREFIX = "registry."
+
+REGISTRY_TYPE_CONFIG = REGISTRY_PREFIX + "type"
 REGISTRY_TYPE_DOC = "The type of the registry to use."
+
+registry_config_defs = [
+    ConfigDef(
+        name=REGISTRY_TYPE_CONFIG,
+        value_type=str,
+        description=REGISTRY_TYPE_DOC,
+        default_value="local",
+        validator=in_list(*[t.value for t in RegistryType]),
+    )
+]
 
 
 class RegistryConfig(BaseConfig):
     def __init__(self, props: Dict[str, Any]) -> None:
-        super().__init__(
-            [
-                ConfigDef(
-                    name=REGISTRY_TYPE_CONFIG,
-                    value_type=str,
-                    description=REGISTRY_TYPE_DOC,
-                    default_value="local",
-                    validator=in_list(*[t.value for t in RegistryType]),
-                )
-            ],
-            props,
-        )
+        super().__init__(props)
+        self.update_config_values(registry_config_defs)

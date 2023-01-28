@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from datetime import datetime
+from datetime import datetime, timezone, tzinfo
 from typing import Any, Dict, Optional
 
 from feathub.common.exceptions import FeathubException, FeathubExpressionException
@@ -28,7 +28,9 @@ from feathub.dsl.ast import (
     CastOp,
     GroupNode,
 )
-from feathub.processors.local.ast_evaluator.functions import get_predefined_function
+from feathub.processors.local.ast_evaluator.local_func_evaluator import (
+    LocalFuncEvaluator,
+)
 
 _TRUE_STRINGS = ("t", "true", "y", "yes", "1")
 _FALSE_STRINGS = ("f", "false", "n", "no", "0")
@@ -38,6 +40,9 @@ class LocalAstEvaluator(AbstractAstEvaluator):
     """
     AST Evaluator for local processor.
     """
+
+    def __init__(self, tz: tzinfo = timezone.utc):
+        self.func_evaluator = LocalFuncEvaluator(tz)
 
     def eval_binary_op(self, ast: BinaryOp, variables: Optional[Dict]) -> Any:
         left_value = self.eval(ast.left_child, variables)
@@ -82,10 +87,7 @@ class LocalAstEvaluator(AbstractAstEvaluator):
 
     def eval_func_call_op(self, ast: FuncCallOp, variables: Optional[Dict]) -> Any:
         values = self.eval(ast.args, variables)
-        func = get_predefined_function(ast.func_name)
-        if func is not None:
-            return func(*values)
-        raise RuntimeError(f"Unsupported function: {ast.func_name}.")
+        return self.func_evaluator.eval(ast.func_name, values)
 
     def eval_variable_node(self, ast: VariableNode, variables: Optional[Dict]) -> Any:
         if ast.var_name not in variables:

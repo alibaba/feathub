@@ -11,10 +11,10 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
 from typing import TypeVar, Generic, Optional, Dict, Type, Any, List
 
 import pandas as pd
+import tzlocal
 
 from feathub.common.exceptions import FeathubConfigurationException
 from feathub.common.validators import Validator
@@ -89,6 +89,27 @@ class ConfigDef(Generic[T]):
         self.validator = validator
 
 
+COMMON_PREFIX = "common."
+
+TIMEZONE_CONFIG = COMMON_PREFIX + "timeZone"
+TIMEZONE_DOC = (
+    "The Region ID that represents a timezone to be used during "
+    "timestamp-related data type conversion operations. Region IDs "
+    "must have the form 'area/city', such as 'America/Los_Angeles'."
+)
+
+# TODO: Add document describing the configuration options available
+#  in Feathub.
+common_config_defs: List[ConfigDef] = [
+    ConfigDef(
+        name=TIMEZONE_CONFIG,
+        value_type=str,
+        description=TIMEZONE_DOC,
+        default_value=str(tzlocal.get_localzone()),
+    )
+]
+
+
 class BaseConfig:
     """
     A convenient base class for configurations to extend.
@@ -96,15 +117,13 @@ class BaseConfig:
     This class holds both the original configuration that was provided and the parsed.
     """
 
-    def __init__(
-        self, config_defs: List[ConfigDef], original_props: Dict[str, Any]
-    ) -> None:
+    def __init__(self, original_props: Dict[str, Any]) -> None:
         """
-        :param config_defs: A list of ConfigDef.
         :param original_props: The original properties.
         """
         self.original_props = original_props
-        self.config_values = self._get_config_values(config_defs, original_props)
+        self.config_values: Dict[str, Any] = {}
+        self.update_config_values(common_config_defs)
 
     def get(self, key: str) -> Any:
         """
@@ -148,14 +167,13 @@ class BaseConfig:
             other.config_values
         )
 
-    @staticmethod
-    def _get_config_values(
-        config_defs: List[ConfigDef],
-        original: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        config = {}
+    def update_config_values(self, config_defs: List[ConfigDef]) -> None:
         for config_def in config_defs:
-            value = original.get(config_def.name, config_def.default_value)
+            if config_def.name in self.config_values:
+                raise FeathubConfigurationException(
+                    f"Duplicate configuration of {config_def.name} is detected."
+                )
+            value = self.original_props.get(config_def.name, config_def.default_value)
             if value is not None and not isinstance(value, config_def.value_type):
                 raise FeathubConfigurationException(
                     f"Configuration type error: {config_def.name} expects type "
@@ -163,5 +181,4 @@ class BaseConfig:
                 )
             if config_def.validator is not None:
                 config_def.validator.ensure_valid(config_def.name, value)
-            config[config_def.name] = value
-        return config
+            self.config_values[config_def.name] = value

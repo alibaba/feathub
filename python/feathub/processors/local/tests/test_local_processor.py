@@ -11,25 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from feathub.feathub_client import FeathubClient
+from typing import Optional, Dict
 
-from feathub.feature_views.transforms.tests.test_expression_transform import (
-    ExpressionTransformITTest,
-)
+from feathub.feathub_client import FeathubClient
 from feathub.feature_tables.tests.test_file_system_source_sink import (
     FileSystemSourceSinkITTest,
 )
-from feathub.tests.test_get_features import GetFeaturesITTest
+from feathub.feature_views.transforms.tests.test_expression_transform import (
+    ExpressionTransformITTest,
+)
 from feathub.feature_views.transforms.tests.test_join_transform import (
     JoinTransformITTest,
 )
-from feathub.tests.test_online_features import OnlineFeaturesITTest
 from feathub.feature_views.transforms.tests.test_over_window_transform import (
     OverWindowTransformITTest,
 )
 from feathub.feature_views.transforms.tests.test_python_udf_transform import (
     PythonUDFTransformITTest,
 )
+from feathub.tests.test_get_features import GetFeaturesITTest
+from feathub.tests.test_online_features import OnlineFeaturesITTest
 
 
 class LocalProcessorITTest(
@@ -57,11 +58,12 @@ class LocalProcessorITTest(
     def tearDownClass(cls) -> None:
         cls.invoke_all_base_class_teardownclass()
 
-    def get_client(self) -> FeathubClient:
-        return self.get_local_client(
+    def get_client(self, extra_config: Optional[Dict] = None) -> FeathubClient:
+        return self.get_client_with_local_registry(
             {
                 "type": "local",
-            }
+            },
+            extra_config,
         )
 
     def test_file_source(self):

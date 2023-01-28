@@ -11,15 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Callable, Dict, Optional
+from typing import List, Any
 
-import feathub.common.utils as utils
-
-# TODO: add Flink's System (Built-in) Functions
-_FUNCTIONS: Dict[str, Callable] = {
-    "unix_timestamp": utils.to_unix_timestamp,
-}
+from feathub.common.utils import to_java_date_format
 
 
-def get_predefined_function(name: str) -> Optional[Callable]:
-    return _FUNCTIONS.get(name.lower(), None)
+def evaluate_function(func_name: str, args: List[Any]) -> str:
+    if func_name.upper() == "UNIX_TIMESTAMP" and len(args) > 1:
+        args[1] = to_java_date_format(args[1])
+    return f"{func_name}({', '.join(args)})"

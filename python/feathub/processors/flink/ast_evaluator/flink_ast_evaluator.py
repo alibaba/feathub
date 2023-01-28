@@ -26,6 +26,7 @@ from feathub.dsl.ast import (
     BinaryOp,
     GroupNode,
 )
+from feathub.processors.flink.ast_evaluator.functions import evaluate_function
 
 
 class FlinkAstEvaluator(AbstractAstEvaluator):
@@ -57,7 +58,7 @@ class FlinkAstEvaluator(AbstractAstEvaluator):
 
     def eval_func_call_op(self, ast: FuncCallOp, variables: Optional[Dict]) -> Any:
         args = [self.eval(v, variables) for v in ast.args.values]
-        return f"{ast.func_name}({', '.join(args)})"
+        return evaluate_function(ast.func_name, args)
 
     def eval_variable_node(self, ast: VariableNode, variables: Optional[Dict]) -> Any:
         return f"`{ast.var_name}`"

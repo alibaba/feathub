@@ -12,35 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pandas as pd
-import numpy as np
-from typing import Dict, Optional, Union, List, Any
 from datetime import datetime, timedelta
+from typing import Dict, Optional, Union, List, Any
+
+import numpy as np
+import pandas as pd
+from dateutil.tz import tz
 
 import feathub.common.utils as utils
+from feathub.common.config import TIMEZONE_CONFIG
 from feathub.common.exceptions import FeathubException
 from feathub.common.types import to_numpy_dtype
 from feathub.dsl.expr_parser import ExprParser
 from feathub.feature_tables.feature_table import FeatureTable
-from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
-from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstEvaluator
-from feathub.processors.processor import Processor
-from feathub.registries.registry import Registry
-from feathub.processors.local.local_job import LocalJob
 from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
-from feathub.processors.local.local_table import LocalTable
+from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
+from feathub.feature_views.feature import Feature
 from feathub.feature_views.feature_view import FeatureView
+from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
+from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.feature_views.transforms.over_window_transform import (
     OverWindowTransform,
 )
-from feathub.feature_views.transforms.agg_func import AggFunc
-from feathub.feature_views.transforms.join_transform import JoinTransform
-from feathub.table.table_descriptor import TableDescriptor
-from feathub.feature_tables.sources.file_system_source import FileSystemSource
-from feathub.feature_views.feature import Feature
+from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
+from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstEvaluator
+from feathub.processors.local.local_job import LocalJob
+from feathub.processors.local.local_processor_config import LocalProcessorConfig
+from feathub.processors.local.local_table import LocalTable
+from feathub.processors.processor import Processor
+from feathub.registries.registry import Registry
+from feathub.table.table_descriptor import TableDescriptor
 
 
 class LocalProcessor(Processor):
@@ -68,8 +72,12 @@ class LocalProcessor(Processor):
         super().__init__()
         self.props = props
         self.registry = registry
+
+        config = LocalProcessorConfig(props)
+        self.timezone = tz.gettz(config.get(TIMEZONE_CONFIG))
+
         self.parser = ExprParser()
-        self.ast_evaluator = LocalAstEvaluator()
+        self.ast_evaluator = LocalAstEvaluator(tz=self.timezone)
 
     def get_table(
         self,
@@ -99,10 +107,12 @@ class LocalProcessor(Processor):
                 df, features.timestamp_field, features.timestamp_format
             )
         if start_datetime is not None:
-            unix_start_datetime = utils.to_unix_timestamp(start_datetime)
+            unix_start_datetime = utils.to_unix_timestamp(
+                start_datetime, tz=self.timezone
+            )
             df = df[df[unix_time_column] >= unix_start_datetime]
         if end_datetime is not None:
-            unix_end_datetime = utils.to_unix_timestamp(end_datetime)
+            unix_end_datetime = utils.to_unix_timestamp(end_datetime, tz=self.timezone)
             df = df[df[unix_time_column] < unix_end_datetime]
         if unix_time_column is not None:
             df = df.drop(columns=[unix_time_column])
@@ -341,13 +351,15 @@ class LocalProcessor(Processor):
         # TODO: optimize the performance for the following code.
         for source_idx, source_row in source_df.iterrows():
             source_timestamp = utils.to_unix_timestamp(
-                source_row[source_timestamp_field], source_timestamp_format
+                source_row[source_timestamp_field],
+                source_timestamp_format,
+                self.timezone,
             )
             joined_value = None
             joined_timestamp = None
             for join_idx, join_row in join_df.iterrows():
                 join_timestamp = utils.to_unix_timestamp(
-                    join_row[join_timestamp_field], join_timestamp_format
+                    join_row[join_timestamp_field], join_timestamp_format, self.timezone
                 )
                 if join_timestamp > source_timestamp:
                     continue

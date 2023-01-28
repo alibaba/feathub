@@ -14,28 +14,31 @@
 
 from typing import List, Dict, Any, Optional
 
-from feathub.common.config import BaseConfig, ConfigDef
+from feathub.common.config import ConfigDef
 from feathub.common.exceptions import FeathubException
-from feathub.table.table_descriptor import TableDescriptor
 from feathub.registries.registry import Registry
+from feathub.registries.registry_config import RegistryConfig, REGISTRY_PREFIX
+from feathub.table.table_descriptor import TableDescriptor
 
-NAMESPACE_CONFIG = "registry.local.namespace"
+LOCAL_REGISTRY_PREFIX = REGISTRY_PREFIX + "local."
+
+NAMESPACE_CONFIG = LOCAL_REGISTRY_PREFIX + "namespace"
 NAMESPACE_DOC = "The namespace of the local registry."
 
+local_registry_config_defs = [
+    ConfigDef(
+        name=NAMESPACE_CONFIG,
+        value_type=str,
+        description=NAMESPACE_DOC,
+        default_value="default",
+    )
+]
 
-class LocalRegistryConfig(BaseConfig):
+
+class LocalRegistryConfig(RegistryConfig):
     def __init__(self, props: Dict[str, Any]) -> None:
-        super().__init__(
-            [
-                ConfigDef(
-                    name=NAMESPACE_CONFIG,
-                    value_type=str,
-                    description=NAMESPACE_DOC,
-                    default_value="default",
-                )
-            ],
-            props,
-        )
+        super().__init__(props)
+        self.update_config_values(local_registry_config_defs)
 
 
 class LocalRegistry(Registry):

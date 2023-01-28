@@ -19,6 +19,7 @@ import pandas as pd
 from pyspark.sql import DataFrame as NativeSparkDataFrame
 from pyspark.sql import SparkSession
 
+from feathub.common.config import TIMEZONE_CONFIG
 from feathub.common.exceptions import FeathubException
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_views.feature_view import FeatureView
@@ -33,6 +34,7 @@ from feathub.processors.spark.spark_job import SparkJob
 from feathub.processors.spark.spark_processor_config import (
     SparkProcessorConfig,
     MASTER_CONFIG,
+    NATIVE_CONFIG_PREFIX,
 )
 from feathub.processors.spark.spark_table import SparkTable
 from feathub.registries.registry import Registry
@@ -47,6 +49,10 @@ class SparkProcessor(Processor):
     SparkProcessor constructor.
 
     master: The Spark master URL to connect to.
+    native.*: Any key with the "native" prefix will be forwarded to the Spark Session
+              config after the "native" prefix is removed. For example, if the processor
+              config has an entry "native.spark.default.parallelism": 2, then the Spark
+              Session config will have an entry "spark.default.parallelism": 2.
     """
 
     def __init__(self, props: Dict, registry: Registry):
@@ -61,9 +67,16 @@ class SparkProcessor(Processor):
 
         config = SparkProcessorConfig(props)
 
-        spark_session = SparkSession.builder.master(
-            config.get(MASTER_CONFIG)
-        ).getOrCreate()
+        spark_session_builder = SparkSession.builder
+        spark_session_builder = spark_session_builder.master(config.get(MASTER_CONFIG))
+        spark_session_builder = spark_session_builder.config(
+            "spark.sql.session.timeZone", config.get(TIMEZONE_CONFIG)
+        )
+        for k, v in config.original_props_with_prefix(
+            NATIVE_CONFIG_PREFIX, True
+        ).items():
+            spark_session_builder = spark_session_builder.config(k, v)
+        spark_session = spark_session_builder.getOrCreate()
 
         self._dataframe_builder = SparkDataFrameBuilder(spark_session, self._registry)
 

@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pandas as pd
-from datetime import datetime, timezone
+from datetime import datetime, timezone, tzinfo
 from string import Template
 from typing import Union, Any, Optional, cast
+
+import pandas as pd
 
 from feathub.common import types
 from feathub.common.exceptions import FeathubException
@@ -25,7 +26,7 @@ from feathub.common.protobuf import value_pb2
 def to_java_date_format(python_format: str) -> str:
     """
     :param python_format: A datetime format string accepted by datetime::strptime().
-    :return: A datetime format string accepted by  java.text.SimpleDateFormat.
+    :return: A datetime format string accepted by java.text.SimpleDateFormat.
     """
 
     # TODO: Currently cannot handle case such as "%Y-%m-%dT%H:%M:%S", which should be
@@ -44,26 +45,29 @@ def to_java_date_format(python_format: str) -> str:
 
 
 def to_unix_timestamp(
-    time: Union[int, datetime, str], format: str = "%Y-%m-%d %H:%M:%S"
+    time: Union[int, datetime, str],
+    format: str = "%Y-%m-%d %H:%M:%S",
+    tz: tzinfo = timezone.utc,
 ) -> float:
     """
     Returns POSIX timestamp corresponding to date_string, parsed according to format.
-    Uses UTC timezone if it is not explicitly specified in the given date.
+    Uses the timezone specified in tz if it is not explicitly specified in the given
+    date.
     """
     if isinstance(time, str):
         time = datetime.strptime(time, format)
     elif isinstance(time, int):
         if format == "epoch":
-            time = datetime.fromtimestamp(time, tz=timezone.utc)
+            time = datetime.fromtimestamp(time, tz=tz)
         elif format == "epoch_millis":
-            time = datetime.fromtimestamp(time / 1000, tz=timezone.utc)
+            time = datetime.fromtimestamp(time / 1000, tz=tz)
         else:
             raise FeathubException(
                 f"Unknown type {type(time)} of timestamp with timestamp "
                 f"format {format}."
             )
     if time.tzinfo is None:
-        time = time.replace(tzinfo=timezone.utc)
+        time = time.replace(tzinfo=tz)
     return time.timestamp()
 
 
