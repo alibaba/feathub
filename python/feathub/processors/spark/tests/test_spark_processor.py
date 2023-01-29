@@ -20,16 +20,19 @@ from feathub.feathub_client import FeathubClient
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.feature_tables.tests.test_black_hole_sink import BlackHoleSinkITTest
 from feathub.feature_tables.tests.test_datagen_source import DataGenSourceITTest
-from feathub.feature_views.transforms.tests.test_expression_transform import (
-    ExpressionTransformITTest,
-)
 from feathub.feature_tables.tests.test_file_system_source_sink import (
     FileSystemSourceSinkITTest,
+)
+from feathub.feature_tables.tests.test_print_sink import PrintSinkITTest
+from feathub.feature_views.transforms.tests.test_expression_transform import (
+    ExpressionTransformITTest,
 )
 from feathub.feature_views.transforms.tests.test_over_window_transform import (
     OverWindowTransformITTest,
 )
-from feathub.feature_tables.tests.test_print_sink import PrintSinkITTest
+from feathub.feature_views.transforms.tests.test_python_udf_transform import (
+    PythonUDFTransformITTest,
+)
 
 
 class SparkProcessorITTest(
@@ -39,6 +42,7 @@ class SparkProcessorITTest(
     FileSystemSourceSinkITTest,
     PrintSinkITTest,
     OverWindowTransformITTest,
+    PythonUDFTransformITTest,
 ):
     __test__ = True
 
@@ -88,9 +92,6 @@ class SparkProcessorITTest(
         self.assertTrue(self.input_data.equals(df))
 
     def test_over_window_on_join_field(self):
-        pass
-
-    def test_python_udf_transform_on_over_window_transform(self):
         pass
 
     def test_over_window_transform_value_counts(self):
