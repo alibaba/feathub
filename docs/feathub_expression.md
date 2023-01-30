@@ -61,28 +61,36 @@ Comparison functions take numeric values as inputs and outputs a boolean value.
 
 Feathub expression supports the following data types: 
 
-BYTES, STRINGS, INTEGER, BIGINT, FLOAT, DOUBLE, BOOLEAN, TIMESTAMP
+BYTES, STRING, INTEGER, BIGINT, FLOAT, DOUBLE, BOOLEAN, TIMESTAMP
 
 The matrix below describes the supported cast between any two data types, where "Y" 
 means supported, "N" means unsupported, and "!" means fallible. If the cast is fallible 
 and the provided input is not valid, CAST will fail the job and TRY_CAST will return 
 NULL. 
 
-| Input\Target | BYTES | STRINGS | INTEGER | BIGINT | FLOAT | DOUBLE | BOOLEAN | TIMESTAMP | 
-|--------------|-------|---------|---------|--------|-------|--------|---------|-----------|
-| BYTES        | Y     | Y       | N       | N      | N     | N      | N       | N         |
-| STRINGS      | N     | Y       | !       | !      | !     | !      | !       | !         |
-| INTEGER      | N     | Y       | Y       | Y      | Y     | Y      | Y       | N         |
-| BIGINT       | N     | Y       | Y       | Y      | Y     | Y      | Y       | N         |
-| FLOAT        | N     | Y       | Y       | Y      | Y     | Y      | Y       | N         |
-| DOUBLE       | N     | Y       | Y       | Y      | Y     | Y      | Y       | N         |
-| BOOLEAN      | N     | Y       | Y       | Y      | Y     | Y      | Y       | N         |
-| TIMESTAMP    | N     | Y       | N       | N      | N     | N      | N       | Y         |
+| Input\Target | BYTES | STRING | INTEGER | BIGINT | FLOAT | DOUBLE | BOOLEAN | TIMESTAMP | 
+|--------------|-------|--------|---------|--------|-------|--------|---------|-----------|
+| BYTES        | Y     | Y      | N       | N      | N     | N      | N       | N         |
+| STRING       | N     | Y      | !       | !      | !     | !      | !       | !         |
+| INTEGER      | N     | Y      | Y       | Y      | Y     | Y      | Y       | N         |
+| BIGINT       | N     | Y      | Y       | Y      | Y     | Y      | Y       | N         |
+| FLOAT        | N     | Y      | Y       | Y      | Y     | Y      | Y       | N         |
+| DOUBLE       | N     | Y      | Y       | Y      | Y     | Y      | Y       | N         |
+| BOOLEAN      | N     | Y      | Y       | Y      | Y     | Y      | Y       | N         |
+| TIMESTAMP    | N     | Y      | N       | N      | N     | N      | N       | Y         |
 
 ## Temporal Functions
 
-| Function                | Description                                                                                                                         |
-|-------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| UNIX_TIMESTAMP(string1) | Converts dateime string string1 in the format yyyy-MM-dd HH:mm:ss to Unix timestamp (in seconds). Returns NULL if in case of error. |
+### UNIX_TIMESTAMP
 
+`UNIX_TIMESTAMP(timeExp[, fmt])` - Returns the UNIX timestamp of the given time
+or NULL in case of error.
 
+Arguments:
+
+- `timeExp` - A string which will be returned as a UNIX timestamp.
+- `fmt` - Date/time format pattern to follow. Default value is "%Y-%m-%d
+  %H:%M:%S". The format codes required by the C standard (1989 version) are
+  regarded as valid format patterns. See [Python's strftime() and strptime()
+  Behavior](https://docs.python.org/3.7/library/datetime.html#strftime-strptime-behavior)
+  for a brief list of and introduction to these format patterns.

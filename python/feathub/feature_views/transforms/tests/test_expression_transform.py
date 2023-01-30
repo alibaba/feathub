@@ -13,9 +13,14 @@
 #  limitations under the License.
 from abc import ABC
 
-from feathub.common.types import Float64
+import pandas as pd
+from dateutil.tz import tz
+
+from feathub.common.types import Float64, Int64, String
+from feathub.common.utils import to_unix_timestamp
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
+from feathub.table.schema import Schema
 from feathub.tests.feathub_it_test_base import FeathubITTestBase
 
 
@@ -64,4 +69,106 @@ class ExpressionTransformITTest(ABC, FeathubITTestBase):
 
         self.assertIsNone(source.keys)
         self.assertIsNone(features.keys)
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_unix_timestamp(self):
+        client = self.get_client(
+            {
+                "common": {
+                    "timeZone": "Asia/Shanghai",
+                }
+            }
+        )
+
+        source = self.create_file_source(self.input_data.copy())
+
+        unix_time = Feature(
+            name="unix_time",
+            dtype=Int64,
+            transform="UNIX_TIMESTAMP(time)",
+        )
+
+        features = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                unix_time,
+            ],
+            keep_source_fields=True,
+        )
+
+        result_df = (
+            client.get_features(features)
+            .to_pandas()
+            .sort_values(by=["time"])
+            .reset_index(drop=True)
+        )
+
+        expected_result_df = self.input_data.copy()
+        expected_result_df["unix_time"] = expected_result_df.apply(
+            lambda row: int(
+                to_unix_timestamp(
+                    row["time"],
+                    tz=tz.gettz("Asia/Shanghai"),
+                )
+            ),
+            axis=1,
+        )
+        expected_result_df = expected_result_df.sort_values(by=["time"]).reset_index(
+            drop=True
+        )
+
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_unix_timestamp_with_timezone(self):
+        input_data = pd.DataFrame(
+            [
+                ["Alex", 100.0, "2022-01-01 08:00:00.001 +0800"],
+                ["Emma", 400.0, "2022-01-01 00:00:00.003 +0000"],
+                ["Alex", 200.0, "2022-01-01 08:00:00.005 +0800"],
+                ["Emma", 300.0, "2022-01-01 00:00:00.007 +0000"],
+                ["Jack", 500.0, "2022-01-01 08:00:00.009 +0800"],
+                ["Alex", 450.0, "2022-01-01 00:00:00.011 +0000"],
+            ],
+            columns=["name", "avg_cost", "time"],
+        )
+
+        source = self.create_file_source(
+            input_data.copy(),
+            schema=Schema(["name", "avg_cost", "time"], [String, Float64, String]),
+        )
+
+        unix_time = Feature(
+            name="unix_time",
+            dtype=Int64,
+            transform="UNIX_TIMESTAMP(time, '%Y-%m-%d %H:%M:%S.%f %z')",
+        )
+
+        features = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                unix_time,
+            ],
+            keep_source_fields=True,
+        )
+
+        result_df = (
+            self.client.get_features(features)
+            .to_pandas()
+            .sort_values(by=["time"])
+            .reset_index(drop=True)
+        )
+
+        expected_result_df = input_data.copy()
+        expected_result_df["unix_time"] = expected_result_df.apply(
+            lambda row: int(
+                to_unix_timestamp(row["time"], format="%Y-%m-%d %H:%M:%S.%f %z")
+            ),
+            axis=1,
+        )
+        expected_result_df = expected_result_df.sort_values(by=["time"]).reset_index(
+            drop=True
+        )
+
         self.assertTrue(expected_result_df.equals(result_df))

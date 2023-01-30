@@ -29,6 +29,21 @@ from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.table.schema import Schema
 
 
+def _merge_nested_dict(a, b) -> None:
+    """
+    Merges dict b into dict a. a and b might be nested dict.
+    """
+    for key in b:
+        if key not in a:
+            a[key] = b[key]
+        elif isinstance(a[key], dict) and isinstance(b[key], dict):
+            _merge_nested_dict(a[key], b[key])
+        elif a[key] != b[key]:
+            raise FeathubException(
+                f"Mismatch value {a[key]} and {b[key]} found for key {key}"
+            )
+
+
 class FeathubITTestBase(unittest.TestCase):
     """
     Abstract base class for all Feathub integration tests. A child class of
@@ -56,33 +71,38 @@ class FeathubITTestBase(unittest.TestCase):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @abstractmethod
-    def get_client(self) -> FeathubClient:
+    def get_client(self, extra_config: Optional[Dict] = None) -> FeathubClient:
         """
         Returns a FeathubClient instance for test cases.
         """
         pass
 
     @staticmethod
-    def get_local_client(processor_config: Dict) -> FeathubClient:
-        return FeathubClient(
-            props={
-                "processor": processor_config,
-                "online_store": {
-                    "types": ["memory"],
-                    "memory": {},
+    def get_client_with_local_registry(
+        processor_config: Dict, extra_config: Optional[Dict] = None
+    ) -> FeathubClient:
+        props = {
+            "processor": processor_config,
+            "online_store": {
+                "types": ["memory"],
+                "memory": {},
+            },
+            "registry": {
+                "type": "local",
+                "local": {
+                    "namespace": "default",
                 },
-                "registry": {
-                    "type": "local",
-                    "local": {
-                        "namespace": "default",
-                    },
-                },
-                "feature_service": {
-                    "type": "local",
-                    "local": {},
-                },
-            }
-        )
+            },
+            "feature_service": {
+                "type": "local",
+                "local": {},
+            },
+        }
+
+        if extra_config is not None:
+            _merge_nested_dict(props, extra_config)
+
+        return FeathubClient(props)
 
     def create_file_source(
         self,

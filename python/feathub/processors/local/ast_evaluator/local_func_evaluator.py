@@ -11,17 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from datetime import tzinfo, timezone
+from typing import Any
 
-setuptools>=18.0
-wheel
-black==22.3.0
-autopep8>=1.6.0
-pytest==4.4.1
-flake8==4.0.1
-mypy==0.971
-testcontainers[kafka,redis]~=3.7.0
-protobuf~=3.17.3
-redis==4.3.0
-types-python-dateutil~=2.8
-types-redis~=4.3.21
-types-tzlocal~=4.2
+from feathub.common.utils import to_unix_timestamp
+
+
+class LocalFuncEvaluator:
+    def __init__(self, tz: tzinfo = timezone.utc):
+        self.tz = tz
+
+    def eval(self, func_name: str, values: Any) -> Any:
+        if func_name.upper() == "UNIX_TIMESTAMP":
+            if len(values) == 1:
+                return to_unix_timestamp(values[0], tz=self.tz)
+            else:
+                return to_unix_timestamp(values[0], values[1], self.tz)
+        raise RuntimeError(f"Unsupported function: {func_name}.")

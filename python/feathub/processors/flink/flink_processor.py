@@ -22,6 +22,7 @@ from pyflink.table import (
     StreamTableEnvironment,
 )
 
+from feathub.common.config import TIMEZONE_CONFIG
 from feathub.common.exceptions import (
     FeathubException,
 )
@@ -37,12 +38,12 @@ from feathub.processors.flink.flink_processor_config import (
     NATIVE_CONFIG_PREFIX,
 )
 from feathub.processors.flink.flink_table import FlinkTable
-from feathub.processors.flink.table_builder.flink_table_builder import (
-    FlinkTableBuilder,
-)
 from feathub.processors.flink.job_submitter.flink_job_submitter import FlinkJobSubmitter
 from feathub.processors.flink.job_submitter.flink_session_cluster_job_submitter import (
     FlinkSessionClusterJobSubmitter,
+)
+from feathub.processors.flink.table_builder.flink_table_builder import (
+    FlinkTableBuilder,
 )
 from feathub.processors.processor import Processor
 from feathub.processors.processor_job import ProcessorJob
@@ -211,6 +212,11 @@ class FlinkProcessor(Processor):
 
         env = StreamExecutionEnvironment.get_execution_environment()
         table_env = StreamTableEnvironment.create(env)
+
+        table_env.get_config().set(
+            "table.local-time-zone", self.config.get(TIMEZONE_CONFIG)
+        )
+
         # TODO: report error when processor configs conflict with native.* configs.
         for k, v in self.config.original_props_with_prefix(
             NATIVE_CONFIG_PREFIX, True

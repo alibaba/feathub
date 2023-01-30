@@ -11,13 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import List, Any
 
-import unittest
-
-from feathub.processors.local.ast_evaluator.functions import get_predefined_function
+from feathub.common.utils import to_java_date_format
 
 
-class FunctionsTest(unittest.TestCase):
-    def test_unix_timestamp(self):
-        func = get_predefined_function("unix_timestamp")
-        self.assertEqual(1.0, func("1970-01-01 00:00:01"))
+def evaluate_function(func_name: str, args: List[Any]) -> str:
+    if func_name.upper() == "UNIX_TIMESTAMP":
+        if len(args) > 1:
+            args[1] = to_java_date_format(args[1])
+        return f"TO_UNIX_TIMESTAMP({', '.join(args)})"
+    raise RuntimeError(f"Unsupported function: {func_name}.")

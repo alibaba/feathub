@@ -23,21 +23,24 @@ class FeatureServiceType(Enum):
     LOCAL = "local"
 
 
-FEATURE_SERVICE_TYPE_CONFIG = "feature_service.type"
+FEATURE_SERVICE_PREFIX = "feature_service."
+
+FEATURE_SERVICE_TYPE_CONFIG = FEATURE_SERVICE_PREFIX + "type"
 FEATURE_SERVICE_TYPE_DOC = "The type of the feature service to use."
 
 
+feature_service_config_defs = [
+    ConfigDef(
+        name=FEATURE_SERVICE_TYPE_CONFIG,
+        value_type=str,
+        description=FEATURE_SERVICE_TYPE_DOC,
+        default_value="local",
+        validator=in_list(*[t.value for t in FeatureServiceType]),
+    )
+]
+
+
 class FeatureServiceConfig(BaseConfig):
-    def __init__(self, props: Dict[str, Any]):
-        super().__init__(
-            [
-                ConfigDef(
-                    name=FEATURE_SERVICE_TYPE_CONFIG,
-                    value_type=str,
-                    description=FEATURE_SERVICE_TYPE_DOC,
-                    default_value="local",
-                    validator=in_list(*[t.value for t in FeatureServiceType]),
-                )
-            ],
-            props,
-        )
+    def __init__(self, props: Dict[str, Any]) -> None:
+        super().__init__(props)
+        self.update_config_values(feature_service_config_defs)

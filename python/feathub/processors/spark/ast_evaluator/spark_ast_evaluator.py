@@ -26,6 +26,7 @@ from feathub.dsl.ast import (
     BinaryOp,
     GroupNode,
 )
+from feathub.processors.spark.ast_evaluator.functions import evaluate_function
 
 
 class SparkAstEvaluator(AbstractAstEvaluator):
@@ -56,9 +57,8 @@ class SparkAstEvaluator(AbstractAstEvaluator):
         return str(ast.value)
 
     def eval_func_call_op(self, ast: FuncCallOp, variables: Optional[Dict]) -> Any:
-        # TODO: Add support for Feathub built-in functions.
         args = [self.eval(v, variables) for v in ast.args.values]
-        return f"{ast.func_name}({', '.join(args)})"
+        return evaluate_function(ast.func_name, args)
 
     def eval_variable_node(self, ast: VariableNode, variables: Optional[Dict]) -> Any:
         return f"`{ast.var_name}`"

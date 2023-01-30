@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import unittest
-from typing import List
+from typing import List, Dict, Any
 
 from feathub.common.config import (
     ConfigDef,
@@ -21,6 +21,12 @@ from feathub.common.config import (
 )
 from feathub.common.exceptions import FeathubConfigurationException
 from feathub.common.validators import in_list, is_subset
+
+
+class MockConfig(BaseConfig):
+    def __init__(self, config_defs: List[ConfigDef], props: Dict[str, Any]):
+        super().__init__(props)
+        self.update_config_values(config_defs)
 
 
 class ConfigTest(unittest.TestCase):
@@ -75,10 +81,10 @@ class ConfigTest(unittest.TestCase):
                 validator=None,
             )
         ]
-        config = BaseConfig(config_options, {"a.b": 2})
+        config = MockConfig(config_options, {"a.b": 2})
         self.assertEqual(2, config.get("a.b"))
 
-        config = BaseConfig(config_options, {})
+        config = MockConfig(config_options, {})
         self.assertEqual(1, config.get("a.b"))
 
         with self.assertRaises(FeathubConfigurationException) as cm:
@@ -92,7 +98,7 @@ class ConfigTest(unittest.TestCase):
         ]
 
         with self.assertRaises(FeathubConfigurationException) as cm:
-            BaseConfig(config_options, {"a.b": "string"})
+            MockConfig(config_options, {"a.b": "string"})
 
         self.assertIn("Configuration type error:", cm.exception.args[0])
 
@@ -114,20 +120,20 @@ class ConfigTest(unittest.TestCase):
             ),
         ]
 
-        config = BaseConfig(config_options, {"a.b": "b"})
+        config = MockConfig(config_options, {"a.b": "b"})
         self.assertEqual("b", config.get("a.b"))
         self.assertEqual(["a", "b"], config.get("a.c"))
 
         with self.assertRaises(FeathubConfigurationException) as cm:
-            BaseConfig(config_options, {"a.b": "c"})
+            MockConfig(config_options, {"a.b": "c"})
         self.assertIn("Invalid value c of a.b", cm.exception.args[0])
 
         with self.assertRaises(FeathubConfigurationException) as cm:
-            BaseConfig(config_options, {"a.c": ["a", "b", "c"]})
+            MockConfig(config_options, {"a.c": ["a", "b", "c"]})
         self.assertIn("Invalid value c of a.c", cm.exception.args[0])
 
     def test_originals_with_prefix(self):
-        config = BaseConfig([], {"a.b": "b", "a.b.a": "a", "a.b.b": "b", "a.c.c": "c"})
+        config = MockConfig([], {"a.b": "b", "a.b.a": "a", "a.b.b": "b", "a.c.c": "c"})
         self.assertEqual(
             {"a": "a", "b": "b"}, config.original_props_with_prefix("a.b.", True)
         )

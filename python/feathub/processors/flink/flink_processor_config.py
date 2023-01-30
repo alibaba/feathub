@@ -14,39 +14,42 @@
 
 from typing import Dict, Any, List
 
-from feathub.common.config import ConfigDef, BaseConfig
+from feathub.common.config import ConfigDef
 from feathub.common.validators import in_list
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
+from feathub.processors.processor_config import ProcessorConfig, PROCESSOR_PREFIX
 
-DEPLOYMENT_MODE_CONFIG = "processor.flink.deployment_mode"
+FLINK_PROCESSOR_PREFIX = PROCESSOR_PREFIX + "flink."
+
+DEPLOYMENT_MODE_CONFIG = FLINK_PROCESSOR_PREFIX + "deployment_mode"
 DEPLOYMENT_MODE_DOC = "The flink job deployment mode."
 
-REST_ADDRESS_CONFIG = "processor.flink.rest.address"
+REST_ADDRESS_CONFIG = FLINK_PROCESSOR_PREFIX + "rest.address"
 REST_ADDRESS_DOC = "The ip or hostname where the JobManager runs."
 
-REST_PORT_CONFIG = "processor.flink.rest.port"
+REST_PORT_CONFIG = FLINK_PROCESSOR_PREFIX + "rest.port"
 REST_PORT_DOC = "The port where the JobManager runs."
 
-FLINK_HOME_CONFIG = "processor.flink.flink_home"
+FLINK_HOME_CONFIG = FLINK_PROCESSOR_PREFIX + "flink_home"
 FLINK_HOME_DOC = (
     "The path to the Flink distribution. If not specified, it uses the "
     "Flink's distribution in PyFlink."
 )
 
-KUBERNETES_IMAGE_CONFIG = "processor.flink.kubernetes.image"
+KUBERNETES_IMAGE_CONFIG = FLINK_PROCESSOR_PREFIX + "kubernetes.image"
 KUBERNETES_IMAGE_DOC = "The docker image to start the JobManager and TaskManager pod."
 
-KUBERNETES_NAMESPACE_CONFIG = "processor.flink.kubernetes.namespace"
+KUBERNETES_NAMESPACE_CONFIG = FLINK_PROCESSOR_PREFIX + "kubernetes.namespace"
 KUBERNETES_NAMESPACE_DOC = (
     "The namespace of the Kubernetes cluster to run the Flink job."
 )
 
-KUBERNETES_CONFIG_FILE_CONFIG = "processor.flink.kubernetes.config.file"
+KUBERNETES_CONFIG_FILE_CONFIG = FLINK_PROCESSOR_PREFIX + "kubernetes.config.file"
 KUBERNETES_CONFIG_FILE_DOC = (
     "The kubernetes config file is used to connector to the Kubernetes " "cluster."
 )
 
-NATIVE_CONFIG_PREFIX = "processor.flink.native."
+NATIVE_CONFIG_PREFIX = FLINK_PROCESSOR_PREFIX + "native."
 
 flink_processor_config_defs: List[ConfigDef] = [
     ConfigDef(
@@ -95,6 +98,7 @@ flink_processor_config_defs: List[ConfigDef] = [
 ]
 
 
-class FlinkProcessorConfig(BaseConfig):
+class FlinkProcessorConfig(ProcessorConfig):
     def __init__(self, props: Dict[str, Any]) -> None:
-        super().__init__(flink_processor_config_defs, props)
+        super().__init__(props)
+        self.update_config_values(flink_processor_config_defs)

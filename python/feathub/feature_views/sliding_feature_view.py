@@ -13,10 +13,8 @@
 #  limitations under the License.
 from typing import Dict, Union, Sequence, Set, Any, Optional
 
-from feathub.common.config import BaseConfig, ConfigDef
-
 from feathub.common import types
-
+from feathub.common.config import BaseConfig, ConfigDef
 from feathub.common.exceptions import FeathubException, FeathubConfigurationException
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.feature_view import FeatureView
@@ -28,8 +26,10 @@ from feathub.feature_views.transforms.sliding_window_transform import (
 from feathub.registries.registry import Registry
 from feathub.table.table_descriptor import TableDescriptor
 
+SLIDING_FEATURE_VIEW_PREFIX = "sdk.sliding_feature_view."
+
 ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG = (
-    "sdk.sliding_feature_view.enable_empty_window_output"
+    SLIDING_FEATURE_VIEW_PREFIX + "enable_empty_window_output"
 )
 ENABLE_EMPTY_WINDOW_OUTPUT_DOC = (
     "If it is True, when the sliding window becomes emtpy, it outputs zero value for "
@@ -38,33 +38,33 @@ ENABLE_EMPTY_WINDOW_OUTPUT_DOC = (
     "sliding window becomes empty."
 )
 
-SKIP_SAME_WINDOW_OUTPUT_CONFIG = "sdk.sliding_feature_view.skip_same_window_output"
+SKIP_SAME_WINDOW_OUTPUT_CONFIG = SLIDING_FEATURE_VIEW_PREFIX + "skip_same_window_output"
 SKIP_SAME_WINDOW_OUTPUT_DOC = (
     "If it is True, the sliding feature view only outputs when the result of the "
     "sliding window changes. If it is False, the sliding feature view outputs at every "
     "step size even if the result of the sliding window doesn't change."
 )
 
+sliding_feature_view_config_defs = [
+    ConfigDef(
+        name=ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG,
+        value_type=bool,
+        description=ENABLE_EMPTY_WINDOW_OUTPUT_DOC,
+        default_value=True,
+    ),
+    ConfigDef(
+        name=SKIP_SAME_WINDOW_OUTPUT_CONFIG,
+        value_type=bool,
+        description=SKIP_SAME_WINDOW_OUTPUT_DOC,
+        default_value=True,
+    ),
+]
+
 
 class SlidingFeatureViewConfig(BaseConfig):
-    def __init__(self, original_props: Dict[str, Any]):
-        super().__init__(
-            [
-                ConfigDef(
-                    name=ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG,
-                    value_type=bool,
-                    description=ENABLE_EMPTY_WINDOW_OUTPUT_DOC,
-                    default_value=True,
-                ),
-                ConfigDef(
-                    name=SKIP_SAME_WINDOW_OUTPUT_CONFIG,
-                    value_type=bool,
-                    description=SKIP_SAME_WINDOW_OUTPUT_DOC,
-                    default_value=True,
-                ),
-            ],
-            original_props,
-        )
+    def __init__(self, original_props: Dict[str, Any]) -> None:
+        super().__init__(original_props)
+        self.update_config_values(sliding_feature_view_config_defs)
 
 
 class SlidingFeatureView(FeatureView):

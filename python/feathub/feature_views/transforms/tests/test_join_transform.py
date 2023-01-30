@@ -219,3 +219,121 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
 
         self.assertListEqual(["name"], built_feature_view_2.keys)
         self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_join_transform_with_zoned_timestamp(self):
+        client = self.get_client(
+            {
+                "common": {
+                    "timeZone": "Asia/Shanghai",
+                }
+            }
+        )
+
+        df_1 = pd.DataFrame(
+            [
+                ["Alex", 100, 100, "2022-01-01 08:00:00.000"],
+                ["Emma", 400, 250, "2022-01-01 08:00:00.002"],
+                ["Alex", 300, 200, "2022-01-01 08:00:00.004"],
+                ["Emma", 200, 250, "2022-01-01 08:00:00.006"],
+                ["Jack", 500, 500, "2022-01-01 08:00:00.008"],
+                ["Alex", 600, 800, "2022-01-01 08:00:00.010"],
+            ],
+            columns=["name", "cost", "distance", "time"],
+        )
+        source = self.create_file_source(
+            df_1,
+            schema=Schema(
+                ["name", "cost", "distance", "time"], [String, Int64, Int64, String]
+            ),
+            timestamp_format="%Y-%m-%d %H:%M:%S.%f",
+        )
+        feature_view_1 = DerivedFeatureView(
+            name="feature_view_1",
+            source=source,
+            features=[
+                Feature(
+                    name="cost",
+                    dtype=Int64,
+                    transform="cost",
+                ),
+                Feature(
+                    name="distance",
+                    dtype=Int64,
+                    transform="distance",
+                ),
+            ],
+            keep_source_fields=True,
+        )
+
+        df_2 = pd.DataFrame(
+            [
+                ["Alex", 100.0, "2022-01-01 08:00:00.001 +0800"],
+                ["Emma", 400.0, "2022-01-01 00:00:00.003 +0000"],
+                ["Alex", 200.0, "2022-01-01 08:00:00.005 +0800"],
+                ["Emma", 300.0, "2022-01-01 00:00:00.007 +0000"],
+                ["Jack", 500.0, "2022-01-01 08:00:00.009 +0800"],
+                ["Alex", 450.0, "2022-01-01 00:00:00.011 +0000"],
+            ],
+            columns=["name", "avg_cost", "time"],
+        )
+        source_2 = self.create_file_source(
+            df_2,
+            schema=Schema(["name", "avg_cost", "time"], [String, Float64, String]),
+            timestamp_format="%Y-%m-%d %H:%M:%S.%f %z",
+            keys=["name"],
+        )
+
+        feature_view_2 = DerivedFeatureView(
+            name="feature_view_2",
+            source=feature_view_1,
+            features=[
+                Feature(
+                    name="cost",
+                    dtype=Int64,
+                    transform="cost",
+                ),
+                "distance",
+                f"{source_2.name}.avg_cost",
+            ],
+            keep_source_fields=False,
+        )
+
+        feature_view_3 = DerivedFeatureView(
+            name="feature_view_3",
+            source=feature_view_2,
+            features=[
+                Feature(
+                    name="derived_cost",
+                    dtype=Float64,
+                    transform="avg_cost * distance",
+                ),
+            ],
+            keep_source_fields=True,
+        )
+
+        [_, built_feature_view_2, built_feature_view_3] = client.build_features(
+            [source_2, feature_view_2, feature_view_3]
+        )
+
+        expected_result_df = df_1
+        expected_result_df["avg_cost"] = pd.Series(
+            [None, None, 100.0, 400.0, None, 200.0]
+        )
+        expected_result_df["derived_cost"] = pd.Series(
+            [None, None, 20000.0, 100000.0, None, 160000.0]
+        )
+        expected_result_df = expected_result_df.sort_values(
+            by=["name", "time"]
+        ).reset_index(drop=True)
+
+        result_df = (
+            client.get_features(features=built_feature_view_3)
+            .to_pandas()
+            .sort_values(by=["name", "time"])
+            .reset_index(drop=True)
+        )
+
+        self.assertIsNone(feature_view_1.keys)
+        self.assertListEqual(["name"], built_feature_view_2.keys)
+        self.assertListEqual(["name"], built_feature_view_3.keys)
+        self.assertTrue(expected_result_df.equals(result_df))
