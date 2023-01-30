@@ -15,6 +15,8 @@ from typing import Dict, Tuple, List
 
 from pyspark.sql import DataFrame as NativeSparkDataFrame, functions
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import udf, struct
+
 from feathub.common.exceptions import (
     FeathubException,
     FeathubTransformationException,
@@ -26,6 +28,7 @@ from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
+from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
 from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from feathub.processors.spark.dataframe_builder.aggregation_utils import (
     AggregationFieldDescriptor,
@@ -150,6 +153,15 @@ class SparkDataFrameBuilder:
                         feature.name,
                         feature.dtype,
                     )
+            elif isinstance(feature.transform, PythonUdfTransform):
+                if len(window_agg_map) > 0:
+                    per_row_transform_features_following_first_over_window.append(
+                        feature
+                    )
+                else:
+                    tmp_dataframe = self._evaluate_python_udf_transform(
+                        tmp_dataframe, feature.transform, feature.name, feature.dtype
+                    )
             elif isinstance(feature.transform, OverWindowTransform):
                 transform = feature.transform
 
@@ -185,6 +197,10 @@ class SparkDataFrameBuilder:
                     feature.name,
                     feature.dtype,
                 )
+            elif isinstance(feature.transform, PythonUdfTransform):
+                tmp_dataframe = self._evaluate_python_udf_transform(
+                    tmp_dataframe, feature.transform, feature.name, feature.dtype
+                )
             else:
                 raise RuntimeError(
                     f"Unsupported transformation type "
@@ -195,6 +211,19 @@ class SparkDataFrameBuilder:
             source_fields=source_dataframe.schema.fieldNames()
         )
         return tmp_dataframe.select(output_fields)
+
+    @staticmethod
+    def _evaluate_python_udf_transform(
+        source_dataframe: NativeSparkDataFrame,
+        transform: PythonUdfTransform,
+        result_field_name: str,
+        result_type: DType,
+    ) -> NativeSparkDataFrame:
+        python_udf = udf(transform.udf, returnType=to_spark_type(result_type))
+        return source_dataframe.withColumn(
+            result_field_name,
+            python_udf(struct([source_dataframe[x] for x in source_dataframe.columns])),
+        )
 
     @staticmethod
     def _evaluate_expression_transform(
