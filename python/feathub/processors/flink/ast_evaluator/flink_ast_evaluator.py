@@ -25,6 +25,9 @@ from feathub.dsl.ast import (
     UminusOp,
     BinaryOp,
     GroupNode,
+    IsOp,
+    NullNode,
+    CaseOp,
 )
 from feathub.processors.flink.ast_evaluator.functions import evaluate_function
 
@@ -78,3 +81,25 @@ class FlinkAstEvaluator(AbstractAstEvaluator):
 
     def eval_group_node(self, ast: GroupNode, variables: Optional[Dict]) -> Any:
         return f"({self.eval(ast.child, variables)})"
+
+    def eval_is_op(self, ast: IsOp, variables: Optional[Dict]) -> Any:
+        left_child = self.eval(ast.left_child, variables)
+        if ast.is_not:
+            return f"{left_child} IS NOT NULL"
+        else:
+            return f"{left_child} IS NULL"
+
+    def eval_null_node(self, ast: NullNode, variables: Optional[Dict]) -> Any:
+        return "NULL"
+
+    def eval_case_op(self, ast: CaseOp, variables: Optional[Dict]) -> Any:
+        eval_result = "CASE "
+        for ast_condition, ast_result in zip(ast.conditions, ast.results):
+            condition = self.eval(ast_condition, variables)
+            result = self.eval(ast_result, variables)
+            eval_result = eval_result + f"WHEN {condition} THEN {result} "
+        if not isinstance(ast.default, NullNode):
+            default = self.eval(ast.default, variables)
+            eval_result = eval_result + f"ELSE {default} "
+        eval_result = eval_result + "END"
+        return eval_result

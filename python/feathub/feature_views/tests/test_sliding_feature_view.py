@@ -12,11 +12,17 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import unittest
+from abc import ABC
 from datetime import timedelta
 from typing import cast
 
+import pandas as pd
+
 from feathub.common import types
 from feathub.common.exceptions import FeathubException, FeathubConfigurationException
+from feathub.common.test_utils import to_epoch_millis
+from feathub.common.types import Int64
+from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.sliding_feature_view import (
     SlidingFeatureView,
@@ -28,8 +34,8 @@ from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
 from feathub.registries.local_registry import LocalRegistry
-from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.table.schema import Schema
+from feathub.tests.feathub_it_test_base import FeathubITTestBase
 
 
 class SlidingFeatureViewTest(unittest.TestCase):
@@ -404,3 +410,49 @@ class SlidingFeatureViewTest(unittest.TestCase):
 
         self.assertTrue(built_feature.config.get(ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG))
         self.assertFalse(built_feature.config.get(SKIP_SAME_WINDOW_OUTPUT_CONFIG))
+
+
+class SlidingFeatureViewITTest(ABC, FeathubITTestBase):
+    def test_sliding_feature_view_filter_expr(self):
+        df = self.input_data.copy()
+        source = self.create_file_source(df)
+
+        f_total_cost = Feature(
+            name="total_cost",
+            dtype=Int64,
+            transform=SlidingWindowTransform(
+                expr="cost",
+                agg_func="SUM",
+                window_size=timedelta(days=2),
+                step_size=timedelta(days=1),
+            ),
+        )
+
+        features = SlidingFeatureView(
+            name="features",
+            source=source,
+            features=[f_total_cost],
+            filter_expr="total_cost > 600",
+            props={
+                ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: True,
+                SKIP_SAME_WINDOW_OUTPUT_CONFIG: True,
+            },
+        )
+
+        result_df = (
+            self.client.get_features(features=features)
+            .to_pandas()
+            .sort_values(by=["window_time"])
+            .reset_index(drop=True)
+        )
+
+        expected_result_df = pd.DataFrame(
+            [
+                [to_epoch_millis("2022-01-02 23:59:59.999"), 1000],
+                [to_epoch_millis("2022-01-03 23:59:59.999"), 1600],
+                [to_epoch_millis("2022-01-04 23:59:59.999"), 1100],
+            ],
+            columns=["window_time", "total_cost"],
+        )
+
+        self.assertTrue(expected_result_df.equals(result_df))

@@ -235,8 +235,11 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
         df = self.input_data.copy()
         source = self.create_file_source(df)
 
+        def repeat_name(row: pd.Series) -> str:
+            return row["name"] + "_" + row["name"]
+
         f_name_name = Feature(
-            name="name_name", dtype=String, transform="name || '_' || name"
+            name="name_name", dtype=String, transform=PythonUdfTransform(repeat_name)
         )
 
         f_total_cost = Feature(

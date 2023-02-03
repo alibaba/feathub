@@ -113,3 +113,9 @@ class SparkProcessorITTest(
 
     def test_over_window_transform_filter_expr_with_window_size_and_limit(self):
         pass
+
+    def test_case(self):
+        pass
+
+    def test_case_else(self):
+        pass

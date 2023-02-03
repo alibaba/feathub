@@ -227,6 +227,12 @@ class LocalProcessor(Processor):
     def _get_table_from_derived_feature_view(
         self, feature_view: DerivedFeatureView
     ) -> LocalTable:
+        # TODO: Support filtering DerivedFeatureView in LocalProcessor.
+        if feature_view.filter_expr is not None:
+            raise FeathubException(
+                "LocalProcessor does not support filtering DerivedFeatureView."
+            )
+
         source_table = self._get_table(feature_view.source)
         source_df = source_table.df
         source_fields = list(source_table.get_schema().field_names)

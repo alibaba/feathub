@@ -391,6 +391,8 @@ class FlinkTableBuilder:
                     f"Unsupported transformation type: {type(feature.transform)}."
                 )
 
+        tmp_table = self._apply_filter_if_any(tmp_table, feature_view.filter_expr)
+
         output_fields = self._get_output_fields(feature_view, source_fields)
         return tmp_table.select(
             *[native_flink_expr.col(field) for field in output_fields]
@@ -544,10 +546,21 @@ class FlinkTableBuilder:
                     f"Unsupported transformation type: {type(feature.transform)}."
                 )
 
+        tmp_table = self._apply_filter_if_any(tmp_table, feature_view.filter_expr)
+
         output_fields = self._get_output_fields(feature_view, source_fields)
         return tmp_table.select(
             *[native_flink_expr.col(field) for field in output_fields]
         )
+
+    @staticmethod
+    def _apply_filter_if_any(
+        table: NativeFlinkTable, filter_expr: Optional[str]
+    ) -> NativeFlinkTable:
+        # TODO: Apply filtering as early as possible to improve performance.
+        if filter_expr is None:
+            return table
+        return table.filter(native_flink_expr.call_sql(to_flink_sql_expr(filter_expr)))
 
     @staticmethod
     def _get_dependent_features(feature_view: FeatureView) -> List[Feature]:

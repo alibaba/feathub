@@ -25,6 +25,9 @@ from feathub.dsl.ast import (
     UminusOp,
     BinaryOp,
     GroupNode,
+    IsOp,
+    NullNode,
+    CaseOp,
 )
 from feathub.processors.spark.ast_evaluator.functions import evaluate_function
 
@@ -80,3 +83,12 @@ class SparkAstEvaluator(AbstractAstEvaluator):
 
     def eval_group_node(self, ast: GroupNode, variables: Optional[Dict]) -> Any:
         return f"({self.eval(ast.child, variables)})"
+
+    def eval_is_op(self, ast: IsOp, variables: Optional[Dict]) -> Any:
+        raise RuntimeError("IS/IS NOT operation is not supported.")
+
+    def eval_null_node(self, ast: NullNode, variables: Optional[Dict]) -> Any:
+        raise RuntimeError("NULL operation is not supported.")
+
+    def eval_case_op(self, ast: CaseOp, variables: Optional[Dict]) -> Any:
+        raise RuntimeError("CASE operation is not supported.")

@@ -36,6 +36,7 @@ class DerivedFeatureView(FeatureView):
         source: Union[str, TableDescriptor],
         features: Sequence[Union[str, Feature]],
         keep_source_fields: bool = False,
+        filter_expr: Optional[str] = None,
     ):
         """
         :param name: The unique identifier of this feature view in the registry.
@@ -52,6 +53,11 @@ class DerivedFeatureView(FeatureView):
                          this list and the features in the source table.
         :param keep_source_fields: True iff all fields in the source table should be
                                    included in this table.
+        :param filter_expr: Optional. If it is not None, it represents a Feathub
+                            expression which evaluates to a boolean value. The filter
+                            expression is evaluated after other transformations in the
+                            feature view, and only those rows which evaluate to True
+                            will be outputted by the feature view.
         """
         super().__init__(
             name=name,
@@ -59,6 +65,7 @@ class DerivedFeatureView(FeatureView):
             features=features,
             keep_source_fields=keep_source_fields,
         )
+        self.filter_expr = filter_expr
 
     def build(
         self, registry: Registry, props: Optional[Dict] = None
@@ -115,6 +122,7 @@ class DerivedFeatureView(FeatureView):
             source=source,
             features=features,
             keep_source_fields=self.keep_source_fields,
+            filter_expr=self.filter_expr,
         )
 
     def to_json(self) -> Dict:
@@ -129,4 +137,5 @@ class DerivedFeatureView(FeatureView):
                 for feature in self.features
             ],
             "keep_source_fields": self.keep_source_fields,
+            "filter_expr": self.filter_expr,
         }

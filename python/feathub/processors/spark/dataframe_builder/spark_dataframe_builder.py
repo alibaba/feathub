@@ -120,6 +120,12 @@ class SparkDataFrameBuilder:
     def _get_dataframe_from_derived_feature_view(
         self, feature_view: DerivedFeatureView
     ) -> NativeSparkDataFrame:
+        # TODO: Support filtering DerivedFeatureView in SparkProcessor.
+        if feature_view.filter_expr is not None:
+            raise FeathubException(
+                "SparkProcessor does not support filtering DerivedFeatureView."
+            )
+
         source_dataframe = self._get_spark_dataframe(feature_view.get_resolved_source())
         tmp_dataframe = source_dataframe
 

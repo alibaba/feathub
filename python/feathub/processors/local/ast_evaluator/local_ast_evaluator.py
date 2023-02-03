@@ -27,6 +27,9 @@ from feathub.dsl.ast import (
     LogicalOp,
     CastOp,
     GroupNode,
+    IsOp,
+    NullNode,
+    CaseOp,
 )
 from feathub.processors.local.ast_evaluator.local_func_evaluator import (
     LocalFuncEvaluator,
@@ -137,10 +140,19 @@ class LocalAstEvaluator(AbstractAstEvaluator):
         left_value = self.eval(ast.left_child, variables)
         right_value = self.eval(ast.right_child, variables)
 
-        if ast.op_type == "&&":
+        if ast.op_type == "AND":
             return left_value and right_value
-        elif ast.op_type == "||":
+        elif ast.op_type == "OR":
             return left_value or right_value
 
     def eval_group_node(self, ast: GroupNode, variables: Optional[Dict]) -> Any:
         return self.eval(ast.child, variables)
+
+    def eval_is_op(self, ast: IsOp, variables: Optional[Dict]) -> Any:
+        raise RuntimeError("IS/IS NOT operation is not supported.")
+
+    def eval_null_node(self, ast: NullNode, variables: Optional[Dict]) -> Any:
+        raise RuntimeError("NULL operation is not supported.")
+
+    def eval_case_op(self, ast: CaseOp, variables: Optional[Dict]) -> Any:
+        raise RuntimeError("CASE operation is not supported.")

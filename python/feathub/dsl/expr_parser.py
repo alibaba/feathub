@@ -30,6 +30,9 @@ from feathub.dsl.ast import (
     CastOp,
     LogicalOp,
     GroupNode,
+    CaseOp,
+    IsOp,
+    NullNode,
 )
 from feathub.dsl.expr_lexer_rules import ExprLexerRules
 
@@ -150,6 +153,40 @@ class ExprParser:
                    | expression AND expression
         """
         p[0] = LogicalOp(p[2], p[1], p[3])
+
+    def p_expression_null_node(self, p: yacc.YaccProduction) -> None:
+        """expression : NULL"""
+        p[0] = NullNode()
+
+    def p_expression_is_op(self, p: yacc.YaccProduction) -> None:
+        """
+        expression : expression IS expression
+                   | expression IS NOT expression
+        """
+        if len(p) == 4:
+            p[0] = IsOp(p[1], p[3])
+        else:
+            p[0] = IsOp(p[1], p[4], True)
+
+    def p_expression_case_op_enclose(self, p: yacc.YaccProduction) -> None:
+        """
+        expression : CASE caselist END
+                   | CASE caselist ELSE expression END
+        """
+        if len(p) == 4:
+            p[0] = p[2].build()
+        else:
+            p[0] = p[2].default(p[4]).build()
+
+    def p_expression_case_op_condition(self, p: yacc.YaccProduction) -> None:
+        """
+        caselist : caselist WHEN expression THEN expression
+                 | WHEN expression THEN expression
+        """
+        if len(p) == 5:
+            p[0] = CaseOp.new_builder().case(p[2], p[4])
+        else:
+            p[0] = p[1].case(p[3], p[5])
 
     def p_error(self, p: yacc.YaccProduction) -> None:  # noqa
         if p:

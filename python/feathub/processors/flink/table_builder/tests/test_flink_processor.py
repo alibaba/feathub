@@ -45,6 +45,12 @@ from feathub.feature_tables.tests.test_redis_source_sink import (
 )
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
+from feathub.feature_views.tests.test_derived_feature_view import (
+    DerivedFeatureViewITTest,
+)
+from feathub.feature_views.tests.test_sliding_feature_view import (
+    SlidingFeatureViewITTest,
+)
 from feathub.feature_views.transforms.tests.test_expression_transform import (
     ExpressionTransformITTest,
 )
@@ -366,6 +372,7 @@ class FlinkProcessorTest(unittest.TestCase):
 
 class FlinkProcessorITTest(
     DataGenSourceITTest,
+    DerivedFeatureViewITTest,
     ExpressionTransformITTest,
     FileSystemSourceSinkITTest,
     JoinTransformITTest,
@@ -375,6 +382,7 @@ class FlinkProcessorITTest(
     PythonUDFTransformITTest,
     RedisSourceSinkITTest,
     SlidingWindowTransformITTest,
+    SlidingFeatureViewITTest,
     BlackHoleSinkITTest,
 ):
     __test__ = True

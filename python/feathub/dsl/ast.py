@@ -15,6 +15,8 @@ import json
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any
 
+from feathub.common.exceptions import FeathubException
+
 
 class ExprAST(ABC):
     def __init__(self, node_type: str) -> None:
@@ -78,7 +80,7 @@ class UminusOp(ExprAST):
 class LogicalOp(ExprAST):
     def __init__(self, op_type: str, left_child: ExprAST, right_child: ExprAST) -> None:
         super().__init__(node_type="LogicalOp")
-        self.op_type = op_type
+        self.op_type = op_type.upper()
         self.left_child = left_child
         self.right_child = right_child
 
@@ -148,7 +150,7 @@ class ArgListNode(ExprAST):
 class FuncCallOp(ExprAST):
     def __init__(self, func_name: str, args: ArgListNode) -> None:
         super().__init__(node_type="FuncCallOp")
-        self.func_name = func_name
+        self.func_name = func_name.upper()
         self.args = args
 
     def to_json(self) -> Dict:
@@ -166,3 +168,82 @@ class GroupNode(ExprAST):
 
     def to_json(self) -> Dict:
         return {"node_type": "GroupNode", "child": self.child}
+
+
+class NullNode(ExprAST):
+    def __init__(self) -> None:
+        super().__init__(node_type="NullNode")
+
+    def to_json(self) -> Dict:
+        return {"node_type": "NullNode"}
+
+
+class IsOp(ExprAST):
+    def __init__(
+        self, left_child: ExprAST, right_child: ExprAST, is_not: bool = False
+    ) -> None:
+        super().__init__(node_type="IsOp")
+        if not isinstance(right_child, NullNode):
+            raise FeathubException("IS/IS NOT can only be concatenated with NULL.")
+
+        self.left_child = left_child
+        self.is_not = is_not
+
+    def to_json(self) -> Dict:
+        return {
+            "node_type": "IsOp",
+            "left_child": self.left_child.to_json(),
+            "is_not": self.is_not,
+        }
+
+
+class CaseOp(ExprAST):
+    def __init__(
+        self,
+        conditions: List[ExprAST],
+        results: List[ExprAST],
+        default: ExprAST,
+    ) -> None:
+        super().__init__(node_type="CaseOp")
+
+        if len(conditions) != len(results):
+            raise FeathubException(
+                "The number of conditions and results does not match."
+            )
+
+        if not conditions:
+            raise FeathubException("Cannot create CaseOp without cases.")
+
+        self.conditions = conditions
+        self.results = results
+        self.default = default
+
+    def to_json(self) -> Dict:
+        return {
+            "node_type": "CaseOp",
+            "conditions": [x.to_json() for x in self.conditions],
+            "results": [x.to_json() for x in self.results],
+            "default": self.default.to_json(),
+        }
+
+    @staticmethod
+    def new_builder() -> "CaseOp.Builder":
+        return CaseOp.Builder()
+
+    class Builder:
+        def __init__(self) -> None:
+            self.conditions: List[ExprAST] = []
+            self.results: List[ExprAST] = []
+            self.default_value: ExprAST = NullNode()
+
+        def case(self, condition: ExprAST, result: ExprAST) -> "CaseOp.Builder":
+            self.conditions.append(condition)
+            self.results.append(result)
+            return self
+
+        def default(self, result: ExprAST) -> "CaseOp.Builder":
+            self.default_value = result
+            return self
+
+        def build(self) -> "CaseOp":
+            return CaseOp(self.conditions, self.results, self.default_value)

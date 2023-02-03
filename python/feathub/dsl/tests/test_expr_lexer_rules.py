@@ -59,15 +59,15 @@ class TestExprLexerRules(unittest.TestCase):
 
     def test_lexer_complex(self):
         expr = """
-        cast ("0.1" AS FLOAT) + CAST("1" AS INTEGER) || "abc" = "abc" && `integer` <> 1
+        cast ("0.1" AS FLOAT) + CAST("1" AS INTEGER) OR "abc" = "abc" AND `integer` <> 1
         """
         token_types = (
             "CAST LPAREN STRING AS DTYPE RPAREN + CAST LPAREN STRING "
             "AS DTYPE RPAREN OR STRING EQ STRING AND ID NE INTEGER"
         ).split(" ")
         token_values: List[Any] = (
-            'CAST ( "0.1" AS FLOAT ) + CAST ( "1" AS INTEGER ) || '
-            '"abc" = "abc" && integer <>'
+            'CAST ( "0.1" AS FLOAT ) + CAST ( "1" AS INTEGER ) OR '
+            '"abc" = "abc" AND integer <>'
         ).split(" ")
         token_values.append(1)
         self.check_token_types_values(
@@ -104,18 +104,18 @@ class TestExprLexerRules(unittest.TestCase):
 
     def test_logical_op(self):
         self.check_token_types_values(
-            ["ID", "OR", "ID"], ["a", "||", "b"], self.tokenize("a || b")
+            ["ID", "OR", "ID"], ["a", "OR", "b"], self.tokenize("a OR b")
         )
         self.check_token_types_values(
-            ["ID", "AND", "ID"], ["a", "&&", "b"], self.tokenize("a && b")
+            ["ID", "AND", "ID"], ["a", "AND", "b"], self.tokenize("a AND b")
         )
         self.check_token_types_values(
             ["FALSE", "OR", "TRUE"],
-            [False, "||", True],
-            self.tokenize("false || true"),
+            [False, "OR", True],
+            self.tokenize("false OR true"),
         )
         self.check_token_types_values(
             ["TRUE", "AND", "FALSE"],
-            [True, "&&", False],
-            self.tokenize("true && false"),
+            [True, "AND", False],
+            self.tokenize("true AND false"),
         )

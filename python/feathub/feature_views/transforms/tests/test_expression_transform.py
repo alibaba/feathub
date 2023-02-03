@@ -172,3 +172,99 @@ class ExpressionTransformITTest(ABC, FeathubITTestBase):
         )
 
         self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_lower(self):
+        source = self.create_file_source(self.input_data.copy())
+
+        lower_name = Feature(
+            name="lower_name",
+            dtype=String,
+            transform="LOWER(name)",
+        )
+
+        features = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                lower_name,
+            ],
+            keep_source_fields=True,
+        )
+
+        result_df = (
+            self.client.get_features(features)
+            .to_pandas()
+            .sort_values(by=["time"])
+            .reset_index(drop=True)
+        )
+
+        expected_result_df = self.input_data.copy()
+        expected_result_df["lower_name"] = expected_result_df.apply(
+            lambda row: str(row["name"]).lower(),
+            axis=1,
+        )
+        expected_result_df = expected_result_df.sort_values(by=["time"]).reset_index(
+            drop=True
+        )
+
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_case(self):
+        upper_name = Feature(
+            name="upper_name",
+            dtype=String,
+            transform="""
+            CASE
+                WHEN name = 'Alex' THEN 'ALEX'
+                WHEN name = 'Jack' THEN 'JACK'
+                WHEN name = 'Emma' THEN 'EMMA'
+            END
+            """,
+        )
+
+        self._test_case(upper_name)
+
+    def test_case_else(self):
+        upper_name = Feature(
+            name="upper_name",
+            dtype=String,
+            transform="""
+            CASE
+                WHEN name = 'Alex' THEN 'ALEX'
+                WHEN name = 'Jack' THEN 'JACK'
+                ELSE 'EMMA'
+            END
+            """,
+        )
+
+        self._test_case(upper_name)
+
+    def _test_case(self, upper_name_feature: Feature):
+        source = self.create_file_source(self.input_data.copy())
+
+        features = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                upper_name_feature,
+            ],
+            keep_source_fields=True,
+        )
+
+        result_df = (
+            self.client.get_features(features)
+            .to_pandas()
+            .sort_values(by=["time"])
+            .reset_index(drop=True)
+        )
+
+        expected_result_df = self.input_data.copy()
+        expected_result_df["upper_name"] = expected_result_df.apply(
+            lambda row: str(row["name"]).upper(),
+            axis=1,
+        )
+        expected_result_df = expected_result_df.sort_values(by=["time"]).reset_index(
+            drop=True
+        )
+
+        self.assertTrue(expected_result_df.equals(result_df))

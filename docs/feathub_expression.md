@@ -34,14 +34,16 @@ Arithmetic functions take numeric values as inputs and outputs a numeric value.
 
 Comparison functions take numeric values as inputs and outputs a boolean value.
 
-| Function | Description |
-| --- | --- |
-| x > y | Returns TRUE iff `x > y`. Returns NULL if in case of error. |
-| x >= y | Returns TRUE iff `x >= y`. Returns NULL if in case of error. |
-| x < y | Returns TRUE iff `x < y`. Returns NULL if in case of error. |
-| x <= y | Returns TRUE iff `x <= y`. Returns NULL if in case of error. |
-| x = y | Returns TRUE iff `x` is equal to `y`. Returns NULL if in case of error. |
-| x <> y | Returns TRUE iff `x` is not equal to `y`. Returns NULL if in case of error. |
+| Function      | Description                                                              |
+|---------------|--------------------------------------------------------------------------|
+| x > y         | Returns TRUE iff `x > y`. Returns NULL in case of error.                 |
+| x >= y        | Returns TRUE iff `x >= y`. Returns NULL in case of error.                |
+| x < y         | Returns TRUE iff `x < y`. Returns NULL in case of error.                 |
+| x <= y        | Returns TRUE iff `x <= y`. Returns NULL in case of error.                |
+| x = y         | Returns TRUE iff `x` is equal to `y`. Returns NULL in case of error.     |
+| x <> y        | Returns TRUE iff `x` is not equal to `y`. Returns NULL in case of error. |
+| x IS NULL     | Returns TRUE iff `x` is NULL.                                            |
+| x IS NOT NULL | Returns TRUE iff `x` is not NULL.                                        |
 
 ## Logical Functions
 
@@ -55,7 +57,7 @@ Comparison functions take numeric values as inputs and outputs a boolean value.
 | Function             | Description                                                                               |
 |----------------------|-------------------------------------------------------------------------------------------|
 | CAST(x AS DTYPE)     | Returns a new value being casted to a the given DTYPE. Throws exception in case of error. |
-| TRY_CAST(x AS DTYPE) | Returns a new value being casted to a the given DTYPE. Returns NULL if in case of error.  |
+| TRY_CAST(x AS DTYPE) | Returns a new value being casted to a the given DTYPE. Returns NULL in case of error.     |
 
 ### Data Types
 
@@ -78,6 +80,27 @@ NULL.
 | DOUBLE       | N     | Y      | Y       | Y      | Y     | Y      | Y       | N         |
 | BOOLEAN      | N     | Y      | Y       | Y      | Y     | Y      | Y       | N         |
 | TIMESTAMP    | N     | Y      | N       | N      | N     | N      | N       | Y         |
+
+## Conditional Functions
+
+### CASE
+
+`CASE WHEN expr1 THEN expr2 [WHEN expr3 THEN expr4]* [ELSE expr5] END` - When
+`expr1` = true, returns `expr2`; else when `expr3` = true, returns `expr4`; else
+returns `expr5`.
+
+Arguments:
+
+- `expr1`, `expr3` - the branch condition expressions should all be boolean
+  type.
+- `expr2`, `expr4`, `expr5` - the branch value expressions and else value
+  expression should all be same type or coercible to a common type.
+
+## String Functions
+
+### LOWER
+
+`LOWER(str)` - Returns `str` with all characters changed to lowercase.
 
 ## Temporal Functions
 
