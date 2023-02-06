@@ -107,6 +107,6 @@ class SparkAstEvaluatorTest(unittest.TestCase):
         self.assertEqual("TRY_CAST(59 AS STRING)", self._eval("TRY_CAST(59 AS STRING)"))
 
     def test_logical_op(self):
-        self.assertEqual("false || true", self._eval("false || True"))
-        self.assertEqual("`a` || true", self._eval("a || True"))
-        self.assertEqual("true && false", self._eval("true && FALSE"))
+        self.assertEqual("false OR true", self._eval("false or True"))
+        self.assertEqual("`a` OR true", self._eval("a or True"))
+        self.assertEqual("true AND false", self._eval("true and FALSE"))

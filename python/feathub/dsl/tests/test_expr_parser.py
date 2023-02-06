@@ -13,7 +13,17 @@
 #  limitations under the License.
 import unittest
 
-from feathub.dsl.ast import FuncCallOp, ArgListNode, VariableNode, ValueNode
+from feathub.dsl.ast import (
+    FuncCallOp,
+    ArgListNode,
+    VariableNode,
+    ValueNode,
+    LogicalOp,
+    IsOp,
+    NullNode,
+    CaseOp,
+    CompareOp,
+)
 from feathub.dsl.expr_parser import ExprParser
 
 
@@ -25,26 +35,64 @@ class ExprParserTest(unittest.TestCase):
         expected_mappings = {
             "UNIX_TIMESTAMP(time)": FuncCallOp(
                 func_name="UNIX_TIMESTAMP",
-                args=ArgListNode(
-                    values=[
-                        VariableNode(
-                            var_name="time",
-                        )
-                    ]
-                ),
+                args=ArgListNode(values=[VariableNode(var_name="time")]),
             ),
             "UNIX_TIMESTAMP(time, '%Y-%m-%d %H:%M:%S.%f %z')": FuncCallOp(
                 func_name="UNIX_TIMESTAMP",
                 args=ArgListNode(
                     values=[
-                        VariableNode(
-                            var_name="time",
-                        ),
-                        ValueNode(
-                            value="%Y-%m-%d %H:%M:%S.%f %z",
-                        ),
+                        VariableNode(var_name="time"),
+                        ValueNode(value="%Y-%m-%d %H:%M:%S.%f %z"),
                     ]
                 ),
+            ),
+            "a AND b": LogicalOp(
+                op_type="AND",
+                left_child=VariableNode(var_name="a"),
+                right_child=VariableNode(var_name="b"),
+            ),
+            "a and b": LogicalOp(
+                op_type="AND",
+                left_child=VariableNode(var_name="a"),
+                right_child=VariableNode(var_name="b"),
+            ),
+            "a IS NULL": IsOp(
+                left_child=VariableNode(var_name="a"),
+                right_child=NullNode(),
+            ),
+            "a IS NOT NULL": IsOp(
+                left_child=VariableNode(var_name="a"),
+                right_child=NullNode(),
+                is_not=True,
+            ),
+            "CASE WHEN a > b THEN 1 WHEN a < b THEN 2 ELSE 3 END": CaseOp(
+                conditions=[
+                    CompareOp(
+                        op_type=">",
+                        left_child=VariableNode(var_name="a"),
+                        right_child=VariableNode(var_name="b"),
+                    ),
+                    CompareOp(
+                        op_type="<",
+                        left_child=VariableNode(var_name="a"),
+                        right_child=VariableNode(var_name="b"),
+                    ),
+                ],
+                results=[
+                    ValueNode(value=1),
+                    ValueNode(value=2),
+                ],
+                default=ValueNode(value=3),
+            ),
+            "CASE WHEN a IS NULL THEN 1 END": CaseOp(
+                conditions=[
+                    IsOp(
+                        left_child=VariableNode(var_name="a"),
+                        right_child=NullNode(),
+                    ),
+                ],
+                results=[ValueNode(value=1)],
+                default=NullNode(),
             ),
         }
 

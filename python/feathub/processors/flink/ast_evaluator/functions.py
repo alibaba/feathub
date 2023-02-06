@@ -16,7 +16,18 @@ from typing import List, Any
 from feathub.common.utils import to_java_date_format
 
 
+"""
+This set contains the name of the built-in functions whose name
+and argument list is the same between Feathub and in Flink.
+"""
+_functions_with_equal_signature = {"LOWER"}
+
+
 def evaluate_function(func_name: str, args: List[Any]) -> str:
-    if func_name.upper() == "UNIX_TIMESTAMP" and len(args) > 1:
-        args[1] = to_java_date_format(args[1])
-    return f"{func_name}({', '.join(args)})"
+    if func_name in _functions_with_equal_signature:
+        return f"{func_name}({', '.join(args)})"
+    elif func_name == "UNIX_TIMESTAMP":
+        if len(args) > 1:
+            args[1] = to_java_date_format(args[1])
+        return f"{func_name}({', '.join(args)})"
+    raise RuntimeError(f"Unsupported function: {func_name}.")

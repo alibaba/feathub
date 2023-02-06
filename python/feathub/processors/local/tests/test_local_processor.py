@@ -91,3 +91,9 @@ class LocalProcessorITTest(
     # TODO: Support Map type conversion in local processor.
     def test_over_window_transform_value_counts(self):
         pass
+
+    def test_case(self):
+        pass
+
+    def test_case_else(self):
+        pass

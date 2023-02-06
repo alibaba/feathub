@@ -100,6 +100,6 @@ class LocalAstEvaluatorTest(unittest.TestCase):
         self.assertEqual(None, self._eval('TRY_CAST("INVALID" AS DOUBLE)'))
 
     def test_logical_op(self):
-        self.assertEqual(True, self._eval("false || True"))
-        self.assertEqual(True, self._eval("a || True", {"a": True}))
-        self.assertEqual(False, self._eval("true && FALSE"))
+        self.assertEqual(True, self._eval("false OR True"))
+        self.assertEqual(True, self._eval("a OR True", {"a": True}))
+        self.assertEqual(False, self._eval("true AND FALSE"))

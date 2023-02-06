@@ -41,6 +41,16 @@ class ExprLexerRules:
         "cast": ("CAST", "CAST"),
         "try_cast": ("TRY_CAST", "TRY_CAST"),
         "as": ("AS", "AS"),
+        "is": ("IS", "IS"),
+        "not": ("NOT", "NOT"),
+        "null": ("NULL", "NULL"),
+        "case": ("CASE", "CASE"),
+        "when": ("WHEN", "WHEN"),
+        "then": ("THEN", "THEN"),
+        "else": ("ELSE", "ELSE"),
+        "end": ("END", "END"),
+        "and": ("AND", "AND"),
+        "or": ("OR", "OR"),
         **{dtype: ("DTYPE", dtype.upper()) for dtype in data_types},
     }
 
@@ -54,8 +64,6 @@ class ExprLexerRules:
         "GE",
         "EQ",
         "NE",
-        "OR",
-        "AND",
         "COMMA",
         "FLOAT",
         "INTEGER",
@@ -72,8 +80,6 @@ class ExprLexerRules:
     t_GE = r">="
     t_EQ = r"="
     t_NE = r"<>"
-    t_OR = r"\|\|"
-    t_AND = r"\&\&"
     t_COMMA = r"\,"
     t_STRING = r"(\".*?\"|\'.*?\')"
 

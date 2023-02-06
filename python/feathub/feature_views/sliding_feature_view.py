@@ -111,6 +111,7 @@ class SlidingFeatureView(FeatureView):
         features: Sequence[Union[str, Feature]],
         timestamp_field: str = "window_time",
         timestamp_format: str = "epoch_millis",
+        filter_expr: Optional[str] = None,
         props: Optional[Dict] = None,
     ):
         """
@@ -133,6 +134,11 @@ class SlidingFeatureView(FeatureView):
                                 SlidingFeatureView that represents the closed window end
                                 time for each row.
         :param timestamp_format: The format of the timestamp field.
+        :param filter_expr: Optional. If it is not None, it represents a Feathub
+                            expression which evaluates to a boolean value. The filter
+                            expression is evaluated after other transformations in the
+                            feature view, and only those rows which evaluate to True
+                            will be outputted by the feature view.
         :param props: Optional. It is not None, it is the properties of the
                       SlidingFeatureView.
         """
@@ -147,6 +153,8 @@ class SlidingFeatureView(FeatureView):
             timestamp_field=timestamp_field,
             timestamp_format=timestamp_format,
         )
+
+        self.filter_expr = filter_expr
 
         self._validate(features)
 
@@ -213,6 +221,7 @@ class SlidingFeatureView(FeatureView):
             features=features,
             timestamp_field=self.timestamp_field,
             timestamp_format=self.timestamp_format,
+            filter_expr=self.filter_expr,
             props={**props, **self.config.original_props},
         )
         return feature_view
@@ -230,6 +239,7 @@ class SlidingFeatureView(FeatureView):
             ],
             "timestamp_field": self.timestamp_field,
             "timestamp_format": self.timestamp_format,
+            "filter_expr": self.filter_expr,
         }
 
     @staticmethod

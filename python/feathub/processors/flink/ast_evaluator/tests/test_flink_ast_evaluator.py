@@ -107,6 +107,6 @@ class FlinkAstEvaluatorTest(unittest.TestCase):
         self.assertEqual("TRY_CAST(59 AS STRING)", self._eval("TRY_CAST(59 AS STRING)"))
 
     def test_logical_op(self):
-        self.assertEqual("FALSE || TRUE", self._eval("false || True"))
-        self.assertEqual("`a` || TRUE", self._eval("a || True"))
-        self.assertEqual("TRUE && FALSE", self._eval("true && FALSE"))
+        self.assertEqual("FALSE OR TRUE", self._eval("false or True"))
+        self.assertEqual("`a` OR TRUE", self._eval("a OR True"))
+        self.assertEqual("TRUE AND FALSE", self._eval("true and FALSE"))

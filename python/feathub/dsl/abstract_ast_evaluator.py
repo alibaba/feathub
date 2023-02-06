@@ -28,6 +28,9 @@ from feathub.dsl.ast import (
     CastOp,
     LogicalOp,
     GroupNode,
+    IsOp,
+    NullNode,
+    CaseOp,
 )
 
 
@@ -65,6 +68,12 @@ class AbstractAstEvaluator(ABC):
             return self.eval_logical_op(ast, variables)
         if isinstance(ast, GroupNode):
             return self.eval_group_node(ast, variables)
+        if isinstance(ast, IsOp):
+            return self.eval_is_op(ast, variables)
+        if isinstance(ast, NullNode):
+            return self.eval_null_node(ast, variables)
+        if isinstance(ast, CaseOp):
+            return self.eval_case_op(ast, variables)
 
         raise FeathubExpressionException(f"Unknown AST node {type(ast)}.")
 
@@ -106,4 +115,16 @@ class AbstractAstEvaluator(ABC):
 
     @abc.abstractmethod
     def eval_group_node(self, ast: GroupNode, variables: Optional[Dict]) -> Any:
+        pass
+
+    @abc.abstractmethod
+    def eval_is_op(self, ast: IsOp, variables: Optional[Dict]) -> Any:
+        pass
+
+    @abc.abstractmethod
+    def eval_null_node(self, ast: NullNode, variables: Optional[Dict]) -> Any:
+        pass
+
+    @abc.abstractmethod
+    def eval_case_op(self, ast: CaseOp, variables: Optional[Dict]) -> Any:
         pass
