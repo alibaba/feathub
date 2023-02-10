@@ -74,7 +74,7 @@ class FeatureTable(TableDescriptor, ABC):
         self.properties = properties
         self.schema = schema
 
-    def get_feature(self, feature_name: str) -> Feature:
+    def get_output_features(self) -> List[Feature]:
         if self.schema is None:
             raise FeathubException(
                 "The feature table does not have schema. Feature can not be derived. "
@@ -82,17 +82,15 @@ class FeatureTable(TableDescriptor, ABC):
                 "and define the features explicitly in the FeatureView."
             )
 
-        if feature_name not in self.schema.field_names:
-            raise FeathubException(
-                f"Failed to find the feature '{feature_name}' in {self.to_json()}."
+        return [
+            Feature(
+                name=field_name,
+                dtype=self.schema.get_field_type(field_name),
+                transform=field_name,
+                keys=self.keys,
             )
-
-        return Feature(
-            name=feature_name,
-            dtype=self.schema.get_field_type(feature_name),
-            transform=feature_name,
-            keys=self.keys,
-        )
+            for field_name in self.schema.field_names
+        ]
 
     def is_bounded(self) -> bool:
         # FeatureTable is bounded by default unless subclass overwrite the method.

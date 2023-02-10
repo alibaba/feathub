@@ -13,9 +13,44 @@
 #  limitations under the License.
 import json
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Callable
 
-from feathub.common.exceptions import FeathubException
+from feathub.common.exceptions import FeathubException, FeathubExpressionException
+from feathub.common.types import (
+    DType,
+    Int32,
+    Int64,
+    Float32,
+    Float64,
+    Bool,
+    String,
+    get_type_by_name,
+    from_python_type,
+)
+
+TYPE_PRECISION_RANK: List[DType] = [Float64, Float32, Int64, Int32]
+
+# A map from the Feathub built-in function name to a callable that is used to
+# evaluate the result data type of the function. The callable takes a list of
+# data types of arguments and returns the data type of the result.
+# TODO: Add a dedicated class to keep track of all the Feathub function.
+FUNCTION_RESULT_TYPE_EVALUATOR: Dict[str, Callable[[List[DType]], DType]] = {
+    "LOWER": lambda _: String,
+    "UNIX_TIMESTAMP": lambda _: Int64,
+}
+
+
+def _get_higher_precision_type(*dtype: DType) -> Optional[DType]:
+    res_type = dtype[0]
+
+    for t in dtype[1:]:
+        if res_type not in TYPE_PRECISION_RANK or t not in TYPE_PRECISION_RANK:
+            raise FeathubExpressionException(f"Illegal mixing of types: {dtype}")
+
+        if TYPE_PRECISION_RANK.index(res_type) > TYPE_PRECISION_RANK.index(t):
+            res_type = t
+
+    return res_type
 
 
 class ExprAST(ABC):
@@ -29,16 +64,39 @@ class ExprAST(ABC):
         """
         pass
 
+    @abstractmethod
+    def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
+        pass
+
     def __str__(self) -> str:
         return json.dumps(self.to_json(), indent=2, sort_keys=True)
 
 
-class BinaryOp(ExprAST):
-    def __init__(self, op_type: str, left_child: ExprAST, right_child: ExprAST) -> None:
-        super().__init__(node_type="BinaryOp")
-        self.op_type = op_type
+class AbstractUnaryOp(ExprAST, ABC):
+    def __init__(self, node_type: str, child: ExprAST):
+        super().__init__(node_type)
+        self.child = child
+
+
+class AbstractBinaryOp(ExprAST, ABC):
+    def __init__(self, node_type: str, left_child: ExprAST, right_child: ExprAST):
+        super().__init__(node_type)
         self.left_child = left_child
         self.right_child = right_child
+
+
+class BinaryOp(AbstractBinaryOp):
+    def __init__(self, op_type: str, left_child: ExprAST, right_child: ExprAST) -> None:
+        super().__init__(
+            node_type="BinaryOp", left_child=left_child, right_child=right_child
+        )
+        self.op_type = op_type
+
+    def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
+        left_type = self.left_child.eval_dtype(variable_types)
+        right_type = self.right_child.eval_dtype(variable_types)
+
+        return _get_higher_precision_type(left_type, right_type)
 
     def to_json(self) -> Dict:
         return {
@@ -49,12 +107,15 @@ class BinaryOp(ExprAST):
         }
 
 
-class CompareOp(ExprAST):
+class CompareOp(AbstractBinaryOp):
     def __init__(self, op_type: str, left_child: ExprAST, right_child: ExprAST) -> None:
-        super().__init__(node_type="CompareOp")
+        super().__init__(
+            node_type="CompareOp", left_child=left_child, right_child=right_child
+        )
         self.op_type = op_type
-        self.left_child = left_child
-        self.right_child = right_child
+
+    def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
+        return Bool
 
     def to_json(self) -> Dict:
         return {
@@ -65,10 +126,12 @@ class CompareOp(ExprAST):
         }
 
 
-class UminusOp(ExprAST):
+class UminusOp(AbstractUnaryOp):
     def __init__(self, child: ExprAST) -> None:
-        super().__init__(node_type="UminusOp")
-        self.child = child
+        super().__init__(node_type="UminusOp", child=child)
+
+    def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
+        return self.child.eval_dtype(variable_types)
 
     def to_json(self) -> Dict:
         return {
@@ -77,12 +140,15 @@ class UminusOp(ExprAST):
         }
 
 
-class LogicalOp(ExprAST):
+class LogicalOp(AbstractBinaryOp):
     def __init__(self, op_type: str, left_child: ExprAST, right_child: ExprAST) -> None:
-        super().__init__(node_type="LogicalOp")
+        super().__init__(
+            node_type="LogicalOp", left_child=left_child, right_child=right_child
+        )
         self.op_type = op_type.upper()
-        self.left_child = left_child
-        self.right_child = right_child
+
+    def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
+        return Bool
 
     def to_json(self) -> Dict:
         return {
@@ -93,14 +159,16 @@ class LogicalOp(ExprAST):
         }
 
 
-class CastOp(ExprAST):
+class CastOp(AbstractUnaryOp):
     def __init__(
         self, child: ExprAST, type_name: str, exception_on_failure: bool = True
     ):
-        super().__init__(node_type="CastOp")
-        self.child = child
+        super().__init__(node_type="CastOp", child=child)
         self.type_name = type_name
         self.exception_on_failure = exception_on_failure
+
+    def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
+        return get_type_by_name(self.type_name)
 
     def to_json(self) -> Dict:
         return {
@@ -116,6 +184,9 @@ class ValueNode(ExprAST):
         super().__init__(node_type="ValueNode")
         self.value = value
 
+    def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
+        return from_python_type(type(self.value))
+
     def to_json(self) -> Dict:
         return {
             "node_type": "ValueNode",
@@ -128,6 +199,11 @@ class VariableNode(ExprAST):
         super().__init__(node_type="VariableNode")
         self.var_name = var_name
 
+    def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
+        if self.var_name not in variable_types:
+            raise RuntimeError(f"Type of variable {self.var_name} is not given.")
+        return variable_types.get(self.var_name)
+
     def to_json(self) -> Dict:
         return {
             "node_type": "VariableNode",
@@ -139,6 +215,9 @@ class ArgListNode(ExprAST):
     def __init__(self, values: List[ExprAST]) -> None:
         super().__init__(node_type="ArgListNode")
         self.values = values
+
+    def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
+        raise NotImplementedError("This method should not be called.")
 
     def to_json(self) -> Dict:
         return {
@@ -153,6 +232,15 @@ class FuncCallOp(ExprAST):
         self.func_name = func_name.upper()
         self.args = args
 
+    def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
+        arg_types = [arg.eval_dtype(variable_types) for arg in self.args.values]
+        function_type_evaluator = FUNCTION_RESULT_TYPE_EVALUATOR.get(self.func_name)
+        if function_type_evaluator is None:
+            raise RuntimeError(
+                f"Unknown result type evaluator for function {self.func_name}."
+            )
+        return function_type_evaluator(arg_types)
+
     def to_json(self) -> Dict:
         return {
             "node_type": "FuncCallOp",
@@ -161,10 +249,12 @@ class FuncCallOp(ExprAST):
         }
 
 
-class GroupNode(ExprAST):
+class GroupNode(AbstractUnaryOp):
     def __init__(self, child: ExprAST) -> None:
-        super().__init__("GroupNode")
-        self.child = child
+        super().__init__("GroupNode", child=child)
+
+    def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
+        return self.child.eval_dtype(variable_types)
 
     def to_json(self) -> Dict:
         return {"node_type": "GroupNode", "child": self.child}
@@ -174,20 +264,26 @@ class NullNode(ExprAST):
     def __init__(self) -> None:
         super().__init__(node_type="NullNode")
 
+    def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
+        raise NotImplementedError("This method should not be called.")
+
     def to_json(self) -> Dict:
         return {"node_type": "NullNode"}
 
 
-class IsOp(ExprAST):
+class IsOp(AbstractBinaryOp):
     def __init__(
         self, left_child: ExprAST, right_child: ExprAST, is_not: bool = False
     ) -> None:
-        super().__init__(node_type="IsOp")
+        super().__init__(
+            node_type="IsOp", left_child=left_child, right_child=right_child
+        )
         if not isinstance(right_child, NullNode):
             raise FeathubException("IS/IS NOT can only be concatenated with NULL.")
-
-        self.left_child = left_child
         self.is_not = is_not
+
+    def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
+        return Bool
 
     def to_json(self) -> Dict:
         return {
@@ -217,6 +313,19 @@ class CaseOp(ExprAST):
         self.conditions = conditions
         self.results = results
         self.default = default
+
+    def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
+        result_types = set(
+            [result_expr.eval_dtype(variable_types) for result_expr in self.results]
+        )
+
+        if not isinstance(self.default, NullNode):
+            result_types.add(self.default.eval_dtype(variable_types))
+
+        if len(result_types) == 1:
+            return result_types.pop()
+
+        return _get_higher_precision_type(*result_types)
 
     def to_json(self) -> Dict:
         return {

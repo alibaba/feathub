@@ -19,7 +19,7 @@ from typing import Type, Dict
 import numpy as np
 import json
 
-from feathub.common.exceptions import FeathubTypeException
+from feathub.common.exceptions import FeathubTypeException, FeathubExpressionException
 
 
 class BasicDType(Enum):
@@ -47,6 +47,15 @@ class DType(ABC):
     def __str__(self) -> str:
         return json.dumps(self.to_json(), indent=2, sort_keys=True)
 
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, type(self)) and self.to_json() == other.to_json()
+
+    def __hash__(self) -> int:
+        return hash(((k, v) for k, v in self.to_json().items()))
+
 
 class PrimitiveType(DType):
     def __init__(self, basic_dtype: BasicDType) -> None:
@@ -56,11 +65,6 @@ class PrimitiveType(DType):
     def to_json(self) -> Dict:
         return {"type": "PrimitiveType", "basic_dtype": f"{self.basic_dtype.name}"}
 
-    def __eq__(self, other: object) -> bool:
-        return (
-            isinstance(other, PrimitiveType) and self.basic_dtype == other.basic_dtype
-        )
-
 
 class VectorType(DType):
     def __init__(self, dtype: DType) -> None:
@@ -69,9 +73,6 @@ class VectorType(DType):
 
     def to_json(self) -> Dict:
         return {"type": "VectorType", "dtype": self.dtype.to_json()}
-
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, VectorType) and self.dtype == other.dtype
 
 
 class MapType(DType):
@@ -87,20 +88,13 @@ class MapType(DType):
             "value_dtype": self.value_dtype.to_json(),
         }
 
-    def __eq__(self, other: object) -> bool:
-        return (
-            isinstance(other, MapType)
-            and self.key_dtype == other.key_dtype
-            and self.value_dtype == other.value_dtype
-        )
-
 
 def from_numpy_dtype(dtype: Type) -> DType:
     if dtype == np.str:
         return String
     elif dtype == np.bool:
         return Bool
-    elif dtype == np.int:
+    elif dtype == np.int32:
         return Int32
     elif dtype == np.int64:
         return Int64
@@ -120,7 +114,7 @@ def to_numpy_dtype(dtype: DType) -> Type:
     elif dtype == Bool:
         return np.bool
     elif dtype == Int32:
-        return np.int
+        return np.int32
     elif dtype == Int64:
         return np.int64
     elif dtype == Float32:
@@ -144,6 +138,40 @@ Int64 = PrimitiveType(BasicDType.INT64)
 Float32 = PrimitiveType(BasicDType.FLOAT32)
 Float64 = PrimitiveType(BasicDType.FLOAT64)
 Timestamp = PrimitiveType(BasicDType.TIMESTAMP)
+
+name_to_dtype: Dict[str, DType] = {
+    "BYTES": Bytes,
+    "STRING": String,
+    "INTEGER": Int32,
+    "BIGINT": Int64,
+    "FLOAT": Float32,
+    "DOUBLE": Float64,
+    "BOOLEAN": Bool,
+    "TIMESTAMP": Timestamp,
+}
+
+
+def get_type_by_name(type_name: str) -> DType:
+    if type_name not in name_to_dtype:
+        raise FeathubExpressionException(f"Unknown dtype name: {type_name}.")
+    return name_to_dtype[type_name]
+
+
+python_type_to_dtype: Dict[Type, DType] = {
+    bool: Bool,
+    int: Int32,
+    float: Float64,
+    str: String,
+}
+
+
+def from_python_type(python_type: Type) -> DType:
+    if python_type not in python_type_to_dtype:
+        raise FeathubExpressionException(
+            f"Cannot convert python type: {python_type} to Feathub dtype."
+        )
+    return python_type_to_dtype[python_type]
+
 
 Int32Vector = VectorType(Int32)
 Int64Vector = VectorType(Int64)

@@ -34,12 +34,10 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="cost",
-                    dtype=Int64,
                     transform="cost",
                 ),
                 Feature(
                     name="distance",
-                    dtype=Int64,
                     transform="distance",
                 ),
             ],
@@ -69,7 +67,6 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="cost",
-                    dtype=Int64,
                     transform="cost",
                 ),
                 "distance",
@@ -84,7 +81,6 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="derived_cost",
-                    dtype=Float64,
                     transform="avg_cost * distance",
                 ),
             ],
@@ -181,14 +177,12 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="cost",
-                    dtype=Int64,
                     transform="cost",
                 ),
                 "distance",
                 f"{source_2.name}.avg_cost",
                 Feature(
                     name="derived_cost",
-                    dtype=Float64,
                     transform="avg_cost * distance",
                 ),
             ],
@@ -253,12 +247,10 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="cost",
-                    dtype=Int64,
                     transform="cost",
                 ),
                 Feature(
                     name="distance",
-                    dtype=Int64,
                     transform="distance",
                 ),
             ],
@@ -289,7 +281,6 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="cost",
-                    dtype=Int64,
                     transform="cost",
                 ),
                 "distance",
@@ -304,7 +295,6 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="derived_cost",
-                    dtype=Float64,
                     transform="avg_cost * distance",
                 ),
             ],

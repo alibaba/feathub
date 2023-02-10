@@ -17,7 +17,7 @@ from math import sqrt
 
 import pandas as pd
 
-from feathub.common.types import Int64, String, Float64, MapType
+from feathub.common.types import Int64, String, Float64
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
@@ -33,13 +33,11 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
 
         f_cost_per_mile = Feature(
             name="cost_per_mile",
-            dtype=Float64,
             transform="CAST(cost AS DOUBLE) / CAST(distance AS DOUBLE) + 10",
         )
 
         f_total_cost = Feature(
             name="total_cost",
-            dtype=Int64,
             transform=OverWindowTransform(
                 expr="cost",
                 agg_func="SUM",
@@ -49,7 +47,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         )
         f_avg_cost = Feature(
             name="avg_cost",
-            dtype=Float64,
             transform=OverWindowTransform(
                 expr="cost",
                 agg_func="AVG",
@@ -59,7 +56,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         )
         f_max_cost = Feature(
             name="max_cost",
-            dtype=Int64,
             transform=OverWindowTransform(
                 expr="cost",
                 agg_func="MAX",
@@ -69,7 +65,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         )
         f_min_cost = Feature(
             name="min_cost",
-            dtype=Int64,
             transform=OverWindowTransform(
                 expr="cost",
                 agg_func="MIN",
@@ -121,7 +116,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         with self.assertRaises(ValueError):
             Feature(
                 name="feature_1",
-                dtype=Int64,
                 transform=OverWindowTransform(
                     "cost", "unsupported_agg", window_size=timedelta(days=2)
                 ),
@@ -133,7 +127,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
 
         f_total_cost = Feature(
             name="total_cost",
-            dtype=Int64,
             transform=OverWindowTransform(
                 expr="cost",
                 agg_func="SUM",
@@ -168,7 +161,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
 
         f_total_cost = Feature(
             name="total_cost",
-            dtype=Int64,
             transform=OverWindowTransform(
                 expr="cost", agg_func="SUM", group_by_keys=["name"]
             ),
@@ -201,7 +193,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
 
         f_total_cost = Feature(
             name="total_cost",
-            dtype=Int64,
             transform=OverWindowTransform(
                 expr="cost", agg_func="SUM", group_by_keys=["name"], limit=2
             ),
@@ -241,7 +232,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="cost_sum",
-                    dtype=Int64,
                     transform=OverWindowTransform(
                         expr="cost",
                         agg_func="SUM",
@@ -297,7 +287,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="cost_sum",
-                    dtype=Int64,
                     transform=OverWindowTransform(
                         expr="cost",
                         agg_func="SUM",
@@ -336,7 +325,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="cost_sum",
-                    dtype=Int64,
                     transform=OverWindowTransform(
                         expr="cost",
                         agg_func="SUM",
@@ -344,7 +332,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
                         window_size=timedelta(milliseconds=3),
                     ),
                 ),
-                Feature(name="double_cost_sum", dtype=Int64, transform="cost_sum * 2"),
+                Feature(name="double_cost_sum", transform="cost_sum * 2"),
             ],
         )
 
@@ -384,7 +372,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
                 ),
                 Feature(
                     name="cost_sum",
-                    dtype=Int64,
                     transform=OverWindowTransform(
                         expr="cost",
                         agg_func="SUM",
@@ -431,15 +418,14 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     "avg_cost",
-                    dtype=Float64,
                     transform=OverWindowTransform(
-                        expr="cost",
+                        expr="CAST(cost AS DOUBLE)",
                         agg_func="AVG",
                         group_by_keys=["name"],
                         window_size=timedelta(days=2),
                     ),
                 ),
-                Feature("ten_times_cost", dtype=Int64, transform="10 * cost"),
+                Feature("ten_times_cost", transform="10 * cost"),
             ],
             keep_source_fields=True,
         )
@@ -516,7 +502,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="last_2_last_2_minute_total_cost",
-                    dtype=Float64,
                     transform=OverWindowTransform(
                         expr="cost",
                         agg_func="SUM",
@@ -527,7 +512,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
                 ),
                 Feature(
                     name="last_2_last_2_minute_avg_cost",
-                    dtype=Float64,
                     transform=OverWindowTransform(
                         expr="cost",
                         agg_func="AVG",
@@ -538,7 +522,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
                 ),
                 Feature(
                     name="last_2_last_2_minute_max_cost",
-                    dtype=Float64,
                     transform=OverWindowTransform(
                         expr="cost",
                         agg_func="MAX",
@@ -549,7 +532,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
                 ),
                 Feature(
                     name="last_2_last_2_minute_min_cost",
-                    dtype=Float64,
                     transform=OverWindowTransform(
                         expr="cost",
                         agg_func="MIN",
@@ -669,7 +651,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="row_num",
-                    dtype=Int64,
                     transform=OverWindowTransform(
                         expr="cost",
                         agg_func="ROW_NUMBER",
@@ -717,7 +698,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="cost_value_counts_limit",
-                    dtype=MapType(String, Int64),
                     transform=OverWindowTransform(
                         expr="cost",
                         agg_func="VALUE_COUNTS",
@@ -728,7 +708,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
                 ),
                 Feature(
                     name="cost_value_counts",
-                    dtype=MapType(String, Int64),
                     transform=OverWindowTransform(
                         expr="cost",
                         agg_func="VALUE_COUNTS",
@@ -742,24 +721,24 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         expected_df = df.copy()
         expected_df["cost_value_counts_limit"] = pd.Series(
             [
-                {"100": 1},
-                {"100": 2},
-                {"400": 1},
-                {"100": 2},
-                {"200": 1, "400": 1},
-                {"500": 1},
-                {"100": 1, "600": 1},
+                {100: 1},
+                {100: 2},
+                {400: 1},
+                {100: 2},
+                {200: 1, 400: 1},
+                {500: 1},
+                {100: 1, 600: 1},
             ]
         )
         expected_df["cost_value_counts"] = pd.Series(
             [
-                {"100": 1},
-                {"100": 2},
-                {"400": 1},
-                {"100": 3},
-                {"200": 1, "400": 1},
-                {"500": 1},
-                {"100": 1, "600": 1},
+                {100: 1},
+                {100: 2},
+                {400: 1},
+                {100: 3},
+                {200: 1, 400: 1},
+                {500: 1},
+                {100: 1, 600: 1},
             ]
         )
         expected_df.drop(["cost", "distance"], axis=1, inplace=True)
@@ -822,7 +801,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
 
         f_all_total_cost = Feature(
             name="all_total_cost",
-            dtype=Int64,
             transform=OverWindowTransform(
                 expr="cost",
                 agg_func="SUM",
@@ -831,14 +809,12 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         )
         f_not_ranged_total_cost = Feature(
             name="not_ranged_total_cost",
-            dtype=Int64,
             transform=OverWindowTransform(
                 expr="cost", agg_func="SUM", group_by_keys=["name"]
             ),
         )
         f_time_window_total_cost = Feature(
             name="time_window_total_cost",
-            dtype=Int64,
             transform=OverWindowTransform(
                 expr="cost",
                 agg_func="SUM",
@@ -848,14 +824,12 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         )
         f_row_limit_total_cost = Feature(
             name="row_limit_total_cost",
-            dtype=Int64,
             transform=OverWindowTransform(
                 expr="cost", agg_func="SUM", group_by_keys=["name"], limit=2
             ),
         )
         f_time_window_row_limit_total_cost = Feature(
             name="time_window_row_limit_total_cost",
-            dtype=Int64,
             transform=OverWindowTransform(
                 expr="cost",
                 agg_func="SUM",
@@ -933,19 +907,16 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="cost",
-                    dtype=Int64,
                     transform="cost",
                 ),
                 "distance",
                 f"{source_2.name}.avg_cost",
                 Feature(
                     name="derived_cost",
-                    dtype=Float64,
                     transform="avg_cost * distance",
                 ),
                 Feature(
                     name="last_avg_cost",
-                    dtype=Int64,
                     transform=OverWindowTransform(
                         expr="avg_cost",
                         agg_func="LAST_VALUE",
@@ -956,7 +927,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
                 ),
                 Feature(
                     name="double_last_avg_cost",
-                    dtype=Float64,
                     transform="last_avg_cost * 2",
                 ),
             ],
@@ -994,6 +964,47 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         self.assertListEqual(["name"], built_feature_view_2.keys)
         self.assertTrue(expected_result_df.equals(result_df))
 
+    def test_over_window_transform_feature_with_dtype(self):
+        df = self.input_data.copy()
+        source = self.create_file_source(df)
+
+        feature_view = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                Feature(
+                    name="cost_sum",
+                    transform=OverWindowTransform(
+                        expr="cost",
+                        agg_func="SUM",
+                        group_by_keys=["name"],
+                        window_size=timedelta(days=2),
+                    ),
+                    dtype=Float64,
+                ),
+            ],
+        )
+
+        expected_df = df.copy()
+        expected_df["cost_sum"] = pd.Series([100, 400, 400, 600, 500, 900]).astype(
+            "Float64"
+        )
+        expected_df.drop(["cost", "distance"], axis=1, inplace=True)
+        expected_df = expected_df.sort_values(by=["name", "time"]).reset_index(
+            drop=True
+        )
+
+        result_df = (
+            self.client.get_features(feature_view)
+            .to_pandas()
+            .sort_values(by=["name", "time"])
+            .reset_index(drop=True)
+        )
+        self.assertTrue(
+            expected_df.equals(result_df),
+            f"Expected: {expected_df}\n Actual: {result_df}",
+        )
+
     def _over_window_transform_first_last_value(
         self,
         window_size=None,
@@ -1008,7 +1019,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="first_time",
-                    dtype=String,
                     transform=OverWindowTransform(
                         expr="`time`",
                         agg_func="FIRST_VALUE",
@@ -1019,7 +1029,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
                 ),
                 Feature(
                     name="last_time",
-                    dtype=String,
                     transform=OverWindowTransform(
                         expr="`time`",
                         agg_func="LAST_VALUE",
@@ -1068,7 +1077,6 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
             features=[
                 Feature(
                     name="last_2_pay_last_2_minute_total_cost",
-                    dtype=Float64,
                     transform=OverWindowTransform(
                         expr="cost",
                         agg_func="SUM",

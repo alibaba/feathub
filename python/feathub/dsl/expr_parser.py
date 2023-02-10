@@ -46,7 +46,7 @@ class ExprParser:
     precedence = (
         ("left", "OR"),
         ("left", "AND"),
-        ("left", "LT", "LE", "GT", "GE", "EQ", "NE"),
+        ("left", "LT", "LE", "GT", "GE", "EQ", "NE", "IS", "NOT"),
         ("left", "+", "-"),
         ("left", "*", "/"),
         ("right", "UMINUS"),

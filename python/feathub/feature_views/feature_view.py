@@ -14,11 +14,22 @@
 from abc import ABC
 from collections import OrderedDict
 from copy import deepcopy
-from typing import Optional, List, Union, cast, Sequence
+from typing import Optional, List, Union, cast, Sequence, Dict
+
+from feathub.dsl.expr_parser import ExprParser
 
 from feathub.common.exceptions import FeathubException
+from feathub.common.types import DType
 from feathub.feature_views.feature import Feature
+from feathub.feature_views.transforms.expression_transform import ExpressionTransform
+from feathub.feature_views.transforms.join_transform import JoinTransform
+from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
+from feathub.feature_views.transforms.sliding_window_transform import (
+    SlidingWindowTransform,
+)
 from feathub.table.table_descriptor import TableDescriptor
+
+feathub_expr_parser = ExprParser()
 
 
 class FeatureView(TableDescriptor, ABC):
@@ -68,14 +79,25 @@ class FeatureView(TableDescriptor, ABC):
 
         is_unresolved = self.is_unresolved()
         keys = None if is_unresolved else self._get_keys()
+        super().__init__(
+            name=name,
+            keys=keys,
+            timestamp_field=timestamp_field,
+            timestamp_format=timestamp_format,
+        )
+
         if not is_unresolved:
             # Uses table's keys as features' keys if features' keys are not specified.
             for feature in [f for f in self.get_resolved_features() if f.keys is None]:
                 feature.keys = keys
 
-            if timestamp_field is None:
-                timestamp_field = self.get_resolved_source().timestamp_field
-                timestamp_format = self.get_resolved_source().timestamp_format
+            for feature in [f for f in self.get_resolved_features() if f.dtype is None]:
+                variable_types = self._get_variable_types()
+                feature.dtype = self._derive_feature_dtype(feature, variable_types)
+
+            if self.timestamp_field is None:
+                self.timestamp_field = self.get_resolved_source().timestamp_field
+                self.timestamp_format = self.get_resolved_source().timestamp_format
 
             feature_names = set()
             for feature in self.get_resolved_features():
@@ -86,13 +108,6 @@ class FeatureView(TableDescriptor, ABC):
                     )
                 feature_names.add(feature.name)
 
-        super().__init__(
-            name=name,
-            keys=keys,
-            timestamp_field=timestamp_field,
-            timestamp_format=timestamp_format,
-        )
-
     def is_unresolved(self) -> bool:
         return (
             isinstance(self.source, str)
@@ -100,6 +115,8 @@ class FeatureView(TableDescriptor, ABC):
             or any(isinstance(f, str) for f in self.features)
         )
 
+    # TODO: Remove this method and add a method to OnDemandFeatureView to get output
+    #  features with source fields.
     def get_output_fields(self, source_fields: List[str]) -> List[str]:
         """
         Returns the names of fields of this table descriptor. This method should be
@@ -136,18 +153,22 @@ class FeatureView(TableDescriptor, ABC):
 
         return list(OrderedDict.fromkeys(reordered_output_fields))
 
-    def get_feature(self, feature_name: str) -> Feature:
+    def get_output_features(self) -> List[Feature]:
         if self.is_unresolved():
             raise RuntimeError("Build this feature view before getting features.")
-        for feature in self.get_resolved_features():
-            if feature_name == feature.name:
-                return feature
 
-        if not self.keep_source_fields:
-            raise RuntimeError(
-                f"Failed to find the feature '{feature_name}' in {self.to_json()}."
-            )
-        return cast(TableDescriptor, self.source).get_feature(feature_name)
+        source_features = self.get_resolved_source().get_output_features()
+        features = {
+            **{f.name: f for f in source_features},
+            **{f.name: f for f in self.get_resolved_features()},
+        }
+
+        output_feature_names = self.get_output_fields([f.name for f in source_features])
+        output_features = []
+        for feature_name in output_feature_names:
+            output_features.append(features[feature_name])
+
+        return output_features
 
     def get_resolved_features(self) -> Sequence[Feature]:
         if self.is_unresolved():
@@ -192,3 +213,36 @@ class FeatureView(TableDescriptor, ABC):
         feature_view = deepcopy(self)
         feature_view.source = self.get_resolved_source().get_bounded_view()
         return feature_view
+
+    def _get_variable_types(self) -> Dict[str, DType]:
+        variable_types = {
+            **{feature.name: feature.dtype for feature in self.get_output_features()},
+            **{
+                feature.name: feature.dtype
+                for feature in self.get_resolved_source().get_output_features()
+            },
+        }
+        return variable_types
+
+    def _derive_feature_dtype(
+        self, feature: Feature, variable_types: Dict[str, DType]
+    ) -> Optional[DType]:
+        transform = feature.transform
+        if isinstance(transform, ExpressionTransform):
+            dtype = feathub_expr_parser.parse(transform.expr).eval_dtype(variable_types)
+        elif isinstance(transform, OverWindowTransform) or isinstance(
+            transform, SlidingWindowTransform
+        ):
+            expr_result_type = feathub_expr_parser.parse(transform.expr).eval_dtype(
+                variable_types
+            )
+            dtype = transform.agg_func.get_result_type(expr_result_type)
+        elif isinstance(transform, JoinTransform):
+            raise FeathubException("JoinTransform feature should have dtype set.")
+        else:
+            raise FeathubException(
+                f"Cannot derive feature data type of {type(transform)} feature"
+            )
+
+        variable_types[feature.name] = dtype
+        return dtype

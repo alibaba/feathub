@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import Optional, List, TYPE_CHECKING, Dict
 from abc import abstractmethod
 
+from feathub.common.exceptions import FeathubException
 from feathub.registries.entity import Entity
 from feathub.feature_views.feature import Feature
 
@@ -74,16 +75,27 @@ class TableDescriptor(Entity):
                       used to configure the given table descriptors.
         :return: A resolved table descriptor.
         """
-
         return self
 
-    @abstractmethod
     def get_feature(self, feature_name: str) -> Feature:
         """
         Returns the feature whose name matches the given feature name.
 
         :param feature_name: The name of the feature to look for.
         :return: The feature with the given name.
+        """
+        for feature in self.get_output_features():
+            if feature_name == feature.name:
+                return feature
+
+        raise FeathubException(
+            f"Failed to find the feature '{feature_name}' in {self.to_json()}."
+        )
+
+    @abstractmethod
+    def get_output_features(self) -> List[Feature]:
+        """
+        Return a list of output features of the table.
         """
         pass
 

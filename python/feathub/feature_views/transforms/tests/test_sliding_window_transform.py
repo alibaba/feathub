@@ -18,7 +18,7 @@ from math import sqrt
 import pandas as pd
 
 from feathub.common.test_utils import to_epoch_millis, to_epoch
-from feathub.common.types import Int64, String, Float64, MapType, Float32
+from feathub.common.types import Int64, String, Float64, Float32
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.sliding_feature_view import (
@@ -54,7 +54,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
 
         f_total_cost = Feature(
             name="total_cost",
-            dtype=Int64,
             transform=SlidingWindowTransform(
                 expr="cost",
                 agg_func="SUM",
@@ -131,7 +130,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
 
         f_total_cost = Feature(
             name="total_cost",
-            dtype=Int64,
             transform=SlidingWindowTransform(
                 expr="cost",
                 agg_func="SUM",
@@ -244,7 +242,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
 
         f_total_cost = Feature(
             name="total_cost",
-            dtype=Int64,
             transform=SlidingWindowTransform(
                 expr="cost",
                 agg_func="SUM",
@@ -683,7 +680,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 features=[
                     Feature(
                         name="last_2_minute_total_pay",
-                        dtype=Float64,
                         transform=SlidingWindowTransform(
                             expr="cost",
                             agg_func="SUM",
@@ -707,7 +703,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                     ),
                     Feature(
                         name="pay_count",
-                        dtype=Int64,
                         transform=SlidingWindowTransform(
                             expr="0",
                             agg_func="COUNT",
@@ -1098,7 +1093,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 features=[
                     Feature(
                         name="first_time",
-                        dtype=String,
                         transform=SlidingWindowTransform(
                             expr="`time`",
                             agg_func="FIRST_VALUE",
@@ -1109,7 +1103,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                     ),
                     Feature(
                         name="last_time",
-                        dtype=String,
                         transform=SlidingWindowTransform(
                             expr="`time`",
                             agg_func="LAST_VALUE",
@@ -1127,7 +1120,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                     ),
                     Feature(
                         name="cnt",
-                        dtype=Int64,
                         transform=SlidingWindowTransform(
                             expr="0",
                             agg_func="COUNT",
@@ -1244,7 +1236,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 features=[
                     Feature(
                         name="last_2_minute_total_cost",
-                        dtype=Float64,
                         transform=SlidingWindowTransform(
                             expr="cost",
                             agg_func="SUM",
@@ -1255,7 +1246,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                     ),
                     Feature(
                         name="cnt",
-                        dtype=Int64,
                         transform=SlidingWindowTransform(
                             expr="1",
                             agg_func="COUNT",
@@ -1317,19 +1307,19 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                         [
                             "Alex",
                             to_epoch_millis("2022-01-01 09:01:59.999"),
-                            {"100.0": 2},
+                            {100.0: 2},
                             2,
                         ],
                         [
                             "Alex",
                             to_epoch_millis("2022-01-01 09:02:59.999"),
-                            {"200.0": 2, "100.0": 1},
+                            {200.0: 2, 100.0: 1},
                             3,
                         ],
                         [
                             "Alex",
                             to_epoch_millis("2022-01-01 09:03:59.999"),
-                            {"200.0": 2},
+                            {200.0: 2},
                             2,
                         ],
                         ["Alex", to_epoch_millis("2022-01-01 09:04:59.999"), None, 0],
@@ -1349,19 +1339,19 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                         [
                             "Alex",
                             to_epoch_millis("2022-01-01 09:01:59.999"),
-                            {"100.0": 2},
+                            {100.0: 2},
                             2,
                         ],
                         [
                             "Alex",
                             to_epoch_millis("2022-01-01 09:02:59.999"),
-                            {"200.0": 2, "100.0": 1},
+                            {200.0: 2, 100.0: 1},
                             3,
                         ],
                         [
                             "Alex",
                             to_epoch_millis("2022-01-01 09:03:59.999"),
-                            {"200.0": 2},
+                            {200.0: 2},
                             2,
                         ],
                     ],
@@ -1380,19 +1370,19 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                         [
                             "Alex",
                             to_epoch_millis("2022-01-01 09:01:59.999"),
-                            {"100.0": 2},
+                            {100.0: 2},
                             2,
                         ],
                         [
                             "Alex",
                             to_epoch_millis("2022-01-01 09:02:59.999"),
-                            {"200.0": 2, "100.0": 1},
+                            {200.0: 2, 100.0: 1},
                             3,
                         ],
                         [
                             "Alex",
                             to_epoch_millis("2022-01-01 09:03:59.999"),
-                            {"200.0": 2},
+                            {200.0: 2},
                             2,
                         ],
                         ["Alex", to_epoch_millis("2022-01-01 09:04:59.999"), None, 0],
@@ -1414,7 +1404,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 features=[
                     Feature(
                         name="last_2_minute_cost_value_counts",
-                        dtype=MapType(String, Int64),
                         transform=SlidingWindowTransform(
                             expr="cost",
                             agg_func="VALUE_COUNTS",
@@ -1426,7 +1415,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                     ),
                     Feature(
                         name="cnt",
-                        dtype=Int64,
                         transform=SlidingWindowTransform(
                             expr="1",
                             agg_func="COUNT",
@@ -1588,7 +1576,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 features=[
                     Feature(
                         name="cnt",
-                        dtype=Int64,
                         transform=SlidingWindowTransform(
                             expr="1",
                             agg_func="COUNT",
@@ -1600,7 +1587,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                     ),
                     Feature(
                         name="epoch_window_time",
-                        dtype=Int64,
                         transform="UNIX_TIMESTAMP(sliding_window_timestamp)",
                     ),
                 ],
@@ -1634,12 +1620,13 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             return row["name"].lower()
 
         f_lower_name = Feature(
-            name="lower_name", dtype=String, transform=PythonUdfTransform(name_to_lower)
+            name="lower_name",
+            dtype=String,
+            transform=PythonUdfTransform(name_to_lower),
         )
 
         f_total_cost = Feature(
             name="total_cost",
-            dtype=Int64,
             transform=SlidingWindowTransform(
                 expr="cost",
                 agg_func="SUM",
@@ -2015,7 +2002,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
 
         f_cost_value_counts_two_days = Feature(
             name="cost_value_counts_two_days",
-            dtype=MapType(Int64, Int64),
             transform=SlidingWindowTransform(
                 expr="cost",
                 agg_func="VALUE_COUNTS",
@@ -2251,3 +2237,91 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             expected_result_df.equals(result_df),
             f"expected: {expected_result_df}\n" f"actual: {result_df}",
         )
+
+    def test_sliding_window_feature_with_dtype(self):
+        df = self.input_data.copy()
+        source = self.create_file_source(df)
+
+        f_total_cost = Feature(
+            name="total_cost",
+            transform=SlidingWindowTransform(
+                expr="cost",
+                agg_func="SUM",
+                window_size=timedelta(days=1),
+                step_size=timedelta(days=1),
+                group_by_keys=["name"],
+            ),
+            dtype=Float64,
+        )
+
+        expected_results = [
+            (
+                ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT,
+                pd.DataFrame(
+                    [
+                        ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100.0],
+                        ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 300.0],
+                        ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 600.0],
+                        ["Alex", to_epoch_millis("2022-01-04 23:59:59.999"), 0.0],
+                        ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400.0],
+                        ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 200.0],
+                        ["Emma", to_epoch_millis("2022-01-03 23:59:59.999"), 0.0],
+                        ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500.0],
+                        ["Jack", to_epoch_millis("2022-01-04 23:59:59.999"), 0.0],
+                    ],
+                    columns=["name", "window_time", "total_cost"],
+                ),
+            ),
+            (
+                DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
+                pd.DataFrame(
+                    [
+                        ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100.0],
+                        ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 300.0],
+                        ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 600.0],
+                        ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400.0],
+                        ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 200.0],
+                        ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500.0],
+                    ],
+                    columns=["name", "window_time", "total_cost"],
+                ),
+            ),
+            (
+                ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
+                pd.DataFrame(
+                    [
+                        ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100.0],
+                        ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 300.0],
+                        ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 600.0],
+                        ["Alex", to_epoch_millis("2022-01-04 23:59:59.999"), 0.0],
+                        ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400.0],
+                        ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 200.0],
+                        ["Emma", to_epoch_millis("2022-01-03 23:59:59.999"), 0.0],
+                        ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500.0],
+                        ["Jack", to_epoch_millis("2022-01-04 23:59:59.999"), 0.0],
+                    ],
+                    columns=["name", "window_time", "total_cost"],
+                ),
+            ),
+        ]
+
+        for props, expected_result_df in expected_results:
+            features = SlidingFeatureView(
+                name="features",
+                source=source,
+                features=[f_total_cost],
+                props=props,
+            )
+
+            result_df = (
+                self.client.get_features(features=features)
+                .to_pandas()
+                .sort_values(by=["name", "window_time"])
+                .reset_index(drop=True)
+            )
+
+            self.assertTrue(
+                expected_result_df.equals(result_df),
+                f"Failed with props: {props}\nexpected: {expected_result_df}\n"
+                f"actual: {result_df}",
+            )
