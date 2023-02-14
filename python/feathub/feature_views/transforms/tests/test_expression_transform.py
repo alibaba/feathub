@@ -268,3 +268,43 @@ class ExpressionTransformITTest(ABC, FeathubITTestBase):
         )
 
         self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_duplicate_feature_name_with_source(self):
+        source = self.create_file_source(self.input_data.copy())
+
+        f_cost = Feature(name="cost", dtype=Int64, transform="cost + 1")
+
+        feature_view_1 = DerivedFeatureView(
+            name="feature_view_1",
+            source=source,
+            features=[
+                f_cost,
+            ],
+            keep_source_fields=True,
+        )
+
+        feature_view_2 = DerivedFeatureView(
+            name="feature_view_2",
+            source=feature_view_1,
+            features=["cost"],
+            keep_source_fields=True,
+        )
+
+        self.client.build_features([feature_view_1, feature_view_2])
+
+        result_df = (
+            self.client.get_features(feature_view_2)
+            .to_pandas()
+            .sort_values(by=["time"])
+            .reset_index(drop=True)
+        )
+
+        expected_result_df = self.input_data.copy()
+        expected_result_df["cost"] = expected_result_df.apply(
+            lambda row: row["cost"] + 1, axis=1
+        )
+        expected_result_df = expected_result_df.sort_values(by=["time"]).reset_index(
+            drop=True
+        )
+
+        self.assertTrue(expected_result_df.equals(result_df))

@@ -439,7 +439,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
                         window_size=timedelta(days=2),
                     ),
                 ),
-                Feature("10_times_cost", dtype=Int64, transform="10 * cost"),
+                Feature("ten_times_cost", dtype=Int64, transform="10 * cost"),
             ],
             keep_source_fields=True,
         )
@@ -447,7 +447,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         feature_view_2 = DerivedFeatureView(
             name="feature_view_2",
             source=feature_view_1,
-            features=["avg_cost", "10_times_cost"],
+            features=["avg_cost", "ten_times_cost"],
         )
 
         self.client.build_features([feature_view_1, feature_view_2])
@@ -456,7 +456,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         expected_result_df["avg_cost"] = pd.Series(
             [100.0, 400.0, 200.0, 300.0, 500.0, 450.0]
         )
-        expected_result_df["10_times_cost"] = pd.Series(
+        expected_result_df["ten_times_cost"] = pd.Series(
             [1000, 4000, 3000, 2000, 5000, 6000]
         )
         expected_result_df.drop(["cost", "distance"], axis=1, inplace=True)

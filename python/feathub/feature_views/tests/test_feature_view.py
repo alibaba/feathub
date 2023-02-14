@@ -78,7 +78,14 @@ class FeatureViewTest(unittest.TestCase):
         )
         built_feature_view = self.registry.build_features([feature_view_2])[0]
 
-        self.assertEqual(feature_1, built_feature_view.get_feature("feature_1"))
+        expected_feature_1 = Feature(
+            name="feature_1",
+            dtype=types.Float32,
+            transform="feature_1",
+        )
+        self.assertEqual(
+            expected_feature_1, built_feature_view.get_feature("feature_1")
+        )
         self.assertEqual(feature_2, built_feature_view.get_feature("feature_2"))
         self.assertEqual(feature_3, built_feature_view.get_feature("feature_3"))
 
