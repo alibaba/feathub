@@ -13,13 +13,16 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from typing import Union, Dict, Sequence, Optional
 
-from feathub.feature_views.transforms.join_transform import JoinTransform
-from feathub.table.table_descriptor import TableDescriptor
+from feathub.common.exceptions import FeathubException
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.feature_view import FeatureView
+from feathub.feature_views.transforms.expression_transform import ExpressionTransform
+from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.registries.registry import Registry
+from feathub.table.table_descriptor import TableDescriptor
 
 
 class DerivedFeatureView(FeatureView):
@@ -51,8 +54,10 @@ class DerivedFeatureView(FeatureView):
                          computed by ExpressionTransform or OverWindowTransform, its
                          expression can only depend on the features specified earlier in
                          this list and the features in the source table.
-        :param keep_source_fields: True iff all fields in the source table should be
-                                   included in this table.
+        :param keep_source_fields: True iff all features in the source table should be
+                                   included in this table. The feature in the source
+                                   will be overwritten by the feature in this feature
+                                   view if they have the same name.
         :param filter_expr: Optional. If it is not None, it represents a Feathub
                             expression which evaluates to a boolean value. The filter
                             expression is evaluated after other transformations in the
@@ -87,30 +92,7 @@ class DerivedFeatureView(FeatureView):
         features = []
         for feature in self.features:
             if isinstance(feature, str):
-                parts = feature.split(".")
-                if len(parts) == 2:
-                    join_table_name = parts[0]
-                    join_feature_name = parts[1]
-                else:
-                    join_table_name = source.name
-                    join_feature_name = parts[0]
-
-                table_desc = registry.get_features(name=join_table_name)
-                join_feature = table_desc.get_feature(feature_name=join_feature_name)
-                if source.name == join_table_name:
-                    feature = join_feature
-                elif join_feature.keys is not None:
-                    feature = Feature(
-                        name=join_feature_name,
-                        dtype=join_feature.dtype,
-                        transform=JoinTransform(join_table_name, join_feature_name),
-                        keys=join_feature.keys,
-                    )
-                else:
-                    raise RuntimeError(
-                        f"Feature '{join_feature_name}' in the remote table "
-                        f"'{join_table_name}' does not have keys specified."
-                    )
+                feature = self._get_feature_from_feature_str(feature, registry, source)
             features.append(feature)
 
         # TODO: Validate ExpressionTransform features that depends on
@@ -124,6 +106,43 @@ class DerivedFeatureView(FeatureView):
             keep_source_fields=self.keep_source_fields,
             filter_expr=self.filter_expr,
         )
+
+    @staticmethod
+    def _get_feature_from_feature_str(
+        feature_str: str, registry: Registry, source: TableDescriptor
+    ) -> Feature:
+        parts = feature_str.split(".")
+        if len(parts) == 1:
+            source_feature = source.get_feature(parts[0])
+            feature = Feature(
+                name=source_feature.name,
+                dtype=source_feature.dtype,
+                transform=ExpressionTransform(source_feature.name),
+                keys=source_feature.keys,
+            )
+            return feature
+        elif len(parts) == 2:
+            join_table_name = parts[0]
+            join_feature_name = parts[1]
+            table_desc = registry.get_features(name=join_table_name)
+            join_feature = table_desc.get_feature(feature_name=join_feature_name)
+            if join_feature.keys is None:
+                raise RuntimeError(
+                    f"Feature '{join_feature_name}' in the remote table "
+                    f"'{join_table_name}' does not have keys specified."
+                )
+            return Feature(
+                name=join_feature_name,
+                dtype=join_feature.dtype,
+                transform=JoinTransform(join_table_name, join_feature_name),
+                keys=join_feature.keys,
+            )
+        else:
+            raise FeathubException(
+                "Invalid string format. If a feature is a string, it should be either "
+                "in the format {table_name}.{feature_name} or in the "
+                "format {feature_name}."
+            )
 
     def to_json(self) -> Dict:
         return {

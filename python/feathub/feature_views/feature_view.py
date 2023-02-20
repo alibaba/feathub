@@ -46,7 +46,9 @@ class FeatureView(TableDescriptor, ABC):
                          table with the given name, or in the format {feature_name},
                          which refers to a feature in the source table.
         :param keep_source_fields: True iff all fields in the source table should be
-                                   included in this table.
+                                   included in this table. The feature in the source
+                                   will be overwritten by the feature in this feature
+                                   view if they have the same name.
         :param timestamp_field: Optional. If not None, the feature with the given name
                                 is used as the `timestamp_field` of the TableDescriptor
                                 represented by this FeatureView. Otherwise, the
@@ -72,8 +74,8 @@ class FeatureView(TableDescriptor, ABC):
                 feature.keys = keys
 
             if timestamp_field is None:
-                timestamp_field = cast(TableDescriptor, self.source).timestamp_field
-                timestamp_format = cast(TableDescriptor, self.source).timestamp_format
+                timestamp_field = self.get_resolved_source().timestamp_field
+                timestamp_format = self.get_resolved_source().timestamp_format
 
             feature_names = set()
             for feature in self.get_resolved_features():

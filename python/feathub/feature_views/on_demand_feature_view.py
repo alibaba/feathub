@@ -68,7 +68,9 @@ class OnDemandFeatureView(FeatureView):
                          table with the given name, or in the format {feature_name},
                          which refers to a feature in the source table.
         :param keep_source_fields: True iff all fields in the source table should be
-                                   included in this table.
+                                   included in this table. The feature in the source
+                                   will be overwritten by the feature in this feature
+                                   view if they have the same name.
         """
         super().__init__(
             name=name,

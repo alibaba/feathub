@@ -247,8 +247,6 @@ class FlinkTableBuilder:
         per_row_transform_features_following_first_over_window_or_join = []
 
         for feature in dependent_features:
-            if feature.name in tmp_table.get_schema().get_field_names():
-                continue
             if isinstance(feature.transform, ExpressionTransform):
                 if len(right_tables) > 0 or len(window_agg_map) > 0:
                     per_row_transform_features_following_first_over_window_or_join.append(  # noqa
@@ -416,8 +414,6 @@ class FlinkTableBuilder:
         per_row_transform_features_following_first_sliding_feature = []
 
         for feature in dependent_features:
-            if feature.name in tmp_table.get_schema().get_field_names():
-                continue
             if isinstance(feature.transform, ExpressionTransform):
                 if len(sliding_window_agg_map) > 0:
                     per_row_transform_features_following_first_sliding_feature.append(

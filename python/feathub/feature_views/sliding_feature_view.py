@@ -209,7 +209,13 @@ class SlidingFeatureView(FeatureView):
         features = []
         for feature in self.features:
             if isinstance(feature, str):
-                feature = source.get_feature(feature_name=feature)
+                source_feature = source.get_feature(feature)
+                feature = Feature(
+                    name=source_feature.name,
+                    dtype=source_feature.dtype,
+                    transform=ExpressionTransform(source_feature.name),
+                    keys=source_feature.keys,
+                )
             if feature.name == self.timestamp_field:
                 continue
             features.append(feature)
