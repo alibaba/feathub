@@ -20,14 +20,15 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.table.types.DataType;
 
+import java.util.Map;
 import java.util.TreeMap;
 
 /** Aggregate function that get the min or max. */
 public class MinMaxAggFunc<T extends Comparable<T>>
-        implements AggFunc<T, T, MinMaxAggFunc.MinMaxAccumulator> {
+        implements AggFunc<T, T, MinMaxAggFunc.MinMaxAccumulator<T>> {
 
     private final DataType inDataType;
-    private final boolean isMin;
+    protected final boolean isMin;
 
     public MinMaxAggFunc(DataType inDataType, boolean isMin) {
         this.inDataType = inDataType;
@@ -35,12 +36,21 @@ public class MinMaxAggFunc<T extends Comparable<T>>
     }
 
     @Override
-    public void add(MinMaxAccumulator accumulator, T value, long timestamp) {
+    public void add(MinMaxAccumulator<T> accumulator, T value, long timestamp) {
         accumulator.values.put(value, accumulator.values.getOrDefault(value, 0L) + 1);
     }
 
     @Override
-    public void retract(MinMaxAccumulator accumulator, T value) {
+    public void merge(MinMaxAccumulator<T> target, MinMaxAccumulator<T> source) {
+        for (Map.Entry<T, Long> entry : source.values.entrySet()) {
+            target.values.put(
+                    entry.getKey(),
+                    target.values.getOrDefault(entry.getKey(), 0L) + entry.getValue());
+        }
+    }
+
+    @Override
+    public void retract(MinMaxAccumulator<T> accumulator, T value) {
         final long newCnt = accumulator.values.get(value) - 1;
         if (newCnt == 0) {
             accumulator.values.remove(value);
@@ -50,15 +60,27 @@ public class MinMaxAggFunc<T extends Comparable<T>>
     }
 
     @Override
-    public T getResult(MinMaxAccumulator accumulator) {
+    public void retractAccumulator(MinMaxAccumulator<T> target, MinMaxAccumulator<T> source) {
+        for (Map.Entry<T, Long> entry : source.values.entrySet()) {
+            final long newCnt = target.values.get(entry.getKey()) - entry.getValue();
+            if (newCnt == 0) {
+                target.values.remove(entry.getKey());
+                continue;
+            }
+            target.values.put(entry.getKey(), newCnt);
+        }
+    }
+
+    @Override
+    public T getResult(MinMaxAccumulator<T> accumulator) {
         if (accumulator.values.isEmpty()) {
             return null;
         }
 
         if (isMin) {
-            return (T) accumulator.values.firstKey();
+            return accumulator.values.firstKey();
         } else {
-            return (T) accumulator.values.lastKey();
+            return accumulator.values.lastKey();
         }
     }
 
@@ -68,17 +90,17 @@ public class MinMaxAggFunc<T extends Comparable<T>>
     }
 
     @Override
-    public MinMaxAccumulator createAccumulator() {
-        return new MinMaxAccumulator();
+    public MinMaxAccumulator<T> createAccumulator() {
+        return new MinMaxAccumulator<>();
     }
 
     @Override
-    public TypeInformation<MinMaxAccumulator> getAccumulatorTypeInformation() {
+    public TypeInformation getAccumulatorTypeInformation() {
         return Types.POJO(MinMaxAccumulator.class);
     }
 
     /** Accumulator for {@link MinMaxAggFunc}. */
-    public static class MinMaxAccumulator {
-        public final TreeMap<Comparable<?>, Long> values = new TreeMap<>();
+    public static class MinMaxAccumulator<T extends Comparable<T>> {
+        public final TreeMap<T, Long> values = new TreeMap<>();
     }
 }

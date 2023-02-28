@@ -495,3 +495,17 @@ class FlinkProcessorITTest(
 
     def test_random_field_length(self):
         pass
+
+    # TODO: Enable the following sliding window tests when
+    #  SlidingWindowKeyedProcessFunction can handle unordered data.
+    def test_sliding_window_with_millisecond_sliding_window_timestamp(self):
+        pass
+
+    def test_transform_with_expression_as_group_by_key(self):
+        pass
+
+    def test_transform_with_limit(self):
+        pass
+
+    def test_transform_with_value_counts(self):
+        pass

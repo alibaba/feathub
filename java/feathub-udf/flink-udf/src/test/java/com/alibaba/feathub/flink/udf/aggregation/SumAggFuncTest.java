@@ -33,13 +33,13 @@ class SumAggFuncTest {
         innerTest(Arrays.array(1.0, 2.0, 3.0), 6.0, 0.0, 5.0, new SumAggFunc.DoubleSumAggFunc());
     }
 
-    private <T, ACC_T> void innerTest(
+    private <T> void innerTest(
             T[] inputs,
             T expectedResult,
             T expectedInitRes,
             T expectedResultAfterRetract,
-            SumAggFunc<T, ACC_T> aggFunc) {
-        final ACC_T accumulator = aggFunc.createAccumulator();
+            SumAggFunc<T> aggFunc) {
+        SumAggFunc.SumAccumulator<T> accumulator = aggFunc.createAccumulator();
         assertThat(aggFunc.getResult(accumulator)).isEqualTo(expectedInitRes);
         for (T input : inputs) {
             aggFunc.add(accumulator, input, 0);

@@ -19,23 +19,26 @@ package com.alibaba.feathub.flink.udf.processfunction;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.DataTypes;
-import org.apache.flink.table.api.Expressions;
 import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+import org.apache.flink.table.types.DataType;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.CollectionUtil;
 
 import com.alibaba.feathub.flink.udf.AggregationFieldsDescriptor;
+import com.alibaba.feathub.flink.udf.SlidingWindowDescriptor;
 import com.alibaba.feathub.flink.udf.SlidingWindowUtils;
-import com.alibaba.feathub.flink.udf.ValueCountsAggFunc;
 import org.assertj.core.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.apache.flink.table.api.Expressions.$;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -69,79 +72,68 @@ public class SlidingWindowKeyedProcessFunctionTest {
                         .as("id", "val", "ts");
     }
 
+    private void verifyResult(
+            AggregationFieldsDescriptor aggDescriptors, Row zeroValuedRow, List<Row> expected) {
+
+        SlidingWindowDescriptor windowDescriptor =
+                new SlidingWindowDescriptor(
+                        Duration.ofSeconds(1), null, Collections.singletonList("id"), null);
+
+        Table table = inputTable;
+        for (AggregationFieldsDescriptor.AggregationFieldDescriptor descriptor :
+                aggDescriptors.getAggFieldDescriptors()) {
+            table = table.addOrReplaceColumns($("val").as(descriptor.fieldName));
+        }
+
+        DataStream<Row> stream =
+                SlidingWindowUtils.applySlidingWindowPreAggregationProcess(
+                        tEnv, table, windowDescriptor, aggDescriptors, "ts");
+
+        Map<String, DataType> dataTypeMap =
+                new HashMap<String, DataType>() {
+                    {
+                        put("id", DataTypes.INT());
+                        put("val", DataTypes.BIGINT());
+                        put("ts", DataTypes.TIMESTAMP_LTZ(3));
+                    }
+                };
+
+        for (AggregationFieldsDescriptor.AggregationFieldDescriptor descriptor :
+                aggDescriptors.getAggFieldDescriptors()) {
+            dataTypeMap.put(descriptor.fieldName, descriptor.dataType);
+        }
+
+        table =
+                SlidingWindowUtils.applySlidingWindowAggregationProcess(
+                        tEnv,
+                        stream,
+                        dataTypeMap,
+                        Arrays.array("id"),
+                        "ts",
+                        1000L,
+                        aggDescriptors,
+                        zeroValuedRow,
+                        false);
+
+        List<Row> actual = CollectionUtil.iteratorToList(table.execute().collect());
+        assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
+    }
+
     @Test
     void testMultiSlidingWindowSizeProcessFunction() {
-        tEnv.createTemporaryView("input_table", inputTable);
-
-        Table table =
-                tEnv.sqlQuery(
-                        "SELECT * FROM TABLE("
-                                + "   HOP("
-                                + "       DATA => TABLE input_table,"
-                                + "       TIMECOL => DESCRIPTOR(ts),"
-                                + "       SLIDE => INTERVAL '1' SECOND,"
-                                + "       SIZE => INTERVAL '1' SECOND))");
-
-        table =
-                table.groupBy($("id"), $("window_start"), $("window_end"), $("window_time"))
-                        .select(
-                                $("id"),
-                                $("val").sum().as("val_sum"),
-                                Expressions.row($("val").sum(), $("val").count()).as("val_avg"),
-                                Expressions.call(ValueCountsAggFunc.class, $("val"))
-                                        .as("val_value_counts"),
-                                $("window_time"));
-
-        table =
-                SlidingWindowUtils.applySlidingWindowKeyedProcessFunction(
-                        tEnv,
-                        table,
-                        Arrays.array("id"),
-                        "window_time",
-                        1000L,
-                        AggregationFieldsDescriptor.builder()
-                                .addField(
-                                        "val_sum",
-                                        DataTypes.BIGINT(),
-                                        "val_sum_1",
-                                        DataTypes.BIGINT(),
-                                        1000L,
-                                        "SUM")
-                                .addField(
-                                        "val_sum",
-                                        DataTypes.BIGINT(),
-                                        "val_sum_2",
-                                        DataTypes.BIGINT(),
-                                        2000L,
-                                        "SUM")
-                                .addField(
-                                        "val_avg",
-                                        table.getResolvedSchema()
-                                                .getColumn("val_avg")
-                                                .orElseThrow(RuntimeException::new)
-                                                .getDataType(),
-                                        "val_avg_1",
-                                        DataTypes.FLOAT(),
-                                        1000L,
-                                        "ROW_AVG")
-                                .addField(
-                                        "val_avg",
-                                        table.getResolvedSchema()
-                                                .getColumn("val_avg")
-                                                .orElseThrow(RuntimeException::new)
-                                                .getDataType(),
-                                        "val_avg_2",
-                                        DataTypes.DOUBLE(),
-                                        2000L,
-                                        "ROW_AVG")
-                                .addField(
-                                        "val_value_counts",
-                                        DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
-                                        "val_value_counts_2",
-                                        DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
-                                        2000L,
-                                        "MERGE_VALUE_COUNTS")
-                                .build());
+        AggregationFieldsDescriptor aggDescriptors =
+                AggregationFieldsDescriptor.builder()
+                        .addField("val_sum_1", DataTypes.BIGINT(), DataTypes.BIGINT(), 1000L, "SUM")
+                        .addField("val_sum_2", DataTypes.BIGINT(), DataTypes.BIGINT(), 2000L, "SUM")
+                        .addField("val_avg_1", DataTypes.BIGINT(), DataTypes.FLOAT(), 1000L, "AVG")
+                        .addField("val_avg_2", DataTypes.BIGINT(), DataTypes.DOUBLE(), 2000L, "AVG")
+                        .addField(
+                                "val_value_counts_2",
+                                DataTypes.BIGINT(),
+                                DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
+                                2000L,
+                                "VALUE_COUNTS")
+                        .build();
 
         List<Row> expected =
                 java.util.Arrays.asList(
@@ -257,73 +249,27 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                 },
                                 Instant.ofEpochMilli(7999)));
 
-        List<Row> actual = CollectionUtil.iteratorToList(table.execute().collect());
-        assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
+        verifyResult(aggDescriptors, null, expected);
     }
 
     @Test
     void testEnableEmptyWindowOutputDisableSameWindowOutput() {
-        tEnv.createTemporaryView("input_table", inputTable);
-
-        Table table =
-                tEnv.sqlQuery(
-                        "SELECT * FROM TABLE("
-                                + "   HOP("
-                                + "       DATA => TABLE input_table,"
-                                + "       TIMECOL => DESCRIPTOR(ts),"
-                                + "       SLIDE => INTERVAL '1' SECOND,"
-                                + "       SIZE => INTERVAL '1' SECOND))");
-
-        table =
-                table.groupBy($("id"), $("window_start"), $("window_end"), $("window_time"))
-                        .select(
-                                $("id"),
-                                $("val").sum().as("val_sum"),
-                                Expressions.row($("val").sum(), $("val").count()).as("val_avg"),
-                                Expressions.call(ValueCountsAggFunc.class, $("val"))
-                                        .as("val_value_counts"),
-                                $("window_time"));
-
         final Row zeroValuedRow = Row.withNames();
         zeroValuedRow.setField("val_sum_2", 0);
         zeroValuedRow.setField("val_avg_2", null);
         zeroValuedRow.setField("val_value_counts_2", null);
 
-        table =
-                SlidingWindowUtils.applySlidingWindowKeyedProcessFunction(
-                        tEnv,
-                        table,
-                        Arrays.array("id"),
-                        "window_time",
-                        1000L,
-                        AggregationFieldsDescriptor.builder()
-                                .addField(
-                                        "val_sum",
-                                        DataTypes.BIGINT(),
-                                        "val_sum_2",
-                                        DataTypes.BIGINT(),
-                                        2000L,
-                                        "SUM")
-                                .addField(
-                                        "val_avg",
-                                        table.getResolvedSchema()
-                                                .getColumn("val_avg")
-                                                .orElseThrow(RuntimeException::new)
-                                                .getDataType(),
-                                        "val_avg_2",
-                                        DataTypes.DOUBLE(),
-                                        2000L,
-                                        "ROW_AVG")
-                                .addField(
-                                        "val_value_counts",
-                                        DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
-                                        "val_value_counts_2",
-                                        DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
-                                        2000L,
-                                        "MERGE_VALUE_COUNTS")
-                                .build(),
-                        zeroValuedRow,
-                        true);
+        AggregationFieldsDescriptor aggDescriptors =
+                AggregationFieldsDescriptor.builder()
+                        .addField("val_sum_2", DataTypes.BIGINT(), DataTypes.BIGINT(), 2000L, "SUM")
+                        .addField("val_avg_2", DataTypes.BIGINT(), DataTypes.DOUBLE(), 2000L, "AVG")
+                        .addField(
+                                "val_value_counts_2",
+                                DataTypes.BIGINT(),
+                                DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
+                                2000L,
+                                "VALUE_COUNTS")
+                        .build();
 
         List<Row> expected =
                 java.util.Arrays.asList(
@@ -369,6 +315,16 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                     }
                                 },
                                 Instant.ofEpochMilli(999)),
+                        Row.of(
+                                0,
+                                1L,
+                                1.0,
+                                new HashMap<Long, Long>() {
+                                    {
+                                        put(1L, 1L);
+                                    }
+                                },
+                                Instant.ofEpochMilli(1999)),
                         Row.of(0, 0L, null, null, Instant.ofEpochMilli(2999)),
                         Row.of(
                                 0,
@@ -414,73 +370,27 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                 Instant.ofEpochMilli(7999)),
                         Row.of(0, 0L, null, null, Instant.ofEpochMilli(8999)));
 
-        List<Row> actual = CollectionUtil.iteratorToList(table.execute().collect());
-        assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
+        verifyResult(aggDescriptors, zeroValuedRow, expected);
     }
 
     @Test
     void testEnableEmptyWindowOutputAndSameWindowOutput() {
-        tEnv.createTemporaryView("input_table", inputTable);
-
-        Table table =
-                tEnv.sqlQuery(
-                        "SELECT * FROM TABLE("
-                                + "   HOP("
-                                + "       DATA => TABLE input_table,"
-                                + "       TIMECOL => DESCRIPTOR(ts),"
-                                + "       SLIDE => INTERVAL '1' SECOND,"
-                                + "       SIZE => INTERVAL '1' SECOND))");
-
-        table =
-                table.groupBy($("id"), $("window_start"), $("window_end"), $("window_time"))
-                        .select(
-                                $("id"),
-                                $("val").sum().as("val_sum"),
-                                Expressions.row($("val").sum(), $("val").count()).as("val_avg"),
-                                Expressions.call(ValueCountsAggFunc.class, $("val"))
-                                        .as("val_value_counts"),
-                                $("window_time"));
-
         final Row zeroValuedRow = Row.withNames();
         zeroValuedRow.setField("val_sum_2", 0);
         zeroValuedRow.setField("val_avg_2", null);
         zeroValuedRow.setField("val_value_counts_2", null);
 
-        table =
-                SlidingWindowUtils.applySlidingWindowKeyedProcessFunction(
-                        tEnv,
-                        table,
-                        Arrays.array("id"),
-                        "window_time",
-                        1000L,
-                        AggregationFieldsDescriptor.builder()
-                                .addField(
-                                        "val_sum",
-                                        DataTypes.BIGINT(),
-                                        "val_sum_2",
-                                        DataTypes.BIGINT(),
-                                        2000L,
-                                        "SUM")
-                                .addField(
-                                        "val_avg",
-                                        table.getResolvedSchema()
-                                                .getColumn("val_avg")
-                                                .orElseThrow(RuntimeException::new)
-                                                .getDataType(),
-                                        "val_avg_2",
-                                        DataTypes.DOUBLE(),
-                                        2000L,
-                                        "ROW_AVG")
-                                .addField(
-                                        "val_value_counts",
-                                        DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
-                                        "val_value_counts_2",
-                                        DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
-                                        2000L,
-                                        "MERGE_VALUE_COUNTS")
-                                .build(),
-                        zeroValuedRow,
-                        false);
+        AggregationFieldsDescriptor aggDescriptors =
+                AggregationFieldsDescriptor.builder()
+                        .addField("val_sum_2", DataTypes.BIGINT(), DataTypes.BIGINT(), 2000L, "SUM")
+                        .addField("val_avg_2", DataTypes.BIGINT(), DataTypes.DOUBLE(), 2000L, "AVG")
+                        .addField(
+                                "val_value_counts_2",
+                                DataTypes.BIGINT(),
+                                DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
+                                2000L,
+                                "VALUE_COUNTS")
+                        .build();
 
         List<Row> expected =
                 java.util.Arrays.asList(
@@ -581,68 +491,18 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                 Instant.ofEpochMilli(7999)),
                         Row.of(0, 0L, null, null, Instant.ofEpochMilli(8999)));
 
-        List<Row> actual = CollectionUtil.iteratorToList(table.execute().collect());
-        assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
+        verifyResult(aggDescriptors, zeroValuedRow, expected);
     }
 
     @Test
     void testMinMax() {
-        tEnv.createTemporaryView("input_table", inputTable);
-
-        Table table =
-                tEnv.sqlQuery(
-                        "SELECT * FROM TABLE("
-                                + "   HOP("
-                                + "       DATA => TABLE input_table,"
-                                + "       TIMECOL => DESCRIPTOR(ts),"
-                                + "       SLIDE => INTERVAL '1' SECOND,"
-                                + "       SIZE => INTERVAL '1' SECOND))");
-
-        table =
-                table.groupBy($("id"), $("window_start"), $("window_end"), $("window_time"))
-                        .select(
-                                $("id"),
-                                $("val").max().as("val_max"),
-                                $("val").min().as("val_min"),
-                                $("window_time"));
-
-        table =
-                SlidingWindowUtils.applySlidingWindowKeyedProcessFunction(
-                        tEnv,
-                        table,
-                        Arrays.array("id"),
-                        "window_time",
-                        1000L,
-                        AggregationFieldsDescriptor.builder()
-                                .addField(
-                                        "val_max",
-                                        DataTypes.BIGINT(),
-                                        "val_max_1",
-                                        DataTypes.BIGINT(),
-                                        1000L,
-                                        "MAX")
-                                .addField(
-                                        "val_max",
-                                        DataTypes.BIGINT(),
-                                        "val_max_2",
-                                        DataTypes.BIGINT(),
-                                        2000L,
-                                        "MAX")
-                                .addField(
-                                        "val_min",
-                                        DataTypes.BIGINT(),
-                                        "val_min_1",
-                                        DataTypes.BIGINT(),
-                                        1000L,
-                                        "MIN")
-                                .addField(
-                                        "val_min",
-                                        DataTypes.BIGINT(),
-                                        "val_min_2",
-                                        DataTypes.BIGINT(),
-                                        2000L,
-                                        "MIN")
-                                .build());
+        AggregationFieldsDescriptor aggDescriptors =
+                AggregationFieldsDescriptor.builder()
+                        .addField("val_max_1", DataTypes.BIGINT(), DataTypes.BIGINT(), 1000L, "MAX")
+                        .addField("val_max_2", DataTypes.BIGINT(), DataTypes.BIGINT(), 2000L, "MAX")
+                        .addField("val_min_1", DataTypes.BIGINT(), DataTypes.BIGINT(), 1000L, "MIN")
+                        .addField("val_min_2", DataTypes.BIGINT(), DataTypes.BIGINT(), 2000L, "MIN")
+                        .build();
 
         List<Row> expected =
                 java.util.Arrays.asList(
@@ -656,49 +516,26 @@ public class SlidingWindowKeyedProcessFunctionTest {
                         Row.of(0, 5L, 5L, 5L, 4L, Instant.ofEpochMilli(6999)),
                         Row.of(0, null, 5L, null, 5L, Instant.ofEpochMilli(7999)));
 
-        List<Row> actual = CollectionUtil.iteratorToList(table.execute().collect());
-        assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
+        verifyResult(aggDescriptors, null, expected);
     }
 
     @Test
     void testFirstValue() {
-        tEnv.createTemporaryView("input_table", inputTable);
-
-        Table table =
-                tEnv.sqlQuery(
-                        "SELECT *, ROW_NUMBER() OVER (PARTITION BY window_start, window_end, window_time, id ORDER BY ts ASC) AS rownum "
-                                + "FROM TABLE("
-                                + "   HOP("
-                                + "       DATA => TABLE input_table,"
-                                + "       TIMECOL => DESCRIPTOR(ts),"
-                                + "       SLIDE => INTERVAL '1' SECOND,"
-                                + "       SIZE => INTERVAL '1' SECOND))");
-
-        table = table.where($("rownum").isEqual(1)).dropColumns($("ts"));
-
-        table =
-                SlidingWindowUtils.applySlidingWindowKeyedProcessFunction(
-                        tEnv,
-                        table,
-                        Arrays.array("id"),
-                        "window_time",
-                        1000L,
-                        AggregationFieldsDescriptor.builder()
-                                .addField(
-                                        "val",
-                                        DataTypes.BIGINT(),
-                                        "val_first_value_1",
-                                        DataTypes.BIGINT(),
-                                        1000L,
-                                        "FIRST_VALUE")
-                                .addField(
-                                        "val",
-                                        DataTypes.BIGINT(),
-                                        "val_first_value_2",
-                                        DataTypes.BIGINT(),
-                                        2000L,
-                                        "FIRST_VALUE")
-                                .build());
+        AggregationFieldsDescriptor aggDescriptors =
+                AggregationFieldsDescriptor.builder()
+                        .addField(
+                                "val_first_value_1",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                1000L,
+                                "FIRST_VALUE")
+                        .addField(
+                                "val_first_value_2",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                2000L,
+                                "FIRST_VALUE")
+                        .build();
 
         List<Row> expected =
                 java.util.Arrays.asList(
@@ -712,49 +549,26 @@ public class SlidingWindowKeyedProcessFunctionTest {
                         Row.of(0, 5L, 4L, Instant.ofEpochMilli(6999)),
                         Row.of(0, null, 5L, Instant.ofEpochMilli(7999)));
 
-        List<Row> actual = CollectionUtil.iteratorToList(table.execute().collect());
-        assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
+        verifyResult(aggDescriptors, null, expected);
     }
 
     @Test
     void testLastValue() {
-        tEnv.createTemporaryView("input_table", inputTable);
-
-        Table table =
-                tEnv.sqlQuery(
-                        "SELECT *, ROW_NUMBER() OVER (PARTITION BY window_start, window_end, window_time, id ORDER BY ts DESC) AS rownum "
-                                + "FROM TABLE("
-                                + "   HOP("
-                                + "       DATA => TABLE input_table,"
-                                + "       TIMECOL => DESCRIPTOR(ts),"
-                                + "       SLIDE => INTERVAL '1' SECOND,"
-                                + "       SIZE => INTERVAL '1' SECOND))");
-
-        table = table.where($("rownum").isEqual(1)).dropColumns($("ts"));
-
-        table =
-                SlidingWindowUtils.applySlidingWindowKeyedProcessFunction(
-                        tEnv,
-                        table,
-                        Arrays.array("id"),
-                        "window_time",
-                        1000L,
-                        AggregationFieldsDescriptor.builder()
-                                .addField(
-                                        "val",
-                                        DataTypes.BIGINT(),
-                                        "val_last_value_1",
-                                        DataTypes.BIGINT(),
-                                        1000L,
-                                        "LAST_VALUE")
-                                .addField(
-                                        "val",
-                                        DataTypes.BIGINT(),
-                                        "val_last_value_2",
-                                        DataTypes.BIGINT(),
-                                        2000L,
-                                        "LAST_VALUE")
-                                .build());
+        AggregationFieldsDescriptor aggDescriptors =
+                AggregationFieldsDescriptor.builder()
+                        .addField(
+                                "val_last_value_1",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                1000L,
+                                "LAST_VALUE")
+                        .addField(
+                                "val_last_value_2",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                2000L,
+                                "LAST_VALUE")
+                        .build();
 
         List<Row> expected =
                 java.util.Arrays.asList(
@@ -768,7 +582,6 @@ public class SlidingWindowKeyedProcessFunctionTest {
                         Row.of(0, 5L, 5L, Instant.ofEpochMilli(6999)),
                         Row.of(0, null, 5L, Instant.ofEpochMilli(7999)));
 
-        List<Row> actual = CollectionUtil.iteratorToList(table.execute().collect());
-        assertThat(actual).containsExactlyInAnyOrderElementsOf(expected);
+        verifyResult(aggDescriptors, null, expected);
     }
 }

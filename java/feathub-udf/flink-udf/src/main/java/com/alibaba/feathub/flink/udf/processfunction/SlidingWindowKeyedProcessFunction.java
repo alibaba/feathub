@@ -61,6 +61,7 @@ import java.util.List;
  * the tumbling window aggregation to the input with window size that is same as the step size of
  * the {@link SlidingWindowKeyedProcessFunction} to be applied.
  */
+@SuppressWarnings({"rawtypes"})
 public class SlidingWindowKeyedProcessFunction extends KeyedProcessFunction<Row, Row, Row> {
 
     private final AggregationFieldsDescriptor aggregationFieldsDescriptor;
@@ -70,7 +71,7 @@ public class SlidingWindowKeyedProcessFunction extends KeyedProcessFunction<Row,
     private final String[] keyFieldNames;
     private final long stepSizeMs;
     private SlidingWindowState state;
-    private final PostSlidingWindowExpiredRowHandler expiredRowHandler;
+    private final SlidingWindowExpiredRowHandler expiredRowHandler;
     private final boolean skipSameWindowOutput;
 
     /**
@@ -87,7 +88,7 @@ public class SlidingWindowKeyedProcessFunction extends KeyedProcessFunction<Row,
             String[] keyFieldNames,
             String rowTimeFieldName,
             long stepSizeMs,
-            PostSlidingWindowExpiredRowHandler expiredRowHandler,
+            SlidingWindowExpiredRowHandler expiredRowHandler,
             boolean skipSameWindowOutput) {
         this.aggregationFieldsDescriptor = aggregationFieldsDescriptor;
         this.inputRowTypeSerializer = inputRowTypeSerializer;
@@ -176,8 +177,7 @@ public class SlidingWindowKeyedProcessFunction extends KeyedProcessFunction<Row,
             final int aggFieldIdx = aggregationFieldsDescriptor.getAggFieldIdx(descriptor);
             Object accumulatorState = accumulatorStates.getField(aggFieldIdx);
             if (rowToAdd != null) {
-                descriptor.aggFunc.add(
-                        accumulatorState, rowToAdd.getField(descriptor.inFieldName), timestamp);
+                descriptor.aggFunc.merge(accumulatorState, rowToAdd.getField(descriptor.fieldName));
             }
 
             // Advance left idx and retract rows whose rowTime is out of the time window
@@ -189,8 +189,8 @@ public class SlidingWindowKeyedProcessFunction extends KeyedProcessFunction<Row,
                     break;
                 }
                 Row curRow = state.timestampToRow.get(rowTime);
-                descriptor.aggFunc.retract(
-                        accumulatorState, curRow.getField(descriptor.inFieldName));
+                descriptor.aggFunc.retractAccumulator(
+                        accumulatorState, curRow.getField(descriptor.fieldName));
             }
             if (leftIdx < timestampList.size() && timestampList.get(leftIdx) <= timestamp) {
                 // If the row time of the earliest row that is not retracted is less than or
@@ -201,7 +201,7 @@ public class SlidingWindowKeyedProcessFunction extends KeyedProcessFunction<Row,
             leftIdxList.set(aggFieldIdx, leftIdx);
 
             outputRow.setField(
-                    descriptor.outFieldName, descriptor.aggFunc.getResult(accumulatorState));
+                    descriptor.fieldName, descriptor.aggFunc.getResult(accumulatorState));
         }
         state.updateLeftTimestampIdx(leftIdxList);
         state.updateAccumulatorStates(accumulatorStates);
