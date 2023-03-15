@@ -28,6 +28,7 @@ from feathub.common.exceptions import (
 )
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_views.feature_view import FeatureView
+from feathub.feature_views.sql_feature_view import SqlFeatureView
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
 from feathub.processors.flink.flink_processor_config import (
@@ -247,7 +248,7 @@ class FlinkProcessor(Processor):
         """
         table = self._resolve_table_descriptor(table)
 
-        if not isinstance(table, FeatureView):
+        if not isinstance(table, FeatureView) or isinstance(table, SqlFeatureView):
             return {}
 
         join_table = self._get_join_tables(table.get_resolved_source())
