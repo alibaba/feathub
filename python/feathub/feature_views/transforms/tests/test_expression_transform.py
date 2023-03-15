@@ -16,7 +16,7 @@ from abc import ABC
 import pandas as pd
 from dateutil.tz import tz
 
-from feathub.common.types import Float64, Int64, String
+from feathub.common.types import Float64, String, Int64
 from feathub.common.utils import to_unix_timestamp
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
@@ -36,7 +36,6 @@ class ExpressionTransformITTest(ABC, FeathubITTestBase):
 
         f_cost_per_mile = Feature(
             name="cost_per_mile",
-            dtype=Float64,
             transform="CAST(cost AS DOUBLE) / CAST(distance AS DOUBLE) + 10",
         )
 
@@ -84,7 +83,6 @@ class ExpressionTransformITTest(ABC, FeathubITTestBase):
 
         unix_time = Feature(
             name="unix_time",
-            dtype=Int64,
             transform="UNIX_TIMESTAMP(time)",
         )
 
@@ -140,7 +138,6 @@ class ExpressionTransformITTest(ABC, FeathubITTestBase):
 
         unix_time = Feature(
             name="unix_time",
-            dtype=Int64,
             transform="UNIX_TIMESTAMP(time, '%Y-%m-%d %H:%M:%S.%f %z')",
         )
 
@@ -178,7 +175,6 @@ class ExpressionTransformITTest(ABC, FeathubITTestBase):
 
         lower_name = Feature(
             name="lower_name",
-            dtype=String,
             transform="LOWER(name)",
         )
 
@@ -212,7 +208,6 @@ class ExpressionTransformITTest(ABC, FeathubITTestBase):
     def test_case(self):
         upper_name = Feature(
             name="upper_name",
-            dtype=String,
             transform="""
             CASE
                 WHEN name = 'Alex' THEN 'ALEX'
@@ -227,7 +222,6 @@ class ExpressionTransformITTest(ABC, FeathubITTestBase):
     def test_case_else(self):
         upper_name = Feature(
             name="upper_name",
-            dtype=String,
             transform="""
             CASE
                 WHEN name = 'Alex' THEN 'ALEX'
@@ -263,6 +257,42 @@ class ExpressionTransformITTest(ABC, FeathubITTestBase):
             lambda row: str(row["name"]).upper(),
             axis=1,
         )
+        expected_result_df = expected_result_df.sort_values(by=["time"]).reset_index(
+            drop=True
+        )
+
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_expression_transform_feature_with_dtype(self):
+        source = self.create_file_source(self.input_data.copy())
+
+        cost_plus_one = Feature(
+            dtype=Float64,
+            name="cost_plus_one",
+            transform="cost + 1",
+        )
+
+        features = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                cost_plus_one,
+            ],
+            keep_source_fields=True,
+        )
+
+        result_df = (
+            self.client.get_features(features)
+            .to_pandas()
+            .sort_values(by=["time"])
+            .reset_index(drop=True)
+        )
+
+        expected_result_df = self.input_data.copy()
+        expected_result_df["cost_plus_one"] = expected_result_df.apply(
+            lambda row: row["cost"] + 1,
+            axis=1,
+        ).astype("float64")
         expected_result_df = expected_result_df.sort_values(by=["time"]).reset_index(
             drop=True
         )

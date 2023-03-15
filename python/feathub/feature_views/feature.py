@@ -35,8 +35,8 @@ class Feature:
     def __init__(
         self,
         name: str,
-        dtype: DType,
         transform: Union[str, Transformation],
+        dtype: Optional[DType] = None,
         keys: Optional[Sequence[str]] = None,
         input_features: Sequence[Feature] = (),
     ):
@@ -79,7 +79,7 @@ class Feature:
     def to_json(self) -> Dict:
         return {
             "name": self.name,
-            "dtype": self.dtype.to_json(),
+            "dtype": None if self.dtype is None else self.dtype.to_json(),
             "transform": self.transform.to_json(),
             "keys": self.keys,
             "input_features": [feature.to_json() for feature in self.input_features],

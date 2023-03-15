@@ -16,6 +16,10 @@ from enum import Enum
 
 
 # TODO: Add docs about the supported AggFunc to README.
+from feathub.common.exceptions import FeathubException
+from feathub.common.types import DType, Float64, Int64, MapType
+
+
 class AggFunc(Enum):
     """Supported aggregation function for over/sliding window transform."""
 
@@ -28,3 +32,21 @@ class AggFunc(Enum):
     ROW_NUMBER = "ROW_NUMBER"
     COUNT = "COUNT"
     VALUE_COUNTS = "VALUE_COUNTS"
+
+    def get_result_type(self, input_type: DType) -> DType:
+        if self == AggFunc.AVG:
+            return Float64
+        elif (
+            self == AggFunc.SUM
+            or self == AggFunc.MAX
+            or self == AggFunc.MIN
+            or self == AggFunc.FIRST_VALUE
+            or self == AggFunc.LAST_VALUE
+        ):
+            return input_type
+        elif self == AggFunc.ROW_NUMBER or self == AggFunc.COUNT:
+            return Int64
+        elif self == AggFunc.VALUE_COUNTS:
+            return MapType(input_type, Int64)
+
+        raise FeathubException(f"Unknown AggFunc {self}.")

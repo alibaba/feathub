@@ -255,26 +255,30 @@ class FlinkProcessorTest(unittest.TestCase):
             registry=self.registry,
         )
 
-        dim_source = FileSystemSource("dim_source", "/path", "csv", Schema([], []))
+        dim_source = FileSystemSource(
+            "dim_source", "/path", "csv", Schema(["a", "id"], [Int32, Int32])
+        )
         dim_feature_view = DerivedFeatureView(
             "dim_feature_view",
             source=dim_source,
             features=[Feature(name="a", dtype=Int32, transform="a", keys=["id"])],
         )
 
-        dim_source2 = FileSystemSource("dim_source2", "/path", "csv", Schema([], []))
+        dim_source2 = FileSystemSource(
+            "dim_source2", "/path", "csv", Schema(["b", "id"], [Int32, Int32])
+        )
         dim_feature_view_2 = DerivedFeatureView(
             "dim_feature_view_2",
             source=dim_source2,
             features=[Feature(name="b", dtype=Int32, transform="b", keys=["id"])],
         )
 
-        source = FileSystemSource("source", "/path", "csv", Schema([], []))
+        source = FileSystemSource("source", "/path", "csv", Schema(["id"], [Int32]))
         joined_feature_view = DerivedFeatureView(
             "joined_feature_view", source, features=["dim_feature_view.a"]
         )
 
-        source_2 = FileSystemSource("source2", "/path", "csv", Schema([], []))
+        source_2 = FileSystemSource("source2", "/path", "csv", Schema(["id"], [Int32]))
         joined_feature_view_2 = DerivedFeatureView(
             "joined_feature_view_2", source_2, features=["dim_feature_view_2.b"]
         )

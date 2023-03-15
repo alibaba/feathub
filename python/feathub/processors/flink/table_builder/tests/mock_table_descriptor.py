@@ -12,7 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from abc import ABC
 from typing import Optional, List, Dict
 
 from feathub.feature_views.feature import Feature
@@ -22,7 +21,7 @@ from feathub.processors.flink.table_builder.source_sink_utils_common import (
 from feathub.table.table_descriptor import TableDescriptor
 
 
-class MockTableDescriptor(TableDescriptor, ABC):
+class MockTableDescriptor(TableDescriptor):
     def __init__(
         self,
         name: str = generate_random_table_name("mock_descriptor"),
@@ -37,7 +36,7 @@ class MockTableDescriptor(TableDescriptor, ABC):
             timestamp_format=timestamp_format,
         )
 
-    def get_feature(self, feature_name: str) -> Feature:
+    def get_output_features(self) -> List[Feature]:
         raise RuntimeError("Unsupported operation.")
 
     def is_bounded(self) -> bool:
