@@ -11,24 +11,28 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Mapping
+
 from collections import OrderedDict
+from typing import Dict, List, Optional
+
 import pandas as pd
 
 import feathub.common.utils as utils
 from feathub.common.exceptions import FeathubException
+from feathub.common.types import to_numpy_dtype
+from feathub.table.schema import Schema
 
 
 class _TableInfo:
     def __init__(
         self,
         table: Dict,
-        dtypes: Mapping,
+        schema: Schema,
         timestamp_field: Optional[str],
         key_fields: List[str],
     ):
         self.table = table
-        self.dtypes = dtypes
+        self.schema = schema
         self.timestamp_field = timestamp_field
         self.key_fields = key_fields
 
@@ -41,9 +45,6 @@ class MemoryOnlineStore:
     INSTANCE = None
 
     def __init__(self) -> None:
-        """
-        :param props: The store properties.
-        """
         super().__init__()
         self.table_infos: Dict[str, _TableInfo] = {}
 
@@ -51,6 +52,7 @@ class MemoryOnlineStore:
         self,
         table_name: str,
         features: pd.DataFrame,
+        schema: Schema,
         key_fields: List[str],
         timestamp_field: Optional[str],
         timestamp_format: Optional[str],
@@ -64,6 +66,7 @@ class MemoryOnlineStore:
         timestamp.
 
         :param table_name: The table's name.
+        :param schema: The Feathub schema of the features.
         :param features: A DataFrame with rows to put into the specified table.
         :param key_fields: The name of fields in the DataFrame to construct the key.
         :param timestamp_field: Optional. If it is not None, it is the name of the field
@@ -75,16 +78,15 @@ class MemoryOnlineStore:
         if table_name not in self.table_infos:
             self.table_infos[table_name] = _TableInfo(
                 table={},
-                dtypes=features.dtypes.to_dict(),
+                schema=schema,
                 key_fields=key_fields,
                 timestamp_field=timestamp_field,
             )
         table_info = self.table_infos[table_name]
-        dtypes = features.dtypes.to_dict()
-        if table_info.dtypes != dtypes:
+        if table_info.schema != schema:
             raise RuntimeError(
-                f"Features' dtypes {dtypes} do not match with dtypes "
-                f"{table_info.dtypes} of the table {table_name}."
+                f"Features' dtypes {schema} do not match with dtypes "
+                f"{table_info.schema} of the table {table_name}."
             )
         if table_info.timestamp_field != timestamp_field:
             raise RuntimeError(
@@ -158,11 +160,18 @@ class MemoryOnlineStore:
             rows.append(row)
 
         # TODO: move this logic to FeatureService.
+
+        schema = self.table_infos[table_name].schema
         features = (
             pd.concat(rows, axis=1)
             .transpose()
             .reset_index(drop=True)
-            .astype(self.table_infos[table_name].dtypes)
+            .astype(
+                {
+                    field_name: to_numpy_dtype(schema.get_field_type(field_name))
+                    for field_name in schema.field_names
+                }
+            )
         )
         features = features.drop(columns=key_fields)
         input_data = input_data.drop(columns=features.columns.tolist(), errors="ignore")

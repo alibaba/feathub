@@ -14,16 +14,16 @@
 
 from typing import Union, Dict, Sequence, Optional
 
-from feathub.common import types
 from feathub.feature_tables.feature_table import FeatureTable
-from feathub.feature_tables.sources.redis_source import RedisSource
-from feathub.feature_views.transforms.join_transform import JoinTransform
-from feathub.feature_views.transforms.expression_transform import ExpressionTransform
-from feathub.table.table_descriptor import TableDescriptor
-from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_tables.sources.memory_store_source import MemoryStoreSource
-from feathub.registries.registry import Registry
+from feathub.feature_tables.sources.redis_source import RedisSource
 from feathub.feature_views.feature import Feature
+from feathub.feature_views.feature_view import FeatureView
+from feathub.feature_views.transforms.expression_transform import ExpressionTransform
+from feathub.feature_views.transforms.join_transform import JoinTransform
+from feathub.registries.registry import Registry
+from feathub.table.schema import Schema
+from feathub.table.table_descriptor import TableDescriptor
 
 
 class OnDemandFeatureView(FeatureView):
@@ -39,7 +39,7 @@ class OnDemandFeatureView(FeatureView):
     """
 
     class _OnlineRequestSource(FeatureTable):
-        def __init__(self) -> None:
+        def __init__(self, schema: Schema) -> None:
             super().__init__(
                 name="_ONLINE_REQUEST",
                 system_name="online_request",
@@ -47,17 +47,17 @@ class OnDemandFeatureView(FeatureView):
                 keys=None,
                 timestamp_field=None,
                 timestamp_format="epoch",
+                schema=schema,
             )
 
         def to_json(self) -> Dict:
             return {"type": "_OnlineRequestSource"}
 
-    _ONLINE_REQUEST_SOURCE = _OnlineRequestSource()
-
     def __init__(
         self,
         name: str,
         features: Sequence[Union[str, Feature]],
+        request_schema: Schema,
         keep_source_fields: bool = False,
     ):
         """
@@ -67,6 +67,8 @@ class OnDemandFeatureView(FeatureView):
                          {table_name}.{feature_name}, which refers to a feature in the
                          table with the given name, or in the format {feature_name},
                          which refers to a feature in the source table.
+        :param request_schema: The schema of the request expected by the
+                               OnDemandFeatureView.
         :param keep_source_fields: True iff all fields in the source table should be
                                    included in this table. The feature in the source
                                    will be overwritten by the feature in this feature
@@ -74,10 +76,11 @@ class OnDemandFeatureView(FeatureView):
         """
         super().__init__(
             name=name,
-            source=OnDemandFeatureView._ONLINE_REQUEST_SOURCE,
+            source=OnDemandFeatureView._OnlineRequestSource(schema=request_schema),
             features=features,
             keep_source_fields=keep_source_fields,
         )
+        self.request_schema = request_schema
         for feature in features:
             if isinstance(feature, str) and len(feature.split(".")) != 2:
                 raise RuntimeError(
@@ -116,10 +119,9 @@ class OnDemandFeatureView(FeatureView):
                 if isinstance(table_desc, MemoryStoreSource) or isinstance(
                     table_desc, RedisSource
                 ):
-                    # TODO: consider specifying dtype.
                     feature = Feature(
                         name=join_feature_name,
-                        dtype=types.Unknown,
+                        dtype=table_desc.get_feature(join_feature_name).dtype,
                         transform=JoinTransform(join_table_name, join_feature_name),
                         keys=table_desc.keys,
                     )
@@ -132,6 +134,7 @@ class OnDemandFeatureView(FeatureView):
         return OnDemandFeatureView(
             name=self.name,
             features=features,
+            request_schema=self.request_schema,
             keep_source_fields=self.keep_source_fields,
         )
 
@@ -146,5 +149,6 @@ class OnDemandFeatureView(FeatureView):
                 feature if isinstance(feature, str) else feature.to_json()
                 for feature in self.features
             ],
+            "request_schema": self.request_schema,
             "keep_source_fields": self.keep_source_fields,
         }

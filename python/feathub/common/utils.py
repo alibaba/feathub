@@ -21,6 +21,8 @@ import pandas as pd
 from feathub.common import types
 from feathub.common.exceptions import FeathubException
 from feathub.common.protobuf import value_pb2
+from feathub.table.schema import Schema
+from feathub.table.table_descriptor import TableDescriptor
 
 
 def to_java_date_format(python_format: str) -> str:
@@ -207,3 +209,13 @@ def _deserialize_object_with_protobuf(pb_value: value_pb2.Value) -> Optional[Any
         return vector_object
     else:
         raise TypeError(f"Cannot deserialize protobuf object {pb_value}")
+
+
+def get_table_schema(table: TableDescriptor) -> Schema:
+    """
+    Return the schema of the table.
+    """
+    schema_builder = Schema.new_builder()
+    for f in table.get_output_features():
+        schema_builder.column(f.name, f.dtype)
+    return schema_builder.build()

@@ -23,6 +23,7 @@ from py4j.protocol import Py4JJavaError
 from pyflink.table import TableResult
 
 from feathub.common.exceptions import FeathubException
+from feathub.common.utils import get_table_schema
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
 from feathub.processors.flink.flink_table import FlinkTable
@@ -72,6 +73,7 @@ class FlinkSessionClusterJobSubmitter(FlinkJobSubmitter):
             MemoryOnlineStore.get_instance().put(
                 table_name=sink.table_name,
                 features=table.to_pandas(),
+                schema=get_table_schema(features),
                 key_fields=features.keys,
                 timestamp_field=features.timestamp_field,
                 timestamp_format=features.timestamp_format,

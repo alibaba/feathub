@@ -17,7 +17,6 @@ from datetime import datetime
 import pandas as pd
 
 from feathub.common.exceptions import FeathubException
-from feathub.common.types import Float64
 from feathub.feature_tables.sources.memory_store_source import MemoryStoreSource
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
@@ -191,13 +190,11 @@ class GetFeaturesITTest(ABC, FeathubITTestBase):
 
         f_cost_per_mile = Feature(
             name="cost_per_mile",
-            dtype=Float64,
             transform="CAST(cost AS DOUBLE) / CAST(distance AS DOUBLE) + 10",
         )
 
         f_cost_per_mile2 = Feature(
             name="cost_per_mile_2",
-            dtype=Float64,
             transform="CAST(cost AS DOUBLE) / CAST(distance AS DOUBLE) + 5",
         )
 

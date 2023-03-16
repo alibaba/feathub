@@ -95,6 +95,7 @@ class RedisClientTest(unittest.TestCase):
                 "table_name_1.val",
             ],
             keep_source_fields=True,
+            request_schema=Schema.new_builder().column("id", types.Int64).build(),
         )
 
     def test_get_online_features(self):

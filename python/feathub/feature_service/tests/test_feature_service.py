@@ -149,15 +149,17 @@ class FeatureServiceTest(unittest.TestCase):
                 f"{self.online_source_2.name}.distance",
                 Feature(
                     name="avg_cost",
-                    dtype=types.Float32,
                     transform="cost / distance",
                 ),
                 Feature(
                     name="derived_extra_field",
-                    dtype=types.Float32,
                     transform="distance * extra_field",
                 ),
             ],
+            request_schema=Schema.new_builder()
+            .column("name", types.String)
+            .column("extra_field", types.Float32)
+            .build(),
         )
         self.registry.build_features([on_demand_fv])
         online_features = self.feature_service.get_online_features(
@@ -190,10 +192,13 @@ class FeatureServiceTest(unittest.TestCase):
                 f"{self.online_source_2.name}.distance",
                 Feature(
                     name="avg_cost",
-                    dtype=types.Float32,
                     transform="cost / distance",
                 ),
             ],
+            request_schema=Schema.new_builder()
+            .column("name", types.String)
+            .column("extra_field", types.Float32)
+            .build(),
         )
         self.registry.build_features([on_demand_fv])
 
@@ -225,6 +230,10 @@ class FeatureServiceTest(unittest.TestCase):
             name="on_demand_fv",
             features=[f"{self.online_source_1.name}.cost"],
             keep_source_fields=True,
+            request_schema=Schema.new_builder()
+            .column("name", types.String)
+            .column("extra_field", types.Float32)
+            .build(),
         )
         self.registry.build_features([on_demand_fv])
         online_features = self.feature_service.get_online_features(

@@ -17,6 +17,7 @@ from typing import List, Optional
 import pandas as pd
 
 from feathub.common import types
+from feathub.common.utils import get_table_schema
 from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.table.schema import Schema
@@ -62,8 +63,8 @@ class OnlineFeaturesITTest(ABC, FeathubITTestBase):
         except RuntimeError as err:
             self.assertEqual(
                 str(err),
-                f"Features' dtypes {input_data_2.dtypes.to_dict()} do not match with "
-                f"dtypes {self.input_data.dtypes.to_dict()} of the table {table_name}.",
+                f"Features' dtypes {get_table_schema(source_2)} do not match with "
+                f"dtypes {get_table_schema(source_1)} of the table {table_name}.",
             )
 
     def test_materialize_features(self):

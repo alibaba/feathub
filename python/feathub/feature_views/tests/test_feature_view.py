@@ -41,13 +41,11 @@ class FeatureViewTest(unittest.TestCase):
 
         feature_1 = Feature(
             name="feature_1",
-            dtype=types.Float32,
             transform="CAST(fare_amount AS FLOAT) + 1",
         )
 
         feature_2 = Feature(
             name="feature_2",
-            dtype=types.Float32,
             transform="CAST(fare_amount AS FLOAT) + 2",
         )
 
@@ -63,7 +61,6 @@ class FeatureViewTest(unittest.TestCase):
 
         feature_3 = Feature(
             name="feature_3",
-            dtype=types.Bool,
             transform="CAST(trip_distance AS FLOAT)>30",
         )
 
