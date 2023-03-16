@@ -108,6 +108,7 @@ def run_nyc_taxi_example(client: FeathubClient) -> None:
                 transform="f_location_max_fare / f_location_avg_fare",
             ),
         ],
+        request_schema=Schema.new_builder().column("DOLocationID", types.Int64).build(),
     )
     client.build_features([source, on_demand_feature_view])
 

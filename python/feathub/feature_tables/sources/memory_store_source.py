@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from feathub.feature_tables.feature_table import FeatureTable
+from feathub.online_stores.memory_online_store import MemoryOnlineStore
+from feathub.registries.registry import Registry
+from feathub.table.table_descriptor import TableDescriptor
 
 
 class MemoryStoreSource(FeatureTable):
@@ -42,6 +45,17 @@ class MemoryStoreSource(FeatureTable):
             timestamp_format="epoch",
         )
         self.table_name = table_name
+
+    def build(
+        self, registry: "Registry", props: Optional[Dict] = None
+    ) -> TableDescriptor:
+        built_table = MemoryStoreSource(
+            name=self.name, keys=self.keys, table_name=self.table_name
+        )
+        built_table.schema = (
+            MemoryOnlineStore.get_instance().table_infos.get(self.table_name).schema
+        )
+        return built_table
 
     def to_json(self) -> Dict:
         return {

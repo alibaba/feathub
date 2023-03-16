@@ -44,6 +44,7 @@ from feathub.processors.local.local_processor_config import LocalProcessorConfig
 from feathub.processors.local.local_table import LocalTable
 from feathub.processors.processor import Processor
 from feathub.registries.registry import Registry
+from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
 
 
@@ -152,6 +153,7 @@ class LocalProcessor(Processor):
         if isinstance(sink, MemoryStoreSink):
             return self._write_features_to_online_store(
                 features=features_df,
+                schema=utils.get_table_schema(features),
                 sink=sink,
                 key_fields=features.keys,
                 timestamp_field=features.timestamp_field,
@@ -181,6 +183,7 @@ class LocalProcessor(Processor):
     def _write_features_to_online_store(
         self,
         features: pd.DataFrame,
+        schema: Schema,
         sink: MemoryStoreSink,
         key_fields: List[str],
         timestamp_field: Optional[str],
@@ -189,6 +192,7 @@ class LocalProcessor(Processor):
         MemoryOnlineStore.get_instance().put(
             table_name=sink.table_name,
             features=features,
+            schema=schema,
             key_fields=key_fields,
             timestamp_field=timestamp_field,
             timestamp_format=timestamp_format,

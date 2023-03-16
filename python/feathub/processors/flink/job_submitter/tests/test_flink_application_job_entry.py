@@ -103,7 +103,7 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
         dim_feature_view = DerivedFeatureView(
             "dim_feature_view",
             source=dim_source,
-            features=[Feature("value", dtype=Int32, keys=["id"], transform="value")],
+            features=[Feature("value", keys=["id"], transform="value")],
         )
         feature_view = DerivedFeatureView(
             name="feature_view",

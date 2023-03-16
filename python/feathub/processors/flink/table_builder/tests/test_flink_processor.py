@@ -26,7 +26,7 @@ from pyflink.table import Table, TableSchema
 from feathub.common.exceptions import (
     FeathubException,
 )
-from feathub.common.types import Int32
+from feathub.common.types import Int32, Int64, String
 from feathub.feathub_client import FeathubClient
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
@@ -234,7 +234,7 @@ class FlinkProcessorTest(unittest.TestCase):
         feature_view = DerivedFeatureView(
             "feature_view",
             source=source,
-            features=[Feature(name="id", dtype=Int32, transform="id")],
+            features=[Feature(name="id", transform="id")],
         )
         self.registry.build_features([feature_view])
 
@@ -261,7 +261,7 @@ class FlinkProcessorTest(unittest.TestCase):
         dim_feature_view = DerivedFeatureView(
             "dim_feature_view",
             source=dim_source,
-            features=[Feature(name="a", dtype=Int32, transform="a", keys=["id"])],
+            features=[Feature(name="a", transform="a", keys=["id"])],
         )
 
         dim_source2 = FileSystemSource(
@@ -270,7 +270,7 @@ class FlinkProcessorTest(unittest.TestCase):
         dim_feature_view_2 = DerivedFeatureView(
             "dim_feature_view_2",
             source=dim_source2,
-            features=[Feature(name="b", dtype=Int32, transform="b", keys=["id"])],
+            features=[Feature(name="b", transform="b", keys=["id"])],
         )
 
         source = FileSystemSource("source", "/path", "csv", Schema(["id"], [Int32]))
@@ -341,7 +341,7 @@ class FlinkProcessorTest(unittest.TestCase):
             "source",
             "/path",
             "csv",
-            Schema([], []),
+            Schema(["key", "val", "time"], [Int64, Int64, String]),
             keys=["key"],
             timestamp_field="time",
             timestamp_format="%Y-%m-%d %H:%M:%S",

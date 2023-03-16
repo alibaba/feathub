@@ -15,7 +15,9 @@
 import unittest
 import pandas as pd
 
+from feathub.common.types import String, Int64
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
+from feathub.table.schema import Schema
 
 
 class MemoryOnlineStoreTest(unittest.TestCase):
@@ -32,6 +34,14 @@ class MemoryOnlineStoreTest(unittest.TestCase):
             ],
             columns=["name", "cost", "distance", "time"],
         )
+        self.schema = (
+            Schema.new_builder()
+            .column("name", String)
+            .column("cost", Int64)
+            .column("distance", Int64)
+            .column("time", String)
+            .build()
+        )
 
     def tearDown(self) -> None:
         MemoryOnlineStore.get_instance().reset()
@@ -41,6 +51,7 @@ class MemoryOnlineStoreTest(unittest.TestCase):
         store.put(
             table_name="table_1",
             features=self.features,
+            schema=self.schema,
             key_fields=["name"],
             timestamp_field="time",
             timestamp_format="%Y-%m-%d %H:%M:%S",
