@@ -51,9 +51,6 @@ with a Feathub wheel with the commands below.
 ```bash
 # Build Feathub Python Dependencies with nightly version of Feathub
 $ bash tools/cli-deps/build-cli-deps.sh
-
-# Build Feathub Python dependencies with wheel of Feathub
-$ bash tools/cli-deps/build-cli-deps.sh feathub_wheel_path
 ```
 
 The dependencies zip will be available at `tools/cli-dep/deps.zip`. We will submit the 

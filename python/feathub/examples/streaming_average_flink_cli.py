@@ -13,7 +13,7 @@
 #  limitations under the License.
 from datetime import timedelta
 
-from feathub.common.types import Int32, Timestamp, Float64
+from feathub.common.types import Int32, Timestamp
 from feathub.feathub_client import FeathubClient
 from feathub.feature_tables.sinks.print_sink import PrintSink
 from feathub.feature_tables.sources.datagen_source import (
@@ -72,7 +72,6 @@ def main() -> None:
         features=[
             Feature(
                 name="avg_val",
-                dtype=Float64,
                 transform=OverWindowTransform(
                     expr="val",
                     agg_func="AVG",
@@ -81,7 +80,7 @@ def main() -> None:
                     limit=10,
                 ),
             ),
-            Feature(name="val_plus_one", dtype=Int32, transform="val + 1"),
+            Feature(name="val_plus_one", transform="val + 1"),
         ],
     )
 

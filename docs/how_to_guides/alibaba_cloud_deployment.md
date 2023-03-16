@@ -16,7 +16,7 @@ following command to build the zip. Note that you need to have docker installed 
 the script.
 
 ```bash
-$ bash tools/vvp-dep/build-vvp-dep.sh
+$ bash tools/cli-deps/build-cli-deps.sh
 ```
 
 The dependencies zip will be available at `tools/cli-deps/deps.zip`. 

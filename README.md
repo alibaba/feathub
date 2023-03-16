@@ -113,7 +113,6 @@ Flink cluster, you can see the following quickstart with different deployment mo
 ```python
 f_price = Feature(
     name="price",
-    dtype=types.Float32,
     transform=JoinTransform(
         table_name="price_update_events",
         feature_name="price"
@@ -127,7 +126,6 @@ f_price = Feature(
 ```python
 f_total_payment_last_two_minutes = Feature(
     name="total_payment_last_two_minutes",
-    dtype=types.Float32,
     transform=OverWindowTransform(
         expr="item_count * price",
         agg_func="SUM",
@@ -142,7 +140,6 @@ f_total_payment_last_two_minutes = Feature(
 ```python
 f_total_payment_last_two_minutes = Feature(
     name="total_payment_last_two_minutes",
-    dtype=types.Float32,
     transform=SlidingWindowTransform(
         expr="item_count * price",
         agg_func="SUM",
@@ -158,7 +155,6 @@ f_total_payment_last_two_minutes = Feature(
 ```python
 f_trip_time_duration = Feature(
     name="f_trip_time_duration",
-    dtype=types.Int32,
     transform="UNIX_TIMESTAMP(taxi_dropoff_datetime) - UNIX_TIMESTAMP(taxi_pickup_datetime)",
 )
 ```
