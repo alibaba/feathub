@@ -104,7 +104,6 @@ def run_nyc_taxi_example(client: FeathubClient) -> None:
             "online_store_source.f_location_max_fare",
             Feature(
                 name="max_avg_ratio",
-                dtype=types.Float32,
                 transform="f_location_max_fare / f_location_avg_fare",
             ),
         ],
@@ -161,14 +160,12 @@ def build_features(client: FeathubClient) -> FeatureView:
 
     f_trip_time_duration = Feature(
         name="f_trip_time_duration",
-        dtype=types.Int32,
         transform="UNIX_TIMESTAMP(lpep_dropoff_datetime) - "
         "UNIX_TIMESTAMP(lpep_pickup_datetime)",
     )
 
     f_location_avg_fare = Feature(
         name="f_location_avg_fare",
-        dtype=types.Float32,
         transform=OverWindowTransform(
             expr="fare_amount",
             agg_func="AVG",
@@ -179,7 +176,6 @@ def build_features(client: FeathubClient) -> FeatureView:
 
     f_location_max_fare = Feature(
         name="f_location_max_fare",
-        dtype=types.Float32,
         transform=OverWindowTransform(
             expr="fare_amount",
             agg_func="MAX",
@@ -190,7 +186,6 @@ def build_features(client: FeathubClient) -> FeatureView:
 
     f_location_total_fare_cents = Feature(
         name="f_location_total_fare_cents",
-        dtype=types.Float32,
         transform=OverWindowTransform(
             expr="fare_amount * 100",
             agg_func="SUM",
@@ -203,6 +198,7 @@ def build_features(client: FeathubClient) -> FeatureView:
         name="feature_view_1",
         source=source,
         features=[
+            f_trip_time_duration,
             f_location_avg_fare,
             f_location_max_fare,
             f_location_total_fare_cents,
@@ -212,14 +208,12 @@ def build_features(client: FeathubClient) -> FeatureView:
 
     f_trip_time_rounded = Feature(
         name="f_trip_time_rounded",
-        dtype=types.Float32,
         transform="f_trip_time_duration / 10",
         input_features=[f_trip_time_duration],
     )
 
     f_is_long_trip_distance = Feature(
         name="f_is_long_trip_distance",
-        dtype=types.Bool,
         transform="trip_distance > 30",
     )
 
