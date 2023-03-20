@@ -14,21 +14,25 @@
 from concurrent.futures import Executor, Future
 
 from pyspark import Row
-from feathub.common.utils import to_java_date_format
-from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from pyspark.sql import DataFrame as NativeSparkDataFrame, SparkSession, functions
 
 from feathub.common.exceptions import FeathubException
+from feathub.common.utils import to_java_date_format, get_table_schema
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_tables.sinks.black_hole_sink import BlackHoleSink
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
+from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
 from feathub.feature_tables.sinks.print_sink import PrintSink
 from feathub.feature_tables.sources.datagen_source import DataGenSource
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
+from feathub.online_stores.memory_online_store import MemoryOnlineStore
+from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from feathub.processors.spark.dataframe_builder.datagen_utils import (
     get_dataframe_from_data_gen_source,
 )
 from feathub.processors.spark.spark_types_utils import to_spark_struct_type
+from feathub.table.schema import Schema
+from feathub.table.table_descriptor import TableDescriptor
 
 
 def get_dataframe_from_source(
@@ -97,6 +101,7 @@ def _append_unix_time_attribute_column(
 def insert_into_sink(
     executor: Executor,
     dataframe: NativeSparkDataFrame,
+    features_desc: TableDescriptor,
     sink: FeatureTable,
     allow_overwrite: bool,
 ) -> Future:
@@ -107,6 +112,7 @@ def insert_into_sink(
     :param executor: The executor to handle the execution of Spark jobs
                      asynchronously.
     :param dataframe: The Spark DataFrame to be inserted into a sink.
+    :param features_desc: The descriptor for the features to be inserted.
     :param sink: The FeatureTable describing the sink.
     :param allow_overwrite: If it is false, throw error if the features collide with
                             existing data in the given sink.
@@ -132,7 +138,31 @@ def insert_into_sink(
             pass
 
         future = executor.submit(dataframe.foreach, f=nop)
+    elif isinstance(sink, MemoryStoreSink):
+        future = executor.submit(
+            _write_features_to_online_store,
+            dataframe=dataframe,
+            features_desc=features_desc,
+            schema=get_table_schema(features_desc),
+            sink=sink,
+        )
     else:
         raise FeathubException(f"Unsupported sink type {type(sink)}.")
 
     return future
+
+
+def _write_features_to_online_store(
+    dataframe: NativeSparkDataFrame,
+    features_desc: TableDescriptor,
+    schema: Schema,
+    sink: MemoryStoreSink,
+) -> None:
+    MemoryOnlineStore.get_instance().put(
+        table_name=sink.table_name,
+        features=dataframe.toPandas(),
+        schema=schema,
+        key_fields=features_desc.keys,
+        timestamp_field=features_desc.timestamp_field,
+        timestamp_format=features_desc.timestamp_format,
+    )

@@ -34,6 +34,7 @@ from feathub.feature_views.transforms.tests.test_over_window_transform import (
 from feathub.feature_views.transforms.tests.test_python_udf_transform import (
     PythonUDFTransformITTest,
 )
+from feathub.tests.test_online_features import OnlineFeaturesITTest
 
 
 class SparkProcessorITTest(
@@ -44,6 +45,7 @@ class SparkProcessorITTest(
     PrintSinkITTest,
     OverWindowTransformITTest,
     PythonUDFTransformITTest,
+    OnlineFeaturesITTest,
 ):
     __test__ = True
 
