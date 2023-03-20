@@ -37,6 +37,7 @@ from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
 
 
+# TODO: Support MySQLSource and MySQLSink.
 def get_dataframe_from_source(
     spark_session: SparkSession, source: FeatureTable
 ) -> NativeSparkDataFrame:

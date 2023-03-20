@@ -23,6 +23,7 @@ from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_tables.sinks.black_hole_sink import BlackHoleSink
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.feature_tables.sinks.kafka_sink import KafkaSink
+from feathub.feature_tables.sinks.mysql_sink import MySQLSink
 from feathub.feature_tables.sinks.print_sink import PrintSink
 from feathub.feature_tables.sinks.redis_sink import RedisSink
 from feathub.feature_tables.sources.datagen_source import DataGenSource
@@ -41,6 +42,9 @@ from feathub.processors.flink.table_builder.file_system_utils import (
 from feathub.processors.flink.table_builder.kafka_utils import (
     get_table_from_kafka_source,
     insert_into_kafka_sink,
+)
+from feathub.processors.flink.table_builder.mysql_utils import (
+    insert_into_mysql_sink,
 )
 from feathub.processors.flink.table_builder.print_utils import insert_into_print_sink
 from feathub.processors.flink.table_builder.redis_utils import insert_into_redis_sink
@@ -85,6 +89,8 @@ def insert_into_sink(
         return insert_into_print_sink(t_env, features_table)
     elif isinstance(sink, RedisSink):
         return insert_into_redis_sink(t_env, features_table, features_desc, sink)
+    elif isinstance(sink, MySQLSink):
+        return insert_into_mysql_sink(t_env, features_table, sink, features_desc.keys)
     elif isinstance(sink, BlackHoleSink):
         return insert_into_black_hole_sink(features_table)
     else:
