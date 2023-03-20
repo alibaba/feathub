@@ -97,3 +97,9 @@ class LocalRegistry(Registry):
             return False
         self.tables.pop(name)
         return True
+
+    def clear_features(self) -> None:
+        """
+        Deletes all features ever registered into this registry.
+        """
+        self.tables.clear()

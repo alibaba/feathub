@@ -77,6 +77,9 @@ from feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster
     FlinkKubernetesApplicationClusterJobSubmitter,
 )
 from feathub.processors.flink.table_builder.flink_table_builder import FlinkTableBuilder
+from feathub.processors.flink.table_builder.tests.test_flink_sql_feature_view import (
+    FlinkSqlFeatureViewITTest,
+)
 from feathub.registries.local_registry import LocalRegistry
 from feathub.table.schema import Schema
 
@@ -388,6 +391,7 @@ class FlinkProcessorITTest(
     SlidingWindowTransformITTest,
     SlidingFeatureViewITTest,
     BlackHoleSinkITTest,
+    FlinkSqlFeatureViewITTest,
 ):
     __test__ = True
 

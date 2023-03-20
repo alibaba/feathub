@@ -26,6 +26,7 @@ from feathub.common.exceptions import FeathubException
 from feathub.feathub_client import FeathubClient
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
+from feathub.registries.local_registry import LocalRegistry
 from feathub.table.schema import Schema
 
 
@@ -69,6 +70,8 @@ class FeathubITTestBase(unittest.TestCase):
     def tearDown(self) -> None:
         MemoryOnlineStore.get_instance().reset()
         shutil.rmtree(self.temp_dir, ignore_errors=True)
+        if isinstance(self.client.registry, LocalRegistry):
+            self.client.registry.clear_features()
 
     @abstractmethod
     def get_client(self, extra_config: Optional[Dict] = None) -> FeathubClient:
