@@ -63,4 +63,7 @@ done
 echo "Stopping standalone Flink cluster."
 ./flink-"${FLINK_VERSION}"/bin/stop-cluster.sh
 
-# TODO: Add execution for Spark processor quickstart
+python -m pip install "${wheel_file}[spark]"
+
+echo "Running Spark processor quickstart."
+python python/feathub/examples/nyc_taxi_spark_client.py

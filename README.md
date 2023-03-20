@@ -103,7 +103,16 @@ Flink cluster, you can see the following quickstart with different deployment mo
 - [Flink Processor Session Mode Quickstart](docs/quickstarts/flink_processor_session_quickstart.md)
 - [Flink Processor Cli Mode Quickstart](docs/quickstarts/flink_processor_cli_quickstart.md)
 
-<!-- TODO: add nyc_example and quickstart document for Spark processor -->
+#### Quickstart using Spark Processor
+
+Execute the following command to run the
+[nyc_taxi_spark_client.py](python/feathub/examples/nyc_taxi_spark_client.py)
+demo with Spark processor and compute the Feathub feature in Spark client mode
+on your local machine.
+
+```bash
+$ python python/feathub/examples/nyc_taxi_spark_client.py
+```
 
 ## Highlighted Capabilities
 
@@ -177,6 +186,8 @@ f_lower_case_name = Feature(
   language.
 - This [document](docs/flink_processor.md) introduces the Flink processor that
   computes the features with Flink.
+- This [document](docs/spark_processor.md) introduces the Spark processor that
+  computes the features with Spark.
 - [feathub-examples](https://github.com/flink-extended/feathub-examples)
   provides additional FeatHub quickstarts that cover key FeatHub APIs and
   functionalities.

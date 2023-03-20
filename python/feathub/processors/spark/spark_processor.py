@@ -131,6 +131,7 @@ class SparkProcessor(Processor):
         future = insert_into_sink(
             executor=self._executor,
             dataframe=dataframe,
+            features_desc=resolved_features,
             sink=sink,
             allow_overwrite=allow_overwrite,
         )
