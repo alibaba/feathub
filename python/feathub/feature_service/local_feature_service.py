@@ -18,6 +18,7 @@ from typing import Optional, List, Dict, Union
 from feathub.common.exceptions import FeathubException
 from feathub.feature_service.feature_service import FeatureService
 from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sources.mysql_source import MySQLSource
 from feathub.feature_tables.sources.redis_source import RedisSource
 from feathub.online_stores.online_store_client import OnlineStoreClient
 from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstEvaluator
@@ -127,9 +128,11 @@ class LocalFeatureService(FeatureService):
                 table_name=source.table_name, input_data=input_df
             )
 
-        if isinstance(source, RedisSource):
-            redis_client = self._get_online_store_client(source)
-            return redis_client.get(input_data=input_df)
+        if isinstance(source, RedisSource) or isinstance(source, MySQLSource):
+            client = self._get_online_store_client(source)
+            return client.get(
+                input_data=input_df, feature_names=[join_transform.feature_name]
+            )
 
         raise RuntimeError(f"Unsupported source {source.to_json()}.")
 

@@ -137,6 +137,7 @@ try:
         "python-dateutil~=2.8",
         "redis==4.3.0",
         "tzlocal~=4.2",
+        "mysql-connector-python~=8.0.0",
     ]
 
     extras_require = {
