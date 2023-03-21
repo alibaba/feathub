@@ -193,7 +193,7 @@ class FlinkKubernetesApplicationClusterJobSubmitter(FlinkJobSubmitter):
         with open(template_path) as f:
             template = f.read().format(configmap_name=job_id)
 
-        path = tempfile.NamedTemporaryFile().name
+        path = tempfile.NamedTemporaryFile(suffix=".yaml").name
         with open(path, "w") as f:
             f.write(template)
         return path

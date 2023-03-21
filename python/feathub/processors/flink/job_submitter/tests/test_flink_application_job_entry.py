@@ -58,7 +58,7 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
         input_df = pandas.DataFrame([[1], [2], [3]], columns=["id"])
         file_source = self._create_file_source(input_df, Schema(["id"], [Int32]))
 
-        sink_path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
+        sink_path = tempfile.NamedTemporaryFile(dir=self.temp_dir, suffix=".csv").name
         sink = FileSystemSink(sink_path, "csv")
         feathub_config_path = self._prepare_feathub_job_config(
             file_source, None, None, None, sink, {}
@@ -118,7 +118,7 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
             ],
         )
 
-        sink_path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
+        sink_path = tempfile.NamedTemporaryFile(dir=self.temp_dir, suffix=".csv").name
         sink = FileSystemSink(sink_path, "csv")
 
         job_config = self._prepare_feathub_job_config(
@@ -151,7 +151,7 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
         sink: FeatureTable,
         join_table: Dict[str, TableDescriptor],
     ) -> str:
-        path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
+        path = tempfile.NamedTemporaryFile(dir=self.temp_dir, suffix=".txt").name
         job_descriptor = FeathubJobDescriptor(
             features=features,
             keys=keys,
@@ -175,7 +175,7 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
         keys: Optional[List[str]] = None,
         timestamp_field: Optional[str] = None,
     ) -> FileSystemSource:
-        path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
+        path = tempfile.NamedTemporaryFile(dir=self.temp_dir, suffix=".csv").name
         df.to_csv(path, index=False, header=False)
         return FileSystemSource(
             name,

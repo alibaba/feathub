@@ -48,7 +48,7 @@ class LocalRegistryTest(unittest.TestCase):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def _create_file_source(self, df: pd.DataFrame) -> FileSystemSource:
-        path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
+        path = tempfile.NamedTemporaryFile(dir=self.temp_dir, suffix=".csv").name
         schema = Schema(
             field_names=df.keys().tolist(),
             field_types=[from_numpy_dtype(dtype) for dtype in df.dtypes],
