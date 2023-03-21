@@ -77,7 +77,7 @@ class SparkProcessorITTest(
     def test_file_system_source_sink(self):
         source = self.create_file_source(self.input_data)
 
-        sink_path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
+        sink_path = tempfile.NamedTemporaryFile(dir=self.temp_dir, suffix=".csv").name
 
         sink = FileSystemSink(sink_path, "csv")
 

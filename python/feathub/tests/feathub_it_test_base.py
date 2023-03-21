@@ -116,7 +116,7 @@ class FeathubITTestBase(unittest.TestCase):
         timestamp_format: str = "%Y-%m-%d %H:%M:%S",
         name: str = None,
     ) -> FileSystemSource:
-        path = tempfile.NamedTemporaryFile(dir=self.temp_dir).name
+        path = tempfile.NamedTemporaryFile(dir=self.temp_dir, suffix=".csv").name
         if schema is None:
             schema = self._create_input_schema()
         df.to_csv(path, index=False, header=False)
