@@ -27,10 +27,10 @@ from feathub.feature_tables.sources.datagen_source import (
     RandomField,
     SequenceField,
 )
-from feathub.processors.spark.spark_types_utils import to_spark_type
-from feathub.processors.spark.dataframe_builder.source_sink_utils_common import (
+from feathub.processors.spark.dataframe_builder.time_utils import (
     append_unix_time_attribute_column,
 )
+from feathub.processors.spark.spark_types_utils import to_spark_type
 
 
 def _generate_random_field_name(occupied_field_names: List[str]) -> str:

@@ -16,8 +16,6 @@ from datetime import datetime, timezone, tzinfo
 from string import Template
 from typing import Union, Any, Optional, cast
 
-import pandas as pd
-
 from feathub.common import types
 from feathub.common.exceptions import FeathubException
 from feathub.common.protobuf import value_pb2
@@ -71,36 +69,6 @@ def to_unix_timestamp(
     if time.tzinfo is None:
         time = time.replace(tzinfo=tz)
     return time.timestamp()
-
-
-def append_unix_time_column(
-    df: pd.DataFrame, timestamp_field: str, timestamp_format: str
-) -> str:
-    unix_time_column = "_unix_time"
-
-    if unix_time_column in df:
-        raise RuntimeError(f"The dataframe has column with name {unix_time_column}.")
-
-    df[unix_time_column] = df.apply(
-        lambda row: to_unix_timestamp(row[timestamp_field], timestamp_format),
-        axis=1,
-    )
-    return unix_time_column
-
-
-def append_and_sort_unix_time_column(
-    df: pd.DataFrame, timestamp_field: str, timestamp_format: str
-) -> str:
-    unix_time_column = append_unix_time_column(df, timestamp_field, timestamp_format)
-
-    df.sort_values(
-        by=[unix_time_column],
-        ascending=True,
-        inplace=True,
-        ignore_index=True,
-    )
-
-    return unix_time_column
 
 
 def serialize_object_with_protobuf(

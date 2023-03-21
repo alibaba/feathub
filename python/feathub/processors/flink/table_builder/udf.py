@@ -96,6 +96,7 @@ ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
 }
 
 SCALAR_JAVA_UDF: Dict[str, JavaUDFDescriptor] = {
+    # TODO: Introduce a UDF for UNIX_TIMESTAMP that throw exception on illegal data.
     "UNIX_TIMESTAMP_MILLIS": JavaUDFDescriptor(
         "UNIX_TIMESTAMP_MILLIS", "com.alibaba.feathub.flink.udf.UnixTimestampMillis"
     ),

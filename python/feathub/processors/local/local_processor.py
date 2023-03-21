@@ -11,17 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Union, List, Any
+from typing import (
+    Dict,
+    Optional,
+    Union,
+    List,
+    Any,
+    Sequence,
+)
 
-import numpy as np
 import pandas as pd
 from dateutil.tz import tz
 
 import feathub.common.utils as utils
 from feathub.common.config import TIMEZONE_CONFIG
-from feathub.common.exceptions import FeathubException
+from feathub.common.exceptions import FeathubException, FeathubTransformationException
 from feathub.common.types import to_numpy_dtype
 from feathub.dsl.expr_parser import ExprParser
 from feathub.feature_tables.feature_table import FeatureTable
@@ -30,18 +35,37 @@ from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.feature_view import FeatureView
-from feathub.feature_views.transforms.agg_func import AggFunc
+from feathub.feature_views.sliding_feature_view import (
+    SlidingFeatureView,
+    ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG,
+    SKIP_SAME_WINDOW_OUTPUT_CONFIG,
+)
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.feature_views.transforms.over_window_transform import (
     OverWindowTransform,
 )
 from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
+from feathub.feature_views.transforms.sliding_window_transform import (
+    SlidingWindowTransform,
+)
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
+from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
+from feathub.processors.local.aggregation_utils import AGG_FUNCTIONS
 from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstEvaluator
 from feathub.processors.local.local_job import LocalJob
 from feathub.processors.local.local_processor_config import LocalProcessorConfig
 from feathub.processors.local.local_table import LocalTable
+from feathub.processors.local.sliding_window_utils import (
+    SlidingWindowDescriptor,
+    AggregationFieldDescriptor,
+    evaluate_sliding_window,
+)
+from feathub.processors.local.time_utils import (
+    append_and_sort_unix_time_column,
+    append_unix_time_column,
+)
+from feathub.processors.local.type_utils import cast_series_dtype
 from feathub.processors.processor import Processor
 from feathub.registries.registry import Registry
 from feathub.table.schema import Schema
@@ -53,17 +77,6 @@ class LocalProcessor(Processor):
     A LocalProcessor uses CPUs on the local machine to compute features and uses Pandas
     DataFrame to store tabular data in memory.
     """
-
-    _AGG_FUNCTIONS = {
-        AggFunc.AVG: np.mean,
-        AggFunc.SUM: np.sum,
-        AggFunc.MAX: np.max,
-        AggFunc.MIN: np.min,
-        AggFunc.FIRST_VALUE: lambda l: l[0],
-        AggFunc.LAST_VALUE: lambda l: l[-1],
-        AggFunc.ROW_NUMBER: lambda l: len(l),
-        AggFunc.VALUE_COUNTS: lambda l: dict(pd.Series(l).value_counts()),
-    }
 
     def __init__(self, props: Dict, registry: Registry):
         """
@@ -98,25 +111,24 @@ class LocalProcessor(Processor):
             )
             df = df[idx]
 
-        unix_time_column = None
         if start_datetime is not None or end_datetime is not None:
             if features.timestamp_field is None:
                 raise FeathubException("Features do not have timestamp column.")
             if features.timestamp_format is None:
                 raise FeathubException("Features do not have timestamp format.")
-            unix_time_column = utils.append_and_sort_unix_time_column(
-                df, features.timestamp_field, features.timestamp_format
+            append_and_sort_unix_time_column(
+                df, features.timestamp_field, features.timestamp_format, self.timezone
             )
         if start_datetime is not None:
             unix_start_datetime = utils.to_unix_timestamp(
                 start_datetime, tz=self.timezone
             )
-            df = df[df[unix_time_column] >= unix_start_datetime]
+            df = df[df[EVENT_TIME_ATTRIBUTE_NAME] >= unix_start_datetime]
         if end_datetime is not None:
             unix_end_datetime = utils.to_unix_timestamp(end_datetime, tz=self.timezone)
-            df = df[df[unix_time_column] < unix_end_datetime]
-        if unix_time_column is not None:
-            df = df.drop(columns=[unix_time_column])
+            df = df[df[EVENT_TIME_ATTRIBUTE_NAME] < unix_end_datetime]
+        if EVENT_TIME_ATTRIBUTE_NAME in df:
+            df = df.drop(columns=[EVENT_TIME_ATTRIBUTE_NAME])
 
         return LocalTable(
             df=df.reset_index(drop=True),
@@ -175,6 +187,8 @@ class LocalProcessor(Processor):
             return self._get_table_from_file_source(features)
         elif isinstance(features, DerivedFeatureView):
             return self._get_table_from_derived_feature_view(features)
+        elif isinstance(features, SlidingFeatureView):
+            return self._get_table_from_sliding_feature_view(features)
 
         raise RuntimeError(
             f"Unsupported type '{type(features).__name__}' for '{features}'."
@@ -240,14 +254,7 @@ class LocalProcessor(Processor):
         source_table = self._get_table(feature_view.source)
         source_df = source_table.df
         source_fields = list(source_table.get_schema().field_names)
-        dependent_features = []
-
-        for feature in feature_view.get_resolved_features():
-            for input_feature in feature.input_features:
-                if input_feature not in dependent_features:
-                    dependent_features.append(input_feature)
-            if feature not in dependent_features:
-                dependent_features.append(feature)
+        dependent_features = self._get_dependent_features(feature_view)
 
         table_names = set(
             [
@@ -301,8 +308,8 @@ class LocalProcessor(Processor):
                     f"Unsupported transformation type "
                     f"{type(feature.transform).__name__} for feature {feature.name}."
                 )
-            source_df[feature.name] = source_df[feature.name].astype(
-                to_numpy_dtype(feature.dtype)
+            source_df[feature.name] = cast_series_dtype(
+                source_df[feature.name], to_numpy_dtype(feature.dtype)
             )
 
         output_fields = feature_view.get_output_fields(source_fields)
@@ -396,7 +403,7 @@ class LocalProcessor(Processor):
         timestamp_field: str,
         timestamp_format: str,
     ) -> List:
-        agg_func = LocalProcessor._AGG_FUNCTIONS.get(transform.agg_func, None)
+        agg_func = AGG_FUNCTIONS.get(transform.agg_func, None)
         if agg_func is None:
             raise RuntimeError(f"Unsupported agg function {transform.agg_func}.")
         temp_column = "_temp"
@@ -416,8 +423,8 @@ class LocalProcessor(Processor):
         )
 
         # Append an internal unix time column.
-        unix_time_column = utils.append_unix_time_column(
-            df_copy, timestamp_field, timestamp_format
+        append_unix_time_column(
+            df_copy, timestamp_field, timestamp_format, self.timezone
         )
 
         group_by_idx = {}
@@ -438,7 +445,7 @@ class LocalProcessor(Processor):
             ):
                 result.append(None)
                 continue
-            max_timestamp = row[unix_time_column]
+            max_timestamp = row[EVENT_TIME_ATTRIBUTE_NAME]
             window_size = transform.window_size
             min_timestamp = (
                 0
@@ -452,7 +459,7 @@ class LocalProcessor(Processor):
                 if len(group_by_idx) > 0
                 else df_copy
             )
-            predicate = rows_in_group[unix_time_column].transform(
+            predicate = rows_in_group[EVENT_TIME_ATTRIBUTE_NAME].transform(
                 lambda timestamp: min_timestamp <= timestamp <= max_timestamp
             )
             if filter_expr_node is not None:
@@ -464,7 +471,7 @@ class LocalProcessor(Processor):
             limit = transform.limit
             if limit is not None:
                 rows_in_group_and_window.sort_values(
-                    by=[unix_time_column],
+                    by=[EVENT_TIME_ATTRIBUTE_NAME],
                     ascending=True,
                     inplace=True,
                     ignore_index=True,
@@ -478,3 +485,124 @@ class LocalProcessor(Processor):
         self, df: pd.DataFrame, transform: PythonUdfTransform
     ) -> List:
         return df.apply(lambda row: transform.udf(row), axis=1).tolist()
+
+    def _get_table_from_sliding_feature_view(
+        self, feature_view: SlidingFeatureView
+    ) -> LocalTable:
+        if (
+            feature_view.config.get(ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG) is not True
+            and feature_view.config.get(SKIP_SAME_WINDOW_OUTPUT_CONFIG) is not True
+        ):
+            raise FeathubException(
+                "LocalProcessor only supports sliding window with "
+                "ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG = True and "
+                "SKIP_SAME_WINDOW_OUTPUT_CONFIG = True."
+            )
+        source_table = self._get_table(feature_view.source)
+        source_df = source_table.df
+        source_fields = list(source_table.get_schema().field_names)
+        dependent_features = self._get_dependent_features(feature_view)
+
+        sliding_window_descriptor: Optional[SlidingWindowDescriptor] = None
+        agg_field_descriptors: List[AggregationFieldDescriptor] = []
+
+        # This list contains all per-row transform features listed after the first
+        # SlidingWindowTransform feature in the dependent_features.
+        per_row_transform_features_following_first_sliding_feature = []
+
+        for feature in dependent_features:
+
+            # The timestamp field is computed as part of the sliding window.
+            if feature.name == feature_view.timestamp_field:
+                continue
+
+            if isinstance(feature.transform, ExpressionTransform):
+                if sliding_window_descriptor is not None:
+                    per_row_transform_features_following_first_sliding_feature.append(
+                        feature
+                    )
+                else:
+                    source_df[feature.name] = self._evaluate_expression_transform(
+                        source_df, feature.transform
+                    )
+            elif isinstance(feature.transform, PythonUdfTransform):
+                if sliding_window_descriptor is not None:
+                    per_row_transform_features_following_first_sliding_feature.append(
+                        feature
+                    )
+                else:
+                    source_df[feature.name] = self._evaluate_python_udf_transform(
+                        source_df, feature.transform
+                    )
+            elif isinstance(feature.transform, SlidingWindowTransform):
+                if feature_view.timestamp_field is None:
+                    raise FeathubException(
+                        "SlidingFeatureView must have timestamp field for "
+                        "SlidingWindowTransform."
+                    )
+                transform = feature.transform
+
+                if sliding_window_descriptor is None:
+                    sliding_window_descriptor = (
+                        SlidingWindowDescriptor.from_sliding_window_transform(transform)
+                    )
+
+                if (
+                    sliding_window_descriptor
+                    != SlidingWindowDescriptor.from_sliding_window_transform(transform)
+                ):
+                    raise FeathubException(
+                        "The SlidingWindowTransforms in a SlidingFeatureView should "
+                        "have the same step size and group by keys."
+                    )
+
+                agg_field_descriptors.append(
+                    AggregationFieldDescriptor.from_feature(feature)
+                )
+            else:
+                raise FeathubTransformationException(
+                    f"Unsupported transformation type "
+                    f"{type(feature.transform).__name__} for feature {feature.name}."
+                )
+
+        agg_df = evaluate_sliding_window(
+            input_df=source_df,
+            feature_view=feature_view,
+            window_descriptor=sliding_window_descriptor,
+            agg_descriptors=agg_field_descriptors,
+            tz=self.timezone,
+            parser=self.parser,
+            ast_evaluator=self.ast_evaluator,
+        )
+
+        for feature in per_row_transform_features_following_first_sliding_feature:
+            if isinstance(feature.transform, ExpressionTransform):
+                agg_df[feature.name] = self._evaluate_expression_transform(
+                    agg_df, feature.transform
+                )
+            elif isinstance(feature.transform, PythonUdfTransform):
+                agg_df[feature.name] = self._evaluate_python_udf_transform(
+                    agg_df, feature.transform
+                )
+            else:
+                raise FeathubTransformationException(
+                    f"Unsupported transformation type: {type(feature.transform)}."
+                )
+
+        output_fields = feature_view.get_output_fields(source_fields)
+
+        return LocalTable(
+            df=agg_df[output_fields],
+            timestamp_field=feature_view.timestamp_field,
+            timestamp_format=feature_view.timestamp_format,
+        )
+
+    def _get_dependent_features(self, feature_view: FeatureView) -> Sequence[Feature]:
+        dependent_features = []
+        for feature in feature_view.get_resolved_features():
+            for input_feature in feature.input_features:
+                if input_feature not in dependent_features:
+                    dependent_features.append(input_feature)
+            if feature not in dependent_features:
+                dependent_features.append(feature)
+        return dependent_features

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 from feathub.feathub_client import FeathubClient
 from feathub.feature_tables.tests.test_file_system_source_sink import (
@@ -29,6 +29,11 @@ from feathub.feature_views.transforms.tests.test_over_window_transform import (
 from feathub.feature_views.transforms.tests.test_python_udf_transform import (
     PythonUDFTransformITTest,
 )
+from feathub.feature_views.transforms.tests.test_sliding_window_transform import (
+    SlidingWindowTransformITTest,
+    SlidingWindowTestConfig,
+    ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT,
+)
 from feathub.tests.test_get_features import GetFeaturesITTest
 from feathub.tests.test_online_features import OnlineFeaturesITTest
 
@@ -41,6 +46,7 @@ class LocalProcessorITTest(
     OnlineFeaturesITTest,
     OverWindowTransformITTest,
     PythonUDFTransformITTest,
+    SlidingWindowTransformITTest,
 ):
     __test__ = True
 
@@ -57,6 +63,11 @@ class LocalProcessorITTest(
     @classmethod
     def tearDownClass(cls) -> None:
         cls.invoke_all_base_class_teardownclass()
+
+    def get_supported_sliding_window_config(self) -> List[SlidingWindowTestConfig]:
+        return [
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT,
+        ]
 
     def get_client(self, extra_config: Optional[Dict] = None) -> FeathubClient:
         return self.get_client_with_local_registry(
