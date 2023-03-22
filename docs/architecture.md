@@ -13,7 +13,7 @@ in the FeatHub architecture below.
 
 ## TableDescriptor - Declarative Definition of Features
 
-A `TableDescriptor` provides metadata to acces, derive and interpret a
+A `TableDescriptor` provides metadata to access, derive and interpret a
 table of feature values. Each column of the table corresponds to a feature.
 
 A table in Feathub is conceptually similar to a table in Apache Flink, with
@@ -24,16 +24,21 @@ table join.
 
 `TableDescriptor` has the following sub-classes.
 
-### Source
+### FeatureTable
+A FeatureTable provides properties to uniquely identify and describe a physical table. 
+A FeatureTable can be used as a source to access and interpret a table of feature 
+values from an offline or online feature store, or as a sink to locate and write a table
+of feature values to an offline or online feature store.
 
-A `Source` provides metadata to access and interpret a table of feature
-values from an offline or online feature store. For example, `FileSystemSource`
-can specify the path of a file containing feature values in csv format.
+For example, a FileSystemSource can be used as a source by specifying the path, data 
+format, and schema. Similarly, a FileSystemSink can be used as a sink by specifying the 
+path and data format.
 
-### Sink
+Here is the available FeatureTables:
 
-A `Sink` provides metadata to locate and write a table of feature values to an
-offline or online feature store.
+- [MySQL](feature_tables/mysql.md)
+
+<!-- TODO: Add documentations for all the available FeatureTables -->
 
 ### FeatureView
 

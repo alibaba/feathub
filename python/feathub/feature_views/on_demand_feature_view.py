@@ -16,6 +16,7 @@ from typing import Union, Dict, Sequence, Optional
 
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_tables.sources.memory_store_source import MemoryStoreSource
+from feathub.feature_tables.sources.mysql_source import MySQLSource
 from feathub.feature_tables.sources.redis_source import RedisSource
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.feature_view import FeatureView
@@ -116,8 +117,10 @@ class OnDemandFeatureView(FeatureView):
 
                 table_desc = registry.get_features(name=join_table_name)
 
-                if isinstance(table_desc, MemoryStoreSource) or isinstance(
-                    table_desc, RedisSource
+                if (
+                    isinstance(table_desc, MemoryStoreSource)
+                    or isinstance(table_desc, RedisSource)
+                    or isinstance(table_desc, MySQLSource)
                 ):
                     feature = Feature(
                         name=join_feature_name,

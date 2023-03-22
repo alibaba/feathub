@@ -39,6 +39,7 @@ from feathub.feature_tables.tests.test_file_system_source_sink import (
 from feathub.feature_tables.tests.test_kafka_source_sink import (
     KafkaSourceSinkITTest,
 )
+from feathub.feature_tables.tests.test_mysql_source_sink import MySQLSourceSinkITTest
 from feathub.feature_tables.tests.test_print_sink import PrintSinkITTest
 from feathub.feature_tables.tests.test_redis_source_sink import (
     RedisSourceSinkITTest,
@@ -394,6 +395,7 @@ class FlinkProcessorITTest(
     BlackHoleSinkITTest,
     FlinkSqlFeatureViewITTest,
     GetFeaturesITTest,
+    MySQLSourceSinkITTest,
 ):
     __test__ = True
 

@@ -20,6 +20,7 @@ from typing import Optional, List, Dict, Type
 from unittest import TestLoader
 
 import pandas as pd
+from testcontainers.mysql import MySqlContainer
 
 from feathub.common import types
 from feathub.common.exceptions import FeathubException
@@ -61,6 +62,8 @@ class FeathubITTestBase(unittest.TestCase):
 
     # A dict holding the base test class for each inherited test method.
     _base_class_mapping: Dict[str, Type[unittest.TestCase]] = None
+
+    mysql_container: Optional[MySqlContainer] = None
 
     def setUp(self) -> None:
         self.temp_dir = tempfile.mkdtemp()
@@ -228,3 +231,16 @@ class FeathubITTestBase(unittest.TestCase):
             .column("time", types.String)
             .build()
         )
+
+    @staticmethod
+    def setup_mysql_container():
+        if FeathubITTestBase.mysql_container is None:
+            FeathubITTestBase.mysql_container = MySqlContainer(image="mysql:8.0")
+            FeathubITTestBase.mysql_container.start()
+        pass
+
+    @staticmethod
+    def teardown_mysql_container():
+        if FeathubITTestBase.mysql_container is not None:
+            FeathubITTestBase.mysql_container.stop()
+            FeathubITTestBase.mysql_container = None

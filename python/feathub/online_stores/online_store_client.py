@@ -20,6 +20,7 @@ from typing import Optional, List
 import pandas as pd
 
 from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sources.mysql_source import MySQLSource
 from feathub.feature_tables.sources.redis_source import RedisSource
 
 
@@ -67,6 +68,21 @@ class OnlineStoreClient(ABC):
                 password=source.password,
                 db_num=source.db_num,
                 namespace=source.namespace,
+                keys=source.keys,
+                timestamp_field=source.timestamp_field,
+            )
+
+        if isinstance(source, MySQLSource):
+            from feathub.online_stores.mysql_client import MySQLClient
+
+            return MySQLClient(
+                schema=source.schema,
+                host=source.host,
+                port=source.port,
+                database=source.database,
+                table=source.table,
+                username=source.username,
+                password=source.password,
                 keys=source.keys,
                 timestamp_field=source.timestamp_field,
             )
