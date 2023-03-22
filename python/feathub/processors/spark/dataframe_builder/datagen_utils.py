@@ -28,6 +28,9 @@ from feathub.feature_tables.sources.datagen_source import (
     SequenceField,
 )
 from feathub.processors.spark.spark_types_utils import to_spark_type
+from feathub.processors.spark.dataframe_builder.source_sink_utils_common import (
+    append_unix_time_attribute_column,
+)
 
 
 def _generate_random_field_name(occupied_field_names: List[str]) -> str:
@@ -152,5 +155,15 @@ def get_dataframe_from_data_gen_source(
         df = df.withColumn(field_name, mapper_udf(seed_field_name))
 
     df = df.drop(seed_field_name)
+
+    df = (
+        df
+        if source.timestamp_field is None
+        else append_unix_time_attribute_column(
+            df,
+            source.timestamp_field,
+            source.timestamp_format,
+        )
+    )
 
     return df

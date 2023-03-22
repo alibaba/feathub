@@ -36,6 +36,11 @@ from feathub.feature_views.transforms.tests.test_python_udf_transform import (
 )
 from feathub.tests.test_online_features import OnlineFeaturesITTest
 
+from feathub.feature_views.transforms.tests.test_join_transform import (
+    JoinTransformITTest,
+)
+from feathub.tests.test_get_features import GetFeaturesITTest
+
 
 class SparkProcessorITTest(
     BlackHoleSinkITTest,
@@ -46,6 +51,8 @@ class SparkProcessorITTest(
     OverWindowTransformITTest,
     PythonUDFTransformITTest,
     OnlineFeaturesITTest,
+    JoinTransformITTest,
+    GetFeaturesITTest,
 ):
     __test__ = True
 
@@ -120,4 +127,13 @@ class SparkProcessorITTest(
         pass
 
     def test_case_else(self):
+        pass
+
+    def test_bounded_left_table_join_unbounded_right_table(self):
+        pass
+
+    def test_get_table_with_start_datetime(self):
+        pass
+
+    def test_get_table_with_end_datetime(self):
         pass

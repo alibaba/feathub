@@ -13,7 +13,7 @@
 # limitations under the License.
 import typing
 from datetime import timedelta
-from typing import Optional
+from typing import Optional, Union
 
 import pandas as pd
 
@@ -43,6 +43,7 @@ class SparkTable(Table):
         self,
         feature: TableDescriptor,
         spark_processor: "SparkProcessor",
+        keys: Union[pd.DataFrame, TableDescriptor, None],
     ) -> None:
         """
         Instantiate the SparkTable.
@@ -50,14 +51,19 @@ class SparkTable(Table):
         :param feature: Describes the features to be included in the table. If it is a
                         FeatureView, it must be resolved.
         :param spark_processor: The spark processor to materialize features.
+        :param keys: Optional. If it is TableDescriptor or DataFrame, it should be
+                     transformed into a table of keys. If it is not None, the computed
+                     table only include rows whose key fields match at least one
+                     row of the keys.
         """
         super().__init__(feature.timestamp_field, feature.timestamp_format)
         self._feature = feature
         self._spark_processor = spark_processor
+        self._keys = keys
 
     def get_schema(self) -> Schema:
         return to_feathub_schema(
-            self._spark_processor.get_spark_dataframe(self._feature).schema
+            self._spark_processor.get_spark_dataframe(self._feature, self._keys).schema
         )
 
     def to_pandas(self, force_bounded: bool = False) -> pd.DataFrame:
@@ -70,7 +76,7 @@ class SparkTable(Table):
                 )
             feature = feature.get_bounded_view()
 
-        dataframe = self._spark_processor.get_spark_dataframe(feature)
+        dataframe = self._spark_processor.get_spark_dataframe(feature, self._keys)
 
         return dataframe.toPandas()
 
@@ -92,4 +98,5 @@ class SparkTable(Table):
             isinstance(other, SparkTable)
             and self._feature == other._feature
             and self._spark_processor == other._spark_processor
+            and self._keys == other._keys
         )

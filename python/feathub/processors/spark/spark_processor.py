@@ -89,11 +89,6 @@ class SparkProcessor(Processor):
         start_datetime: Optional[datetime] = None,
         end_datetime: Optional[datetime] = None,
     ) -> SparkTable:
-        if keys is not None:
-            # TODO: Add support for keys after Spark processor supports join transform.
-            raise FeathubException(
-                "Spark processor does not support features with keys."
-            )
 
         if start_datetime is not None or end_datetime is not None:
             # TODO: Add support for timestamp and watermark with window transform.
@@ -107,6 +102,7 @@ class SparkProcessor(Processor):
         return SparkTable(
             feature=features,
             spark_processor=self,
+            keys=keys,
         )
 
     def materialize_features(
@@ -148,5 +144,9 @@ class SparkProcessor(Processor):
 
         return features
 
-    def get_spark_dataframe(self, feature: TableDescriptor) -> NativeSparkDataFrame:
-        return self._dataframe_builder.build(feature)
+    def get_spark_dataframe(
+        self,
+        feature: TableDescriptor,
+        keys: Union[pd.DataFrame, TableDescriptor, None] = None,
+    ) -> NativeSparkDataFrame:
+        return self._dataframe_builder.build(feature, keys)
