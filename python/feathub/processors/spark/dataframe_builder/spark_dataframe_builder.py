@@ -11,8 +11,11 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Sequence, Union
 
+import pandas as pd
+
+from feathub.feature_views.transforms.join_transform import JoinTransform
 from pyspark.sql import DataFrame as NativeSparkDataFrame, functions
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, struct
@@ -43,6 +46,10 @@ from feathub.processors.spark.dataframe_builder.source_sink_utils import (
 from feathub.processors.spark.dataframe_builder.spark_sql_expr_utils import (
     to_spark_sql_expr,
 )
+from feathub.processors.spark.dataframe_builder.join_utils import (
+    JoinFieldDescriptor,
+    temporal_join,
+)
 from feathub.processors.spark.spark_types_utils import (
     to_spark_type,
 )
@@ -70,6 +77,7 @@ class SparkDataFrameBuilder:
     def build(
         self,
         features: TableDescriptor,
+        keys: Union[pd.DataFrame, TableDescriptor, None] = None,
     ) -> NativeSparkDataFrame:
         """
         Convert the given features to native Spark DataFrame.
@@ -78,6 +86,8 @@ class SparkDataFrameBuilder:
         exception will be thrown.
 
         :param features: The feature to convert to Spark DataFrame.
+        :param keys: Optional. If it is not none, then the returned table only includes
+                     rows whose key fields match at least one row of the keys.
         :return: The native Spark DataFrame that represents the given features.
         """
 
@@ -88,6 +98,9 @@ class SparkDataFrameBuilder:
 
         dataframe = self._get_spark_dataframe(features)
 
+        if keys is not None:
+            dataframe = self._filter_dataframe_by_keys(dataframe, keys)
+
         if EVENT_TIME_ATTRIBUTE_NAME in dataframe.columns:
             dataframe = dataframe.drop(EVENT_TIME_ATTRIBUTE_NAME)
 
@@ -95,7 +108,26 @@ class SparkDataFrameBuilder:
 
         return dataframe
 
-    def _get_spark_dataframe(self, features: TableDescriptor) -> NativeSparkDataFrame:
+    def _filter_dataframe_by_keys(
+        self,
+        df: NativeSparkDataFrame,
+        keys: Union[pd.DataFrame, TableDescriptor],
+    ) -> NativeSparkDataFrame:
+        key_df = self._get_spark_dataframe(keys)
+        for field_name in key_df.schema.fieldNames():
+            if field_name not in df.schema.fieldNames():
+                raise FeathubException(
+                    f"Given key {field_name} not in the fields: "
+                    f"{df.schema.fieldNames()}."
+                )
+        return df.join(key_df, key_df.schema.fieldNames())
+
+    def _get_spark_dataframe(
+        self, features: Union[TableDescriptor, pd.DataFrame]
+    ) -> NativeSparkDataFrame:
+        if isinstance(features, pd.DataFrame):
+            return self._spark_session.createDataFrame(features)
+
         if features.name in self._built_dataframes:
             if features != self._built_dataframes[features.name][0]:
                 raise FeathubException(
@@ -134,6 +166,21 @@ class SparkDataFrameBuilder:
             OverWindowDescriptor, List[AggregationFieldDescriptor]
         ] = {}
 
+        dataframe_by_names = {}
+        descriptors_by_names = {}
+
+        table_names = set(
+            [
+                feature.transform.table_name
+                for feature in feature_view.get_resolved_features()
+                if isinstance(feature.transform, JoinTransform)
+            ]
+        )
+        for name in table_names:
+            descriptor = self._registry.get_features(name=name)
+            descriptors_by_names[name] = descriptor
+            dataframe_by_names[name] = self._get_spark_dataframe(features=descriptor)
+
         for feature in feature_view.get_resolved_features():
             for input_feature in feature.input_features:
                 if input_feature not in dependent_features:
@@ -141,15 +188,23 @@ class SparkDataFrameBuilder:
             if feature not in dependent_features:
                 dependent_features.append(feature)
 
+        # The right_tables map keeps track of the information of the right table to join
+        # with the source table. The key is a tuple of right_table_name and join_keys
+        # and the value is a map from the name of the field of the right table
+        # to join to JoinFieldDescriptor.
+        right_tables: Dict[
+            Tuple[str, Sequence[str]], Dict[str, JoinFieldDescriptor]
+        ] = {}
+
         # This list contains all per-row transform features listed after the first
-        # OverWindowTransform feature in the dependent_features. These features
-        # are evaluated after all over windows.
-        per_row_transform_features_following_first_over_window = []
+        # JoinTransform or OverWindowTransform feature in the dependent_features.
+        # These features are evaluated after all over windows and table join.
+        per_row_transform_features_following_first_over_window_or_join = []
 
         for feature in dependent_features:
             if isinstance(feature.transform, ExpressionTransform):
-                if len(window_agg_map) > 0:
-                    per_row_transform_features_following_first_over_window.append(
+                if len(right_tables) > 0 or len(window_agg_map) > 0:
+                    per_row_transform_features_following_first_over_window_or_join.append(  # noqa
                         feature
                     )
                 else:
@@ -160,8 +215,8 @@ class SparkDataFrameBuilder:
                         feature.dtype,
                     )
             elif isinstance(feature.transform, PythonUdfTransform):
-                if len(window_agg_map) > 0:
-                    per_row_transform_features_following_first_over_window.append(
+                if len(right_tables) > 0 or len(window_agg_map) > 0:
+                    per_row_transform_features_following_first_over_window_or_join.append(  # noqa
                         feature
                     )
                 else:
@@ -182,11 +237,65 @@ class SparkDataFrameBuilder:
                     [],
                 )
                 window_aggs.append(AggregationFieldDescriptor.from_feature(feature))
+            elif isinstance(feature.transform, JoinTransform):
+                if feature.keys is None:
+                    raise FeathubException(
+                        f"SparkProcessor cannot join feature {feature} without key."
+                    )
+                if not all(
+                    key in source_dataframe.schema.fieldNames() for key in feature.keys
+                ):
+                    raise FeathubException(
+                        f"Source dataframe {source_dataframe.schema.fieldNames()} "
+                        f"does not have the keys of the Feature to join {feature.keys}."
+                    )
+
+                join_transform = feature.transform
+                right_table_descriptor = descriptors_by_names[join_transform.table_name]
+                if right_table_descriptor.timestamp_field is None:
+                    raise FeathubException(
+                        f"SparkProcessor cannot join with {right_table_descriptor} "
+                        f"without timestamp field."
+                    )
+                join_field_descriptors = right_tables.setdefault(
+                    (join_transform.table_name, tuple(feature.keys)), dict()
+                )
+                join_field_descriptors.update(
+                    {
+                        key: JoinFieldDescriptor.from_field_name(key)
+                        for key in feature.keys
+                    }
+                )
+                join_field_descriptors[
+                    EVENT_TIME_ATTRIBUTE_NAME
+                ] = JoinFieldDescriptor.from_field_name(EVENT_TIME_ATTRIBUTE_NAME)
+
+                join_field_descriptors[
+                    join_transform.feature_name
+                ] = JoinFieldDescriptor.from_table_descriptor_and_field_name(
+                    right_table_descriptor, join_transform.feature_name
+                )
             else:
                 raise RuntimeError(
                     f"Unsupported transformation type "
                     f"{type(feature.transform).__name__} for feature {feature.name}."
                 )
+
+        for (
+            right_table_name,
+            keys,
+        ), join_field_descriptors in right_tables.items():
+            right_dataframe = dataframe_by_names[right_table_name].select(
+                *[
+                    functions.col(right_table_field)
+                    for right_table_field in join_field_descriptors.keys()
+                ]
+            )
+            tmp_dataframe = temporal_join(
+                tmp_dataframe,
+                right_dataframe,
+                keys,
+            )
 
         for over_window_descriptor, agg_descriptor in window_agg_map.items():
             tmp_dataframe = evaluate_over_window_transform(
@@ -195,7 +304,7 @@ class SparkDataFrameBuilder:
                 agg_descriptor,
             )
 
-        for feature in per_row_transform_features_following_first_over_window:
+        for feature in per_row_transform_features_following_first_over_window_or_join:
             if isinstance(feature.transform, ExpressionTransform):
                 tmp_dataframe = self._evaluate_expression_transform(
                     tmp_dataframe,

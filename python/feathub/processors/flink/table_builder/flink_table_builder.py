@@ -167,18 +167,16 @@ class FlinkTableBuilder:
         table: NativeFlinkTable,
         keys: Union[pd.DataFrame, TableDescriptor],
     ) -> NativeFlinkTable:
-        if keys is not None:
-            key_table = self._get_table(keys)
-            for field_name in key_table.get_schema().get_field_names():
-                if field_name not in table.get_schema().get_field_names():
-                    raise FeathubException(
-                        f"Given key {field_name} not in the table fields "
-                        f"{table.get_schema().get_field_names()}."
-                    )
-            table = join_table_on_key(
-                key_table, table, key_table.get_schema().get_field_names()
-            )
-        return table
+        key_table = self._get_table(keys)
+        for field_name in key_table.get_schema().get_field_names():
+            if field_name not in table.get_schema().get_field_names():
+                raise FeathubException(
+                    f"Given key {field_name} not in the table fields "
+                    f"{table.get_schema().get_field_names()}."
+                )
+        return join_table_on_key(
+            key_table, table, key_table.get_schema().get_field_names()
+        )
 
     def _get_table(
         self, features: Union[TableDescriptor, pd.DataFrame]

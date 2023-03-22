@@ -126,7 +126,7 @@ def join_table_on_key(
     Join the left and right table on the given key fields.
     """
 
-    right_aliased = _get_field_aliased_right_table(right, key_fields)
+    right_aliased = _rename_fields(right, key_fields)
     predicate = _get_join_predicate(left, right_aliased, key_fields)
 
     return left.join(right_aliased, predicate).select(
@@ -160,7 +160,7 @@ def full_outer_join_on_key_with_default_value(
                                  NULL.
     :return: The joined table.
     """
-    right_aliased = _get_field_aliased_right_table(right, key_fields)
+    right_aliased = _rename_fields(right, key_fields)
     predicate = _get_join_predicate(left, right_aliased, key_fields)
 
     return left.full_outer_join(right_aliased, predicate).select(
@@ -216,7 +216,7 @@ def temporal_join(
     """
     )
 
-    right_aliased = _get_field_aliased_right_table(
+    right_aliased = _rename_fields(
         temporal_right_table, [*keys, EVENT_TIME_ATTRIBUTE_NAME]
     )
 
@@ -273,9 +273,7 @@ def temporal_join(
     return result_table
 
 
-def _get_field_aliased_right_table(
-    right: NativeFlinkTable, fields: Sequence[str]
-) -> NativeFlinkTable:
+def _rename_fields(right: NativeFlinkTable, fields: Sequence[str]) -> NativeFlinkTable:
     aliased_right_table_field_names = [
         f"right.{f}" if f in fields else f for f in right.get_schema().get_field_names()
     ]

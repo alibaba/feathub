@@ -48,7 +48,7 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
             [
                 ["Alex", 100.0, "2022-01-01,09:01:00"],
                 ["Emma", 400.0, "2022-01-01,09:02:00"],
-                ["Alex", 200.0, "2022-01-02,09:03:00"],
+                ["Alex", 200.0, "2022-01-02,07:03:00"],
                 ["Emma", 300.0, "2022-01-02,09:04:00"],
                 ["Jack", 500.0, "2022-01-03,09:05:00"],
                 ["Alex", 450.0, "2022-01-03,09:06:00"],
@@ -93,10 +93,10 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
 
         expected_result_df = df_1
         expected_result_df["avg_cost"] = pd.Series(
-            [None, None, 100.0, 400.0, None, 200.0]
+            [None, None, 200.0, 400.0, None, 200.0]
         )
         expected_result_df["derived_cost"] = pd.Series(
-            [None, None, 20000.0, 100000.0, None, 160000.0]
+            [None, None, 40000.0, 100000.0, None, 160000.0]
         )
         expected_result_df = expected_result_df.sort_values(
             by=["name", "time"]
@@ -158,7 +158,7 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
             [
                 ["Alex", 100.0, "2022-01-01,09:01:00"],
                 ["Emma", 400.0, "2022-01-01,09:02:00"],
-                ["Alex", 200.0, "2022-01-02,09:03:00"],
+                ["Alex", 200.0, "2022-01-02,07:03:00"],
                 ["Emma", 300.0, "2022-01-02,09:04:00"],
                 ["Jack", 500.0, "2022-01-03,09:05:00"],
                 ["Alex", 450.0, "2022-01-03,09:06:00"],
@@ -195,10 +195,10 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
 
         expected_result_df = df_1
         expected_result_df["avg_cost"] = pd.Series(
-            [None, None, 100.0, 400.0, None, 200.0]
+            [None, None, 200.0, 400.0, None, 200.0]
         )
         expected_result_df["derived_cost"] = pd.Series(
-            [None, None, 20000.0, 100000.0, None, 160000.0]
+            [None, None, 40000.0, 100000.0, None, 160000.0]
         )
         expected_result_df = expected_result_df.sort_values(
             by=["name", "time"]
