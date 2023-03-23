@@ -22,17 +22,16 @@ import org.apache.flink.util.Collector;
 import java.time.Instant;
 
 /**
- * PostSlidingWindowZeroValuedRowExpiredRowHandler output a row with the default values and the key
- * from the expired row when a row is expired.
+ * SlidingWindowZeroValuedRowExpiredRowHandler output a row with the default values and the key from
+ * the expired row when a row is expired.
  */
-public class PostSlidingWindowZeroValuedRowExpiredRowHandler
-        implements PostSlidingWindowExpiredRowHandler {
+public class SlidingWindowZeroValuedRowExpiredRowHandler implements SlidingWindowExpiredRowHandler {
 
     private final Row zeroValuedRow;
     private final String rowTimeFieldName;
     private final String[] keyFieldNames;
 
-    public PostSlidingWindowZeroValuedRowExpiredRowHandler(
+    public SlidingWindowZeroValuedRowExpiredRowHandler(
             Row zeroValuedRow, String rowTimeFieldName, String... keyFieldNames) {
         this.zeroValuedRow = zeroValuedRow;
         this.rowTimeFieldName = rowTimeFieldName;

@@ -24,25 +24,29 @@ import java.io.Serializable;
 // TODO: Update AbstractTimeWindowedAggFunc to reuse the implementations of AggFunc.
 /**
  * Interface of aggregation function. The aggregation function can aggregate any number of records
- * with its timestamp and get the aggregation result. It also has a reset method to reset the
- * aggregation function to its initial state.
+ * with its timestamp and get the aggregation result.
  */
 public interface AggFunc<IN_T, OUT_T, ACC_T> extends Serializable {
-
     /**
-     * Aggregate the value with the timestamp.
+     * Adds the given input value to the given accumulator.
      *
      * @param value The value.
      * @param timestamp The timestamp of the value.
      */
     void add(ACC_T accumulator, IN_T value, long timestamp);
 
+    /** Merges the contents of the source accumulator into the target accumulator. */
+    void merge(ACC_T target, ACC_T source);
+
     /**
-     * Retract the given value.
+     * Retracts the given input value from the given accumulator.
      *
      * @param value The value to be retracted.
      */
     void retract(ACC_T accumulator, IN_T value);
+
+    /** Retracts the contents of the source accumulator from the target accumulator. */
+    void retractAccumulator(ACC_T target, ACC_T source);
 
     /** @return The aggregation result. */
     OUT_T getResult(ACC_T accumulator);

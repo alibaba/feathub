@@ -30,8 +30,18 @@ public class CountAggFunc implements AggFunc<Object, Long, CountAggFunc.CountAcc
     }
 
     @Override
+    public void merge(CountAccumulator target, CountAccumulator source) {
+        target.cnt += source.cnt;
+    }
+
+    @Override
     public void retract(CountAccumulator accumulator, Object value) {
         accumulator.cnt -= 1;
+    }
+
+    @Override
+    public void retractAccumulator(CountAccumulator target, CountAccumulator source) {
+        target.cnt -= source.cnt;
     }
 
     @Override
@@ -54,7 +64,7 @@ public class CountAggFunc implements AggFunc<Object, Long, CountAggFunc.CountAcc
         return Types.POJO(CountAccumulator.class);
     }
 
-    /** Accumulator of {@link CountAccumulator}. */
+    /** Accumulator of {@link CountAggFunc}. */
     public static class CountAccumulator {
         public Long cnt = 0L;
     }

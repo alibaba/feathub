@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /** An aggregate function that counts each unique value and returns as Map. */
+// TODO: Update this function to reuse the implementations of
+//  com.alibaba.feathub.flink.udf.aggregation.ValueCountsAggFunc
 public class ValueCountsAggFunc extends AggregateFunction<Map<Object, Long>, Map<Object, Long>> {
 
     public Map<Object, Long> getValue(Map<Object, Long> accumulator) {

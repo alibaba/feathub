@@ -31,7 +31,7 @@ import java.util.Map;
 public class AggregationFieldsDescriptor implements Serializable {
     private final List<AggregationFieldDescriptor> aggregationFieldDescriptors;
 
-    private final Map<String, Integer> outFieldNameToIdx = new HashMap<>();
+    private final Map<String, Integer> fieldNameToIdx = new HashMap<>();
 
     private Long maxWindowSizeMs;
 
@@ -40,7 +40,7 @@ public class AggregationFieldsDescriptor implements Serializable {
         this.aggregationFieldDescriptors = aggregationFieldDescriptors;
         int idx = 0;
         for (AggregationFieldDescriptor descriptor : this.aggregationFieldDescriptors) {
-            outFieldNameToIdx.put(descriptor.outFieldName, idx);
+            fieldNameToIdx.put(descriptor.fieldName, idx);
             idx += 1;
         }
     }
@@ -67,12 +67,11 @@ public class AggregationFieldsDescriptor implements Serializable {
 
     /** Get the index of the given {@link AggregationFieldDescriptor} in the list. */
     public int getAggFieldIdx(AggregationFieldDescriptor descriptor) {
-        if (!outFieldNameToIdx.containsKey(descriptor.outFieldName)) {
+        if (!fieldNameToIdx.containsKey(descriptor.fieldName)) {
             throw new RuntimeException(
-                    String.format(
-                            "The given outFieldName %s doesn't exists.", descriptor.outFieldName));
+                    String.format("The given fieldName %s doesn't exist.", descriptor.fieldName));
         }
-        return outFieldNameToIdx.get(descriptor.outFieldName);
+        return fieldNameToIdx.get(descriptor.fieldName);
     }
 
     /** Builder for {@link AggregationFieldsDescriptor}. */
@@ -84,20 +83,14 @@ public class AggregationFieldsDescriptor implements Serializable {
         }
 
         public Builder addField(
-                String inFieldName,
+                String fieldName,
                 DataType inDataType,
-                String outFieldNames,
                 DataType outDataType,
                 Long windowSizeMs,
                 String aggFunc) {
             aggregationFieldDescriptors.add(
                     new AggregationFieldDescriptor(
-                            inFieldName,
-                            inDataType,
-                            outFieldNames,
-                            outDataType,
-                            windowSizeMs,
-                            aggFunc));
+                            fieldName, inDataType, outDataType, windowSizeMs, aggFunc));
             return this;
         }
 
@@ -108,26 +101,30 @@ public class AggregationFieldsDescriptor implements Serializable {
 
     /** The descriptor of an aggregation field. */
     public static class AggregationFieldDescriptor implements Serializable {
-        public String inFieldName;
-        public String outFieldName;
-        public DataType outDataType;
-        public Long windowSizeMs;
-        public AggFunc<Object, ?, Object> aggFunc;
+        public final String fieldName;
+        public final DataType dataType;
+        public final Long windowSizeMs;
+        public final AggFunc<Object, ?, Object> aggFunc;
+        public final AggFunc<Object, ?, Object> aggFuncWithoutRetract;
 
         @SuppressWarnings({"unchecked"})
         public AggregationFieldDescriptor(
-                String inFieldName,
+                String fieldName,
                 DataType inDataType,
-                String outFieldNames,
                 DataType outDataType,
                 Long windowSizeMs,
-                String aggFunc) {
-            this.inFieldName = inFieldName;
-            this.outFieldName = outFieldNames;
-            this.outDataType = outDataType;
+                String aggFuncName) {
+            this.fieldName = fieldName;
+            this.dataType = outDataType;
             this.windowSizeMs = windowSizeMs;
+
             this.aggFunc =
-                    (AggFunc<Object, ?, Object>) AggFuncUtils.getAggFunc(aggFunc, inDataType);
+                    (AggFunc<Object, ?, Object>)
+                            AggFuncUtils.getAggFunc(aggFuncName, inDataType, true);
+
+            this.aggFuncWithoutRetract =
+                    (AggFunc<Object, ?, Object>)
+                            AggFuncUtils.getAggFunc(aggFuncName, inDataType, false);
         }
     }
 }

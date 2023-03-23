@@ -26,23 +26,21 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Test for {@link MergeValueCountsAggFunc}. */
-class MergeValueCountsAggFuncTest {
+/** Test for {@link ValueCountsAggFunc}. */
+class ValueCountsAggFuncTest {
     @Test
-    void testMergeValueCountsAggregationFunction() {
-        final MergeValueCountsAggFunc aggFunc =
-                new MergeValueCountsAggFunc(DataTypes.MAP(DataTypes.STRING(), DataTypes.BIGINT()));
-        final MergeValueCountsAggFunc.MergeValueCountsAccumulator accumulator =
-                aggFunc.createAccumulator();
+    void testValueCountsAggregationFunction() {
+        final ValueCountsAggFunc aggFunc = new ValueCountsAggFunc(DataTypes.STRING());
+        Map<Object, Long> accumulator = aggFunc.createAccumulator();
         assertThat(aggFunc.getResult(accumulator)).isNull();
-        aggFunc.add(accumulator, Collections.singletonMap("a", 1L), 0);
-        aggFunc.add(accumulator, Collections.singletonMap("a", 1L), 0);
-        aggFunc.add(accumulator, Collections.singletonMap("b", 1L), 0);
+        aggFunc.add(accumulator, "a", 0);
+        aggFunc.add(accumulator, "a", 0);
+        aggFunc.add(accumulator, "b", 0);
         Map<Object, Long> expectedResult = new HashMap<>();
         expectedResult.put("a", 2L);
         expectedResult.put("b", 1L);
         assertThat(aggFunc.getResult(accumulator)).isEqualTo(expectedResult);
-        aggFunc.retract(accumulator, Collections.singletonMap("b", 1L));
+        aggFunc.retract(accumulator, "b");
         assertThat(aggFunc.getResult(accumulator)).isEqualTo(Collections.singletonMap("a", 2L));
     }
 }

@@ -22,13 +22,18 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Test for {@link FirstValueAggFunc}. */
+/** Test for {@link FirstLastValueAggFunc}. */
 class FirstLastValueAggFuncTest {
     @Test
     void tesFirstValue() {
-        final FirstLastValueAggFunc<Integer> aggFunc =
-                new FirstLastValueAggFunc<>(DataTypes.INT(), true);
-        final FirstLastValueAggFunc.FirstLastValueAccumulator accumulator =
+        testFirstValueInternal(new FirstLastValueAggFunc<>(DataTypes.INT(), true), true);
+        testFirstValueInternal(
+                new FirstLastValueAggFuncWithoutRetract<>(DataTypes.INT(), true), false);
+    }
+
+    private void testFirstValueInternal(
+            final FirstLastValueAggFunc<Integer> aggFunc, boolean testRetract) {
+        final FirstLastValueAggFunc.FirstLastValueAccumulator<Integer> accumulator =
                 aggFunc.createAccumulator();
         assertThat(aggFunc.getResult(accumulator)).isNull();
         aggFunc.add(accumulator, 0, 0);
@@ -36,15 +41,22 @@ class FirstLastValueAggFuncTest {
         aggFunc.add(accumulator, 2, 2);
         aggFunc.add(accumulator, 3, 3);
         assertThat(aggFunc.getResult(accumulator)).isEqualTo(0);
-        aggFunc.retract(accumulator, 0);
-        assertThat(aggFunc.getResult(accumulator)).isEqualTo(1);
+        if (testRetract) {
+            aggFunc.retract(accumulator, 0);
+            assertThat(aggFunc.getResult(accumulator)).isEqualTo(1);
+        }
     }
 
     @Test
     void testLastValue() {
-        final FirstLastValueAggFunc<Integer> aggFunc =
-                new FirstLastValueAggFunc<>(DataTypes.INT(), false);
-        final FirstLastValueAggFunc.FirstLastValueAccumulator accumulator =
+        testLastValueInternal(new FirstLastValueAggFunc<>(DataTypes.INT(), false), true);
+        testLastValueInternal(
+                new FirstLastValueAggFuncWithoutRetract<>(DataTypes.INT(), false), false);
+    }
+
+    private void testLastValueInternal(
+            final FirstLastValueAggFunc<Integer> aggFunc, boolean testRetract) {
+        final FirstLastValueAggFunc.FirstLastValueAccumulator<Integer> accumulator =
                 aggFunc.createAccumulator();
         assertThat(aggFunc.getResult(accumulator)).isNull();
         aggFunc.add(accumulator, 0, 0);
@@ -52,7 +64,9 @@ class FirstLastValueAggFuncTest {
         aggFunc.add(accumulator, 2, 2);
         aggFunc.add(accumulator, 3, 3);
         assertThat(aggFunc.getResult(accumulator)).isEqualTo(3);
-        aggFunc.retract(accumulator, 0);
-        assertThat(aggFunc.getResult(accumulator)).isEqualTo(3);
+        if (testRetract) {
+            aggFunc.retract(accumulator, 0);
+            assertThat(aggFunc.getResult(accumulator)).isEqualTo(3);
+        }
     }
 }

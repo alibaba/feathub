@@ -77,6 +77,8 @@ INTEGER_TYPES = {
 FLOAT_TYPES = {type(DataTypes.FLOAT()), type(DataTypes.DOUBLE())}
 
 
+# TODO: remove this method as it's function can be supported by
+#  Java's AggFunc.getResult(AggFunc.createAccumulator()).
 def get_default_value_and_type(
     agg_descriptor: AggregationFieldDescriptor,
 ) -> Tuple[Any, DataType]:

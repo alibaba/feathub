@@ -22,7 +22,7 @@ import org.apache.flink.util.Collector;
 import java.io.Serializable;
 
 /** Interface for handling post sliding window expired row. */
-// TODO: Implement a PostSlidingWindowExpiredRowHandler that retract the expired row.
-public interface PostSlidingWindowExpiredRowHandler extends Serializable {
+// TODO: Implement a SlidingWindowExpiredRowHandler that retract the expired row.
+public interface SlidingWindowExpiredRowHandler extends Serializable {
     void handleExpiredRow(Collector<Row> out, Row expiredRow, long currentTimestamp);
 }

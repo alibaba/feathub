@@ -26,29 +26,41 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MinMaxAggFuncTest {
     @Test
     void testMax() {
-        final MinMaxAggFunc<Integer> aggFunc = new MinMaxAggFunc<>(DataTypes.INT(), false);
-        final MinMaxAggFunc.MinMaxAccumulator accumulator = aggFunc.createAccumulator();
+        testMaxInternal(new MinMaxAggFunc<>(DataTypes.INT(), false), true);
+        testMaxInternal(new MinMaxAggFuncWithoutRetract<>(DataTypes.INT(), false), false);
+    }
+
+    private void testMaxInternal(final MinMaxAggFunc<Integer> aggFunc, boolean testRetract) {
+        final MinMaxAggFunc.MinMaxAccumulator<Integer> accumulator = aggFunc.createAccumulator();
         assertThat(aggFunc.getResult(accumulator)).isNull();
         aggFunc.add(accumulator, 1, 0);
         aggFunc.add(accumulator, 3, 0);
         aggFunc.add(accumulator, 0, 0);
         aggFunc.add(accumulator, 4, 0);
         assertThat(aggFunc.getResult(accumulator)).isEqualTo(4);
-        aggFunc.retract(accumulator, 4);
-        assertThat(aggFunc.getResult(accumulator)).isEqualTo(3);
+        if (testRetract) {
+            aggFunc.retract(accumulator, 4);
+            assertThat(aggFunc.getResult(accumulator)).isEqualTo(3);
+        }
     }
 
     @Test
     void testMin() {
-        final MinMaxAggFunc<Integer> aggFunc = new MinMaxAggFunc<>(DataTypes.INT(), true);
-        final MinMaxAggFunc.MinMaxAccumulator accumulator = aggFunc.createAccumulator();
+        testMinInternal(new MinMaxAggFunc<>(DataTypes.INT(), true), true);
+        testMinInternal(new MinMaxAggFuncWithoutRetract<>(DataTypes.INT(), true), false);
+    }
+
+    private void testMinInternal(final MinMaxAggFunc<Integer> aggFunc, boolean testRetract) {
+        final MinMaxAggFunc.MinMaxAccumulator<Integer> accumulator = aggFunc.createAccumulator();
         assertThat(aggFunc.getResult(accumulator)).isNull();
         aggFunc.add(accumulator, 1, 0);
         aggFunc.add(accumulator, 3, 0);
         aggFunc.add(accumulator, 0, 0);
         aggFunc.add(accumulator, 4, 0);
         assertThat(aggFunc.getResult(accumulator)).isEqualTo(0);
-        aggFunc.retract(accumulator, 0);
-        assertThat(aggFunc.getResult(accumulator)).isEqualTo(1);
+        if (testRetract) {
+            aggFunc.retract(accumulator, 0);
+            assertThat(aggFunc.getResult(accumulator)).isEqualTo(1);
+        }
     }
 }
