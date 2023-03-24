@@ -1,15 +1,8 @@
-# Feathub Architecture and Concepts
+# Basic Concepts
 
-<img src="./figures/architecture_1.png" width="50%" height="auto">
-
-The figure above shows the key components and concepts in the FeatHub
+This document describes the basic concepts in FeatHub. Please checkout
+[README](../../../README.md#architecture-overview) for an overview of FeatHub
 architecture.
-
-<img src="./figures/architecture_2.png" width="70%" height="auto">
-
-The figure above shows how a developer can use FeatHub to facilitate feature
-engineering for model training and model inference. We describe the key concepts
-in the FeatHub architecture below.
 
 ## TableDescriptor - Declarative Definition of Features
 
@@ -34,9 +27,8 @@ For example, a FileSystemSource can be used as a source by specifying the path, 
 format, and schema. Similarly, a FileSystemSink can be used as a sink by specifying the 
 path and data format.
 
-Here is the available FeatureTables:
-
-- [MySQL](feature_tables/mysql.md)
+See [Connectors](../connectors/_index.md) for the list of storage systems from
+which we can construct FeatureTable in FeatHub.
 
 <!-- TODO: Add documentations for all the available FeatureTables -->
 
@@ -90,7 +82,7 @@ Feathub currently supports the following types of Transformations.
 
 
 
-## Processor - Pluggable Compute Engine for Feature Generation
+## Processor - Pluggable Compute Engine for Feature ETL
 
 A `Processor` is a pluggable compute engine that implements APIs to extract,
 transform, and load feature values into feature stores. A ``Processor is

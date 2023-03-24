@@ -1,19 +1,17 @@
-# Flink Processor Cli Mode
+# Flink Command-Line Mode Quickstart
 
 In this document, we will show you the steps to submit a simple Feathub job with Flink 
 Commandline Tool to a standalone Flink cluster. The Feathub job simply consumes
 the data from the Flink datagen connector, computes some feature, and prints out the 
 result.
 
-### Prerequisites
-
-The prerequisites to run the quickstart are listed below.
+## Prerequisites
 
 - Unix-like operating system (e.g. Linux, Mac OS X)
 - Python 3.7
 - Java 8
 
-### Install Flink 
+## Install Flink
 
 Download a stable release of Flink 1.15.2, then extract the archive:
 
@@ -25,9 +23,9 @@ $ tar -xzf flink-1.15.2-bin-scala_2.12.tgz
 You can refer to the [local installation](https://nightlies.apache.org/flink/flink-docs-release-1.15//docs/try-flink/local_installation/) 
 instruction for more detailed step.
 
-### Start the standalone Flink cluster locally
+## Deploy a Standalone Flink cluster
 
-You can start a Flink standalone cluster in your local environment with the following 
+You can deploy a standalone Flink cluster in your local environment with the following 
 command.
 
 ```bash
@@ -64,7 +62,7 @@ that are specific to certain platform, like Linux, macOS, or Windows. You need t
 sure that the environment that run the building script is the same as the environment
 the Flink cluster runs.
 
-## Submit Job with Flink Cli
+## Deploy FeatHub Job in the Flink Cluster
 
 Now you can submit the Feathub job to the standalone Flink cluster with the following
 command:

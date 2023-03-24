@@ -1,4 +1,4 @@
-# Feathub Tutorial
+# Tutorial
 
 This tutorial shows how to use Feathub to achieve the following objectives:
 - Define, extract, transform and materialize features into feature stores.
@@ -8,13 +8,13 @@ This tutorial shows how to use Feathub to achieve the following objectives:
   for online feature serving.
 
 This tutorial shows these Feathub capabilities by walking you through
-[nyc_taxi.py](./../python/feathub/examples/nyc_taxi.py), which trains a
+[nyc_taxi.py](../../../python/feathub/examples/nyc_taxi.py), which trains a
 GradientBoostingRegressor model on the NYC Taxi Records
 [dataset](https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page) to
 predict taxi fares, evaluates the prediction accuracy, and materialize features
 into online feature store for online feature serving.
 
-See [README](./../README.md#quickstart) for the instruction to run this demo.
+See [README](../../../README.md#quickstart) for the instruction to run this demo.
 
 ## Initialize FeatHub client
 

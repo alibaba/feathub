@@ -1,14 +1,16 @@
-# Spark Processor
+# Apache Spark
 
-The SparkProcessor does feature ETL using Spark as the processing engine. In the
+The SparkProcessor does feature ETL using Spark as the compute engine. In the
 following sections we describe the deployment modes supported by SparkProcessor
 and the configuration keys accepted by each mode.
 
+## Supported Versions
+
+- Spark 3.3
+
 ## Deployment Mode
 
-FeatHub's SparkProcessor only supports Spark's client mode. When running in
-client mode, the Spark driver component of the spark application will run on the
-machine from where the job submitted.
+The Spark processor runs the Spark job in client mode.
 
 ## Configurations
 
