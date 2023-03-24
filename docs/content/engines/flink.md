@@ -1,8 +1,12 @@
-# Flink Processor
+# Apache Flink
 
-The FlinkProcessor does feature ETL using Flink as the processing engine. In the
+The FlinkProcessor does feature ETL using Flink as the compute engine. In the
 following sections we describe the deployment modes supported by FlinkProcessor
 and the configuration keys accepted by each mode.
+
+## Supported Versions
+
+- Flink 1.15
 
 ## Deployment Mode
 The Flink processor runs the Flink job in one of the following deployment modes:
@@ -30,7 +34,7 @@ Flink cluster. Users need to manually submit the Feathub job as a Flink job
 using the Flink [CLI tool](https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/cli/#command-line-interface).
 
 A quickstart of how to submit a simple Feathub job with CLI mode to a standalone Flink 
-cluster can be found in this [document](quickstarts/flink_processor_cli_quickstart.md).
+cluster can be found in this [document](../get-started/quickstarts/flink-cli-mode.md).
 
 ### Session mode
 
@@ -47,7 +51,7 @@ the [Flink Docs](https://nightlies.apache.org/flink/flink-docs-master/docs/deplo
 for explanation of session mode. 
 
 A quickstart of how to submit a simple Feathub job with session mode to a standalone 
-Flink cluster can be found in this [document](quickstarts/flink_processor_session_quickstart.md).
+Flink cluster can be found in this [document](../get-started/quickstarts/flink-session-mode.md).
 
 ### Kubernetes Application mode
 
@@ -66,7 +70,7 @@ for more explanation of Kubernetes Application mode.
 To run the Flink job in Kubernetes Application mode, a docker image is required.
 
 Feathub provides a base Docker image to run the Flink job that compute the Feathub 
-features. User can modify the [Dockerfile](../docker/Dockerfile) to further customize 
+features. User can modify the [Dockerfile](../../../docker/Dockerfile) to further customize 
 the image. You can refer to [here](https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/resource-providers/standalone/docker/#further-customization)
 to learn how to customize the image. Then you can use the following command to build 
 the image:
