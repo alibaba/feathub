@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
 
 # TODO: Add document denoting that users should not declare column names
-#  starting and ending with double underscores, which are used as Feathub metadata.
+#  starting and ending with double underscores, which are used as FeatHub metadata.
 REDIS_SINK_KEY_FIELD_NAME = "__redis_sink_key__"
 
 

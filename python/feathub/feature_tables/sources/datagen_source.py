@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -88,7 +88,7 @@ class DataGenSource(FeatureTable):
     SequenceFields, the actually generated number of rows would be decided
     by the minimum span among these configurations.
 
-    Feathub types that can be used in DataGenSource's schema and their
+    FeatHub types that can be used in DataGenSource's schema and their
     supported field config:
 
     - String:       RandomField / SequenceField

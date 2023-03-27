@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,29 +15,29 @@
 
 class FeathubException(Exception):
     """
-    Base exception for Feathub.
+    Base exception for FeatHub.
     """
 
 
 class FeathubConfigurationException(FeathubException):
     """
-    Raised when there is Feathub configuration problem.
+    Raised when there is FeatHub configuration problem.
     """
 
 
 class FeathubTypeException(FeathubException):
     """
-    Raised when there is Feathub type problem.
+    Raised when there is FeatHub type problem.
     """
 
 
 class FeathubTransformationException(FeathubException):
     """
-    Raised when there is Feathub transformation problem.
+    Raised when there is FeatHub transformation problem.
     """
 
 
 class FeathubExpressionException(FeathubException):
     """
-    Raised when there is problem of Feathub expression.
+    Raised when there is problem of FeatHub expression.
     """

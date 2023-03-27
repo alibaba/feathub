@@ -110,7 +110,7 @@ See [Basic Concepts](docs/content/concepts/basic-concepts.md) for more details a
 
 ## Supported Compute Engines
 
-Feathub supports the following compute engines to execute feature ETL pipeline:
+FeatHub supports the following compute engines to execute feature ETL pipeline:
 - [Apache Flink 1.15](docs/content/engines/flink.md)
 - [Aapche Spark 3.3](docs/content/engines/spark.md)
 - Local processor, which is implemented using the Pandas library and computes features in the given Python process.
@@ -191,10 +191,10 @@ f_lower_case_name = Feature(
 
 ## Get Started
 
-### Install Feathub Nightly Build
+### Install FeatHub Nightly Build
 
 
-To install the nightly version of Feathub and the corresponding extra
+To install the nightly version of FeatHub and the corresponding extra
 requirements based on the compute engine you plan to use, run one of the
 following commands:
 
@@ -242,7 +242,7 @@ $ python python/feathub/examples/nyc_taxi_spark_client.py
 
 ### Prerequisites
 
-You need the following to build Feathub from source:
+You need the following to build FeatHub from source:
 - Unix-like operating system (e.g. Linux, Mac OS X)
 - x86_64 architecture
 - Python 3.7
@@ -275,7 +275,7 @@ $ ulimit -n 1024
    [README](https://github.com/protocolbuffers/protobuf#protocol-compiler-installation)
    to install protoc.
 
-### Build and Install Feathub from Source
+### Build and Install FeatHub from Source
 <!-- TODO: Add instruction to install "./python[all]" after the dependency confliction in PyFlink and PySpark is resolved. -->
 ```bash
 $ mvn clean package -DskipTests -f ./java
@@ -292,7 +292,7 @@ $ pytest --tb=line -W ignore::DeprecationWarning ./python
 
 ### Format Code Style
 
-Feathub uses the following tools to maintain code quality:
+FeatHub uses the following tools to maintain code quality:
 - [Black](https://black.readthedocs.io/en/stable/index.html) to format Python code
 - [flake8](https://flake8.pycqa.org/en/latest/) to check Python code style
 - [mypy](https://mypy.readthedocs.io/en/stable/) to check type annotation
@@ -347,9 +347,9 @@ Come join us!
 - [Documentation](docs/content/_index.md): Our documentation provides guidance
 on compute engines, connectors, expression language, and more. Check it out if
 you need help getting started or want to learn more about FeatHub.
-- [Feathub Examples](https://github.com/flink-extended/feathub-examples): This
-repository provides a wide variety of Feathub demos that can be executed using
-Docker Compose. It's a great resource if you want to try out Feathub and see
+- [FeatHub Examples](https://github.com/flink-extended/feathub-examples): This
+repository provides a wide variety of FeatHub demos that can be executed using
+Docker Compose. It's a great resource if you want to try out FeatHub and see
 what it can do.
 - Tech Talks and Articles
   - Flink Forward Asia 2022 ([slides](https://www.slideshare.net/DongLin1/feathub), [video](https://www.bilibili.com/video/BV1714y1E7fQ/?spm_id_from=333.337.search-card.all.click), [article](https://mp.weixin.qq.com/s/ZFKRNaQODe0LwRT1nlwZgA))

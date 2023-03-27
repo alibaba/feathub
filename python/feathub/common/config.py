@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -99,7 +99,7 @@ TIMEZONE_DOC = (
 )
 
 # TODO: Add document describing the configuration options available
-#  in Feathub.
+#  in FeatHub.
 common_config_defs: List[ConfigDef] = [
     ConfigDef(
         name=TIMEZONE_CONFIG,

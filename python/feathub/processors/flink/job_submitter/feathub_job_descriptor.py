@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ from feathub.table.table_descriptor import TableDescriptor
 
 
 class FeathubJobDescriptor:
-    """Descriptor of a Feathub job to run in a remote Flink cluster."""
+    """Descriptor of a FeatHub job to run in a remote Flink cluster."""
 
     def __init__(
         self,
@@ -59,7 +59,7 @@ class FeathubJobDescriptor:
                                       table.
         :param allow_overwrite: If it is false, throw error if the features collide with
                                 existing data in the given sink.
-        :param props: All properties of Feathub.
+        :param props: All properties of FeatHub.
         """
         self.features = features
         self.keys = keys

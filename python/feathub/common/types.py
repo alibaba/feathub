@@ -1,4 +1,4 @@
-# Copyright 2022 The Feathub Authors
+# Copyright 2022 The FeatHub Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -168,7 +168,7 @@ python_type_to_dtype: Dict[Type, DType] = {
 def from_python_type(python_type: Type) -> DType:
     if python_type not in python_type_to_dtype:
         raise FeathubExpressionException(
-            f"Cannot convert python type: {python_type} to Feathub dtype."
+            f"Cannot convert python type: {python_type} to FeatHub dtype."
         )
     return python_type_to_dtype[python_type]
 

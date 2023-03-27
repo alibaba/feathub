@@ -1,6 +1,6 @@
-# Deploy Feathub Job on Alibaba Cloud Realtime Compute
+# Deploy FeatHub Job on Alibaba Cloud Realtime Compute
 
-In this document, we will show you the steps to deploy a simple Feathub job that 
+In this document, we will show you the steps to deploy a simple FeatHub job that 
 consumes data from the Flink datagen connector, computes some features, and prints out 
 the result to the [Alibaba Cloud Realtime Compute for Apache Flink](https://help.aliyun.com/document_detail/110778.html).
 
@@ -8,10 +8,10 @@ the result to the [Alibaba Cloud Realtime Compute for Apache Flink](https://help
 
 - An up and running instance of [Alibaba Cloud Realtime Compute for Apache Flink](https://help.aliyun.com/document_detail/110778.html)
 
-## Package Feathub Python Dependencies
+## Package FeatHub Python Dependencies
 
 We provide the script to package a zip that contains the Python dependencies to run
-Feathub job in Alibaba Cloud Realtime Compute for Apache Flink. You can run the 
+FeatHub job in Alibaba Cloud Realtime Compute for Apache Flink. You can run the 
 following command to build the zip. Note that you need to have docker installed to run 
 the script.
 

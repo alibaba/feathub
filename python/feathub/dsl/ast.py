@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -30,10 +30,10 @@ from feathub.common.types import (
 
 TYPE_PRECISION_RANK: List[DType] = [Float64, Float32, Int64, Int32]
 
-# A map from the Feathub built-in function name to a callable that is used to
+# A map from the FeatHub built-in function name to a callable that is used to
 # evaluate the result data type of the function. The callable takes a list of
 # data types of arguments and returns the data type of the result.
-# TODO: Add a dedicated class to keep track of all the Feathub function.
+# TODO: Add a dedicated class to keep track of all the FeatHub function.
 FUNCTION_RESULT_TYPE_EVALUATOR: Dict[str, Callable[[List[DType]], DType]] = {
     "LOWER": lambda _: String,
     "UNIX_TIMESTAMP": lambda _: Int64,

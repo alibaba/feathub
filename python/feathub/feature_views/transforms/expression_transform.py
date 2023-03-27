@@ -1,4 +1,4 @@
-# Copyright 2022 The Feathub Authors
+# Copyright 2022 The FeatHub Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,13 +18,13 @@ from feathub.feature_views.transforms.transformation import Transformation
 
 class ExpressionTransform(Transformation):
     """
-    Derives feature values by applying Feathub expression on one row of the parent table
-    at a time. Feathub expression is a declarative lanaguage with built-in functions.
+    Derives feature values by applying FeatHub expression on one row of the parent table
+    at a time. FeatHub expression is a declarative lanaguage with built-in functions.
     """
 
     def __init__(self, expr: str) -> None:
         """
-        :param expr: A Feathub expression composed of UDF and feature names.
+        :param expr: A FeatHub expression composed of UDF and feature names.
         """
         super().__init__()
         self.expr = expr

@@ -1,4 +1,4 @@
-# Copyright 2022 The Feathub Authors
+# Copyright 2022 The FeatHub Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ class Feature:
                      parent table.
         :param dtype: The data type of this feature's values.
         :param transform: The logic used to derive this feature's values. If it is a
-                          string, it represents a Feathub expression.
+                          string, it represents a FeatHub expression.
         :param keys: Optional. The names of fields in the parent table that are
                      necessary to interpret this feature's values. These fields
                      should be included in the join keys when joining this feature onto

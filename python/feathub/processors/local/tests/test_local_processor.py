@@ -1,4 +1,4 @@
-# Copyright 2022 The Feathub Authors
+# Copyright 2022 The FeatHub Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,12 +72,12 @@ class LocalProcessorITTest(
         result_df = self.client.get_features(features=source).to_pandas()
         self.assertTrue(df.equals(result_df))
 
-    # TODO: Make LocalProcessor throw Feathub Exception when non-exist key is
+    # TODO: Make LocalProcessor throw FeatHub Exception when non-exist key is
     #  encountered.
     def test_get_table_with_non_exist_key(self):
         pass
 
-    # TODO: Make LocalProcessor throw Feathub Exception with unsupported FeatureView.
+    # TODO: Make LocalProcessor throw FeatHub Exception with unsupported FeatureView.
     def test_get_table_with_unsupported_feature_view(self):
         pass
 

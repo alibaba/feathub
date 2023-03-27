@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ from feathub.table.table_descriptor import TableDescriptor
 
 
 class FlinkTableBuilder:
-    """FlinkTableBuilder is used to convert Feathub feature to a Flink Table."""
+    """FlinkTableBuilder is used to convert FeatHub feature to a Flink Table."""
 
     def __init__(
         self,
@@ -91,7 +91,7 @@ class FlinkTableBuilder:
 
         :param t_env: The Flink StreamTableEnvironment under which the Tables to be
                       created.
-        :param registry: The Feathub registry.
+        :param registry: The FeatHub registry.
         """
         self.t_env = t_env
         self.registry = registry
@@ -537,7 +537,7 @@ class FlinkTableBuilder:
                 # This is a temporary solution to ignore the CURRENT_EVENT_TIME function
                 # as the event time (window time) is added above.
                 # TODO: Refactor FlinkAstEvaluator to properly handle CURRENT_EVENT_TIME
-                #  and expose CURRENT_EVENT_TIME as a built-in function of Feathub
+                #  and expose CURRENT_EVENT_TIME as a built-in function of FeatHub
                 #  expression.
                 if feature.transform.expr == "CURRENT_EVENT_TIME()":
                     continue

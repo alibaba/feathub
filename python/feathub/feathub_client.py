@@ -1,4 +1,4 @@
-# Copyright 2022 The Feathub Authors
+# Copyright 2022 The FeatHub Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ from feathub.table.table_descriptor import TableDescriptor
 
 class FeathubClient:
     """
-    The Feathub client provides APIs to manage features.
+    The FeatHub client provides APIs to manage features.
     """
 
     def __init__(self, props: Dict) -> None:

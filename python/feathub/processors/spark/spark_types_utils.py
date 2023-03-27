@@ -1,4 +1,4 @@
-# Copyright 2022 The Feathub Authors
+# Copyright 2022 The FeatHub Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,9 +37,9 @@ inverse_type_mapping: Dict[Type[native_spark_types.AtomicType], types.BasicDType
 
 def to_spark_struct_type(schema: Schema) -> native_spark_types.StructType:
     """
-    Convert Feathub schema to native Spark StructType.
+    Convert FeatHub schema to native Spark StructType.
 
-    :param schema: The Feathub schema.
+    :param schema: The FeatHub schema.
     :return: The native Spark StructType.
     """
 
@@ -53,10 +53,10 @@ def to_spark_struct_type(schema: Schema) -> native_spark_types.StructType:
 
 def to_feathub_schema(struct_type: native_spark_types.StructType) -> Schema:
     """
-    Convert Spark StructType to Feathub schema.
+    Convert Spark StructType to FeatHub schema.
 
     :param struct_type: The Spark StructType.
-    :return: The Feathub schema.
+    :return: The FeatHub schema.
     """
 
     field_names = []
@@ -69,9 +69,9 @@ def to_feathub_schema(struct_type: native_spark_types.StructType) -> Schema:
 
 def to_spark_type(feathub_type: types.DType) -> native_spark_types.DataType:
     """
-    Convert Feathub DType to Spark DataType.
+    Convert FeatHub DType to Spark DataType.
 
-    :param feathub_type: The Feathub DType.
+    :param feathub_type: The FeatHub DType.
     :return: The Spark DataType.
     """
     if isinstance(feathub_type, types.BasicDType):
@@ -90,10 +90,10 @@ def to_spark_type(feathub_type: types.DType) -> native_spark_types.DataType:
 
 def to_feathub_type(spark_type: native_spark_types.DataType) -> types.DType:
     """
-    Convert Spark DataType to Feathub DType.
+    Convert Spark DataType to FeatHub DType.
 
     :param spark_type: The Spark DataType.
-    :return: The Feathub DType.
+    :return: The FeatHub DType.
     """
     if isinstance(spark_type, native_spark_types.AtomicType):
         return _atomic_type_to_feathub_type(spark_type)
@@ -102,7 +102,7 @@ def to_feathub_type(spark_type: native_spark_types.DataType) -> types.DType:
     elif isinstance(spark_type, native_spark_types.MapType):
         return _map_type_to_feathub_type(spark_type)
 
-    raise FeathubTypeException(f"Spark type {spark_type} is not supported by Feathub.")
+    raise FeathubTypeException(f"Spark type {spark_type} is not supported by FeatHub.")
 
 
 def _primitive_type_to_spark_type(
@@ -154,7 +154,7 @@ def _atomic_type_to_basic_type(
 ) -> types.BasicDType:
     if type(spark_type) not in inverse_type_mapping:
         raise FeathubTypeException(
-            f"Spark type {spark_type} is not supported by Feathub."
+            f"Spark type {spark_type} is not supported by FeatHub."
         )
     return inverse_type_mapping[type(spark_type)]
 

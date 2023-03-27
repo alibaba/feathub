@@ -18,4 +18,4 @@ applications.
 - [Connectors](connectors/_index.md)
   - [MySql](connectors/mysql.md)
 - [How To](how-to/_index.md)
-  - [Deploy Feathub Job on Alibaba Cloud](how-to/deploy-on-alibaba-cloud.md)
+  - [Deploy FeatHub Job on Alibaba Cloud](how-to/deploy-on-alibaba-cloud.md)

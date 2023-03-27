@@ -1,4 +1,4 @@
-# Copyright 2022 The Feathub Authors
+# Copyright 2022 The FeatHub Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ from feathub.feature_views.transforms.transformation import Transformation
 
 class OverWindowTransform(Transformation):
     """
-    Derives feature values by applying Feathub expression and aggregation function on
+    Derives feature values by applying FeatHub expression and aggregation function on
     multiple rows of the parent table at a time.
     """
 
@@ -34,7 +34,7 @@ class OverWindowTransform(Transformation):
         limit: Optional[int] = None,
     ):
         """
-        :param expr: A Feathub expression composed of UDF and feature names.
+        :param expr: A FeatHub expression composed of UDF and feature names.
         :param agg_func: The aggregation function or the name of the aggregation
                          function as string such as "MAX", "AVG".
         :param window_size: Optional. If it is not None, for any row in the table with
@@ -43,7 +43,7 @@ class OverWindowTransform(Transformation):
                             included in the aggregation. If it is None, the window size
                             is effectively unlimited.
         :param group_by_keys: The names of fields to be used as the grouping key.
-        :param filter_expr: Optional. If it is not None, it represents a Feathub
+        :param filter_expr: Optional. If it is not None, it represents a FeatHub
                             expression. If a row match the filter expression, the
                             transformation result is computed by aggregating rows that
                             match the filter expression and within the time window and

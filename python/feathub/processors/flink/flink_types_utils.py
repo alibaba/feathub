@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -43,9 +43,9 @@ inverse_type_mapping: Dict[Type[AtomicType], BasicDType] = {
 
 def to_flink_schema(schema: Schema) -> NativeFlinkSchema:
     """
-    Convert Feathub schema to native Flink schema.
+    Convert FeatHub schema to native Flink schema.
 
-    :param schema: The Feathub schema.
+    :param schema: The FeatHub schema.
     :return: The native Flink schema.
     """
     builder = NativeFlinkSchema.new_builder()
@@ -57,10 +57,10 @@ def to_flink_schema(schema: Schema) -> NativeFlinkSchema:
 
 def to_feathub_schema(schema: TableSchema) -> Schema:
     """
-    Convert Flink TableSchema to Feathub schema.
+    Convert Flink TableSchema to FeatHub schema.
 
     :param schema: The Flink TableSchema.
-    :return: The Feathub schema.
+    :return: The FeatHub schema.
     """
     field_names = schema.get_field_names()
     field_types = [
@@ -72,9 +72,9 @@ def to_feathub_schema(schema: TableSchema) -> Schema:
 
 def to_flink_type(feathub_type: DType) -> DataType:
     """
-    Convert Feathub DType to Flink DataType.
+    Convert FeatHub DType to Flink DataType.
 
-    :param feathub_type: The Feathub Dtype.
+    :param feathub_type: The FeatHub Dtype.
     :return: The Flink DataType.
     """
     if isinstance(feathub_type, BasicDType):
@@ -93,10 +93,10 @@ def to_flink_type(feathub_type: DType) -> DataType:
 
 def to_feathub_type(flink_type: DataType) -> DType:
     """
-    Convert Flink DataType to Feathub DType.
+    Convert Flink DataType to FeatHub DType.
 
     :param flink_type: The Flink DataType.
-    :return: The Feathub DType.
+    :return: The FeatHub DType.
     """
     if isinstance(flink_type, AtomicType):
         return _atomic_type_to_feathub_type(flink_type)
@@ -105,7 +105,7 @@ def to_feathub_type(flink_type: DataType) -> DType:
     elif isinstance(flink_type, NativeFlinkMapType):
         return _map_type_to_feathub_type(flink_type)
 
-    raise FeathubTypeException(f"Flink type {flink_type} is not supported by Feathub.")
+    raise FeathubTypeException(f"Flink type {flink_type} is not supported by FeatHub.")
 
 
 def _primitive_type_to_flink_type(feathub_type: PrimitiveType) -> DataType:
@@ -145,7 +145,7 @@ def _array_type_to_feathub_type(flink_type: ArrayType) -> DType:
 def _atomic_type_to_basic_type(flink_type: AtomicType) -> BasicDType:
     if type(flink_type) not in inverse_type_mapping:
         raise FeathubTypeException(
-            f"Flink type {flink_type} is not supported by Feathub."
+            f"Flink type {flink_type} is not supported by FeatHub."
         )
     return inverse_type_mapping[type(flink_type)]
 

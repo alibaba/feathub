@@ -1,14 +1,14 @@
-# Feathub Expression Language
+# FeatHub Expression Language
 
-Feathub expression language is a declarative language with built-in functions.
+FeatHub expression language is a declarative language with built-in functions.
 It can be used in the `ExpressionTransform` to describe how to derive a new
 feature value from existing features' values for each row in a table.
 
-In the following, we describe the built-in functions supported by the Feathub
+In the following, we describe the built-in functions supported by the FeatHub
 expression language.
 
 ## Reserved Keywords
-Feathub expression has the following string reserved as keywords:
+FeatHub expression has the following string reserved as keywords:
 
 AS, BIGINT, BOOLEAN, BYTES, CAST, DOUBLE, FALSE, FLOAT, INTEGER, STRING, TIMESTAMP, 
 TRUE, TRY_CAST
@@ -61,7 +61,7 @@ Comparison functions take numeric values as inputs and outputs a boolean value.
 
 ### Data Types
 
-Feathub expression supports the following data types: 
+FeatHub expression supports the following data types: 
 
 BYTES, STRING, INTEGER, BIGINT, FLOAT, DOUBLE, BOOLEAN, TIMESTAMP
 

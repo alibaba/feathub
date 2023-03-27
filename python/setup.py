@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ protoc_version = subprocess.check_output(
 if not protoc_version.startswith(b"libprotoc 3.17"):
     print(
         f"protoc '{protoc_version}' is installed in the local environment, "
-        f"while Feathub has only been verified with protoc 3.17.x."
+        f"while FeatHub has only been verified with protoc 3.17.x."
     )
     sys.exit(-1)
 
@@ -65,7 +65,7 @@ try:
     exec(open(version_file).read())
 except IOError:
     print(
-        "Failed to load Feathub version file for packaging. "
+        "Failed to load FeatHub version file for packaging. "
         + "'%s' not found!" % version_file,
         file=sys.stderr,
     )
@@ -170,7 +170,7 @@ try:
             },
         },
         license="https://www.apache.org/licenses/LICENSE-2.0",
-        author="Feathub Authors",
+        author="FeatHub Authors",
         python_requires=">=3.6",
         install_requires=install_requires,
         extras_require=extras_require,
