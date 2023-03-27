@@ -13,7 +13,9 @@
 #  limitations under the License.
 from abc import ABC
 from datetime import timedelta
+from enum import Enum
 from math import sqrt
+from typing import List
 
 import pandas as pd
 
@@ -33,21 +35,41 @@ from feathub.feature_views.transforms.sliding_window_transform import (
 from feathub.table.schema import Schema
 from feathub.tests.feathub_it_test_base import FeathubITTestBase
 
-ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT = {
-    ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: True,
-    SKIP_SAME_WINDOW_OUTPUT_CONFIG: True,
-}
-DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT = {
-    ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: False,
-    SKIP_SAME_WINDOW_OUTPUT_CONFIG: False,
-}
-ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT = {
-    ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: True,
-    SKIP_SAME_WINDOW_OUTPUT_CONFIG: False,
-}
+
+class SlidingWindowTestConfig(Enum):
+    ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT = {
+        ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: True,
+        SKIP_SAME_WINDOW_OUTPUT_CONFIG: True,
+    }
+    DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT = {
+        ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: False,
+        SKIP_SAME_WINDOW_OUTPUT_CONFIG: False,
+    }
+    ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT = {
+        ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: True,
+        SKIP_SAME_WINDOW_OUTPUT_CONFIG: False,
+    }
+
+
+ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT = (
+    SlidingWindowTestConfig.ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT
+)
+DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT = (
+    SlidingWindowTestConfig.DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT
+)
+ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT = (
+    SlidingWindowTestConfig.ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT
+)
 
 
 class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
+    def get_supported_sliding_window_config(self) -> List[SlidingWindowTestConfig]:
+        return [
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT,
+            DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
+            ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
+        ]
+
     def test_transform_without_key(self):
         df = self.input_data.copy()
         source = self.create_file_source(df)
@@ -62,53 +84,45 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             ),
         )
 
-        expected_results = [
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
-                    [
-                        [to_epoch_millis("2022-01-01 23:59:59.999"), 500],
-                        [to_epoch_millis("2022-01-02 23:59:59.999"), 1000],
-                        [to_epoch_millis("2022-01-03 23:59:59.999"), 1600],
-                        [to_epoch_millis("2022-01-04 23:59:59.999"), 1100],
-                        [to_epoch_millis("2022-01-05 23:59:59.999"), 0],
-                    ],
-                    columns=["window_time", "total_cost"],
-                ),
+        expected_results = {
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [to_epoch_millis("2022-01-01 23:59:59.999"), 500],
+                    [to_epoch_millis("2022-01-02 23:59:59.999"), 1000],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), 1600],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), 1100],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), 0],
+                ],
+                columns=["window_time", "total_cost"],
             ),
-            (
-                DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
-                    [
-                        [to_epoch_millis("2022-01-01 23:59:59.999"), 500],
-                        [to_epoch_millis("2022-01-02 23:59:59.999"), 1000],
-                        [to_epoch_millis("2022-01-03 23:59:59.999"), 1600],
-                        [to_epoch_millis("2022-01-04 23:59:59.999"), 1100],
-                    ],
-                    columns=["window_time", "total_cost"],
-                ),
+            DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [to_epoch_millis("2022-01-01 23:59:59.999"), 500],
+                    [to_epoch_millis("2022-01-02 23:59:59.999"), 1000],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), 1600],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), 1100],
+                ],
+                columns=["window_time", "total_cost"],
             ),
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
-                    [
-                        [to_epoch_millis("2022-01-01 23:59:59.999"), 500],
-                        [to_epoch_millis("2022-01-02 23:59:59.999"), 1000],
-                        [to_epoch_millis("2022-01-03 23:59:59.999"), 1600],
-                        [to_epoch_millis("2022-01-04 23:59:59.999"), 1100],
-                        [to_epoch_millis("2022-01-05 23:59:59.999"), 0],
-                    ],
-                    columns=["window_time", "total_cost"],
-                ),
+            ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [to_epoch_millis("2022-01-01 23:59:59.999"), 500],
+                    [to_epoch_millis("2022-01-02 23:59:59.999"), 1000],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), 1600],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), 1100],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), 0],
+                ],
+                columns=["window_time", "total_cost"],
             ),
-        ]
+        }
 
-        for props, expected_result_df in expected_results:
+        for props in self.get_supported_sliding_window_config():
+            expected_result_df = expected_results[props]
             features = SlidingFeatureView(
                 name="features",
                 source=source,
                 features=[f_total_cost],
-                props=props,
+                props=props.value,
             )
 
             result_df = (
@@ -140,77 +154,69 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             ),
         )
 
-        expected_results = [
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
-                    [
-                        ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100],
-                        ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 400],
-                        ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 900],
-                        ["Alex", to_epoch_millis("2022-01-05 23:59:59.999"), 600],
-                        ["Alex", to_epoch_millis("2022-01-06 23:59:59.999"), 0],
-                        ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400],
-                        ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 600],
-                        ["Emma", to_epoch_millis("2022-01-04 23:59:59.999"), 200],
-                        ["Emma", to_epoch_millis("2022-01-05 23:59:59.999"), 0],
-                        ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500],
-                        ["Jack", to_epoch_millis("2022-01-06 23:59:59.999"), 0],
-                    ],
-                    columns=["name", "window_time", "total_cost"],
-                ),
+        expected_results = {
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100],
+                    ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 400],
+                    ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 900],
+                    ["Alex", to_epoch_millis("2022-01-05 23:59:59.999"), 600],
+                    ["Alex", to_epoch_millis("2022-01-06 23:59:59.999"), 0],
+                    ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400],
+                    ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 600],
+                    ["Emma", to_epoch_millis("2022-01-04 23:59:59.999"), 200],
+                    ["Emma", to_epoch_millis("2022-01-05 23:59:59.999"), 0],
+                    ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500],
+                    ["Jack", to_epoch_millis("2022-01-06 23:59:59.999"), 0],
+                ],
+                columns=["name", "window_time", "total_cost"],
             ),
-            (
-                DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
-                    [
-                        ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100],
-                        ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 400],
-                        ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 900],
-                        ["Alex", to_epoch_millis("2022-01-04 23:59:59.999"), 900],
-                        ["Alex", to_epoch_millis("2022-01-05 23:59:59.999"), 600],
-                        ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400],
-                        ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 600],
-                        ["Emma", to_epoch_millis("2022-01-03 23:59:59.999"), 600],
-                        ["Emma", to_epoch_millis("2022-01-04 23:59:59.999"), 200],
-                        ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500],
-                        ["Jack", to_epoch_millis("2022-01-04 23:59:59.999"), 500],
-                        ["Jack", to_epoch_millis("2022-01-05 23:59:59.999"), 500],
-                    ],
-                    columns=["name", "window_time", "total_cost"],
-                ),
+            DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100],
+                    ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 400],
+                    ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 900],
+                    ["Alex", to_epoch_millis("2022-01-04 23:59:59.999"), 900],
+                    ["Alex", to_epoch_millis("2022-01-05 23:59:59.999"), 600],
+                    ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400],
+                    ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 600],
+                    ["Emma", to_epoch_millis("2022-01-03 23:59:59.999"), 600],
+                    ["Emma", to_epoch_millis("2022-01-04 23:59:59.999"), 200],
+                    ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500],
+                    ["Jack", to_epoch_millis("2022-01-04 23:59:59.999"), 500],
+                    ["Jack", to_epoch_millis("2022-01-05 23:59:59.999"), 500],
+                ],
+                columns=["name", "window_time", "total_cost"],
             ),
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
-                    [
-                        ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100],
-                        ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 400],
-                        ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 900],
-                        ["Alex", to_epoch_millis("2022-01-04 23:59:59.999"), 900],
-                        ["Alex", to_epoch_millis("2022-01-05 23:59:59.999"), 600],
-                        ["Alex", to_epoch_millis("2022-01-06 23:59:59.999"), 0],
-                        ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400],
-                        ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 600],
-                        ["Emma", to_epoch_millis("2022-01-03 23:59:59.999"), 600],
-                        ["Emma", to_epoch_millis("2022-01-04 23:59:59.999"), 200],
-                        ["Emma", to_epoch_millis("2022-01-05 23:59:59.999"), 0],
-                        ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500],
-                        ["Jack", to_epoch_millis("2022-01-04 23:59:59.999"), 500],
-                        ["Jack", to_epoch_millis("2022-01-05 23:59:59.999"), 500],
-                        ["Jack", to_epoch_millis("2022-01-06 23:59:59.999"), 0],
-                    ],
-                    columns=["name", "window_time", "total_cost"],
-                ),
+            ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100],
+                    ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 400],
+                    ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 900],
+                    ["Alex", to_epoch_millis("2022-01-04 23:59:59.999"), 900],
+                    ["Alex", to_epoch_millis("2022-01-05 23:59:59.999"), 600],
+                    ["Alex", to_epoch_millis("2022-01-06 23:59:59.999"), 0],
+                    ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400],
+                    ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 600],
+                    ["Emma", to_epoch_millis("2022-01-03 23:59:59.999"), 600],
+                    ["Emma", to_epoch_millis("2022-01-04 23:59:59.999"), 200],
+                    ["Emma", to_epoch_millis("2022-01-05 23:59:59.999"), 0],
+                    ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500],
+                    ["Jack", to_epoch_millis("2022-01-04 23:59:59.999"), 500],
+                    ["Jack", to_epoch_millis("2022-01-05 23:59:59.999"), 500],
+                    ["Jack", to_epoch_millis("2022-01-06 23:59:59.999"), 0],
+                ],
+                columns=["name", "window_time", "total_cost"],
             ),
-        ]
+        }
 
-        for props, expected_result_df in expected_results:
+        for props in self.get_supported_sliding_window_config():
+            expected_result_df = expected_results.get(props)
             features = SlidingFeatureView(
                 name="features",
                 source=source,
                 features=[f_total_cost],
-                props=props,
+                props=props.value,
             )
             expected_result_df = expected_result_df.sort_values(
                 by=["name", "window_time"]
@@ -252,77 +258,69 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             ),
         )
 
-        expected_results = [
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
-                    [
-                        [to_epoch_millis("2022-01-01 23:59:59.999"), "Alex_Alex", 100],
-                        [to_epoch_millis("2022-01-02 23:59:59.999"), "Alex_Alex", 400],
-                        [to_epoch_millis("2022-01-03 23:59:59.999"), "Alex_Alex", 900],
-                        [to_epoch_millis("2022-01-05 23:59:59.999"), "Alex_Alex", 600],
-                        [to_epoch_millis("2022-01-06 23:59:59.999"), "Alex_Alex", 0],
-                        [to_epoch_millis("2022-01-01 23:59:59.999"), "Emma_Emma", 400],
-                        [to_epoch_millis("2022-01-02 23:59:59.999"), "Emma_Emma", 600],
-                        [to_epoch_millis("2022-01-04 23:59:59.999"), "Emma_Emma", 200],
-                        [to_epoch_millis("2022-01-05 23:59:59.999"), "Emma_Emma", 0],
-                        [to_epoch_millis("2022-01-03 23:59:59.999"), "Jack_Jack", 500],
-                        [to_epoch_millis("2022-01-06 23:59:59.999"), "Jack_Jack", 0],
-                    ],
-                    columns=["window_time", "name_name", "total_cost"],
-                ),
+        expected_results = {
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [to_epoch_millis("2022-01-01 23:59:59.999"), "Alex_Alex", 100],
+                    [to_epoch_millis("2022-01-02 23:59:59.999"), "Alex_Alex", 400],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Alex_Alex", 900],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "Alex_Alex", 600],
+                    [to_epoch_millis("2022-01-06 23:59:59.999"), "Alex_Alex", 0],
+                    [to_epoch_millis("2022-01-01 23:59:59.999"), "Emma_Emma", 400],
+                    [to_epoch_millis("2022-01-02 23:59:59.999"), "Emma_Emma", 600],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), "Emma_Emma", 200],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "Emma_Emma", 0],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Jack_Jack", 500],
+                    [to_epoch_millis("2022-01-06 23:59:59.999"), "Jack_Jack", 0],
+                ],
+                columns=["window_time", "name_name", "total_cost"],
             ),
-            (
-                DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
-                    [
-                        [to_epoch_millis("2022-01-01 23:59:59.999"), "Alex_Alex", 100],
-                        [to_epoch_millis("2022-01-02 23:59:59.999"), "Alex_Alex", 400],
-                        [to_epoch_millis("2022-01-03 23:59:59.999"), "Alex_Alex", 900],
-                        [to_epoch_millis("2022-01-04 23:59:59.999"), "Alex_Alex", 900],
-                        [to_epoch_millis("2022-01-05 23:59:59.999"), "Alex_Alex", 600],
-                        [to_epoch_millis("2022-01-01 23:59:59.999"), "Emma_Emma", 400],
-                        [to_epoch_millis("2022-01-02 23:59:59.999"), "Emma_Emma", 600],
-                        [to_epoch_millis("2022-01-03 23:59:59.999"), "Emma_Emma", 600],
-                        [to_epoch_millis("2022-01-04 23:59:59.999"), "Emma_Emma", 200],
-                        [to_epoch_millis("2022-01-03 23:59:59.999"), "Jack_Jack", 500],
-                        [to_epoch_millis("2022-01-04 23:59:59.999"), "Jack_Jack", 500],
-                        [to_epoch_millis("2022-01-05 23:59:59.999"), "Jack_Jack", 500],
-                    ],
-                    columns=["window_time", "name_name", "total_cost"],
-                ),
+            DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [to_epoch_millis("2022-01-01 23:59:59.999"), "Alex_Alex", 100],
+                    [to_epoch_millis("2022-01-02 23:59:59.999"), "Alex_Alex", 400],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Alex_Alex", 900],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), "Alex_Alex", 900],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "Alex_Alex", 600],
+                    [to_epoch_millis("2022-01-01 23:59:59.999"), "Emma_Emma", 400],
+                    [to_epoch_millis("2022-01-02 23:59:59.999"), "Emma_Emma", 600],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Emma_Emma", 600],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), "Emma_Emma", 200],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Jack_Jack", 500],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), "Jack_Jack", 500],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "Jack_Jack", 500],
+                ],
+                columns=["window_time", "name_name", "total_cost"],
             ),
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
-                    [
-                        [to_epoch_millis("2022-01-01 23:59:59.999"), "Alex_Alex", 100],
-                        [to_epoch_millis("2022-01-02 23:59:59.999"), "Alex_Alex", 400],
-                        [to_epoch_millis("2022-01-03 23:59:59.999"), "Alex_Alex", 900],
-                        [to_epoch_millis("2022-01-04 23:59:59.999"), "Alex_Alex", 900],
-                        [to_epoch_millis("2022-01-05 23:59:59.999"), "Alex_Alex", 600],
-                        [to_epoch_millis("2022-01-06 23:59:59.999"), "Alex_Alex", 0],
-                        [to_epoch_millis("2022-01-01 23:59:59.999"), "Emma_Emma", 400],
-                        [to_epoch_millis("2022-01-02 23:59:59.999"), "Emma_Emma", 600],
-                        [to_epoch_millis("2022-01-03 23:59:59.999"), "Emma_Emma", 600],
-                        [to_epoch_millis("2022-01-04 23:59:59.999"), "Emma_Emma", 200],
-                        [to_epoch_millis("2022-01-05 23:59:59.999"), "Emma_Emma", 0],
-                        [to_epoch_millis("2022-01-03 23:59:59.999"), "Jack_Jack", 500],
-                        [to_epoch_millis("2022-01-04 23:59:59.999"), "Jack_Jack", 500],
-                        [to_epoch_millis("2022-01-05 23:59:59.999"), "Jack_Jack", 500],
-                        [to_epoch_millis("2022-01-06 23:59:59.999"), "Jack_Jack", 0],
-                    ],
-                    columns=["window_time", "name_name", "total_cost"],
-                ),
+            ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [to_epoch_millis("2022-01-01 23:59:59.999"), "Alex_Alex", 100],
+                    [to_epoch_millis("2022-01-02 23:59:59.999"), "Alex_Alex", 400],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Alex_Alex", 900],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), "Alex_Alex", 900],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "Alex_Alex", 600],
+                    [to_epoch_millis("2022-01-06 23:59:59.999"), "Alex_Alex", 0],
+                    [to_epoch_millis("2022-01-01 23:59:59.999"), "Emma_Emma", 400],
+                    [to_epoch_millis("2022-01-02 23:59:59.999"), "Emma_Emma", 600],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Emma_Emma", 600],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), "Emma_Emma", 200],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "Emma_Emma", 0],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Jack_Jack", 500],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), "Jack_Jack", 500],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "Jack_Jack", 500],
+                    [to_epoch_millis("2022-01-06 23:59:59.999"), "Jack_Jack", 0],
+                ],
+                columns=["window_time", "name_name", "total_cost"],
             ),
-        ]
+        }
 
-        for props, expected_result_df in expected_results:
+        for props in self.get_supported_sliding_window_config():
+            expected_result_df = expected_results.get(props)
             features = SlidingFeatureView(
                 name="features",
                 source=source,
                 features=[f_name_name, f_total_cost],
-                props=props,
+                props=props.value,
             )
             expected_result_df = expected_result_df.sort_values(
                 by=["name_name", "window_time"]
@@ -362,318 +360,310 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
         )
         source = self.create_file_source(df, schema=schema, keys=["name"])
 
-        expected_results = [
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
+        expected_results = {
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
                     [
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:01:59.999"),
-                            300.0,
-                            300.0,
-                            2,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:03:59.999"),
-                            0.0,
-                            200.0,
-                            0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:05:59.999"),
-                            0.0,
-                            0.0,
-                            0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:06:59.999"),
-                            450.0,
-                            0.0,
-                            1,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:08:59.999"),
-                            0.0,
-                            0.0,
-                            0,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-01 09:02:59.999"),
-                            400.0,
-                            500.0,
-                            1,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-01 09:04:59.999"),
-                            300.0,
-                            0.0,
-                            1,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-01 09:06:59.999"),
-                            0.0,
-                            0.0,
-                            0,
-                        ],
-                        [
-                            "Jack",
-                            to_epoch_millis("2022-01-01 09:05:59.999"),
-                            0.0,
-                            500.0,
-                            0,
-                        ],
-                        [
-                            "Jack",
-                            to_epoch_millis("2022-01-01 09:07:59.999"),
-                            0.0,
-                            0.0,
-                            0,
-                        ],
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:01:59.999"),
+                        300.0,
+                        300.0,
+                        2,
                     ],
-                    columns=[
-                        "name",
-                        "window_time",
-                        "last_2_minute_total_pay",
-                        "last_2_minute_total_receive",
-                        "pay_count",
-                    ],
-                ),
-            ),
-            (
-                DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
                     [
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:01:59.999"),
-                            300.0,
-                            300.0,
-                            2,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:02:59.999"),
-                            300.0,
-                            300.0,
-                            2,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:03:59.999"),
-                            0.0,
-                            200.0,
-                            0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:04:59.999"),
-                            0.0,
-                            200.0,
-                            0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:06:59.999"),
-                            450.0,
-                            0.0,
-                            1,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:07:59.999"),
-                            450.0,
-                            0.0,
-                            1,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-01 09:02:59.999"),
-                            400.0,
-                            500.0,
-                            1,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-01 09:03:59.999"),
-                            400.0,
-                            500.0,
-                            1,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-01 09:04:59.999"),
-                            300.0,
-                            0.0,
-                            1,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-01 09:05:59.999"),
-                            300.0,
-                            0.0,
-                            1,
-                        ],
-                        [
-                            "Jack",
-                            to_epoch_millis("2022-01-01 09:05:59.999"),
-                            0.0,
-                            500.0,
-                            0,
-                        ],
-                        [
-                            "Jack",
-                            to_epoch_millis("2022-01-01 09:06:59.999"),
-                            0.0,
-                            500.0,
-                            0,
-                        ],
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:03:59.999"),
+                        0.0,
+                        200.0,
+                        0,
                     ],
-                    columns=[
-                        "name",
-                        "window_time",
-                        "last_2_minute_total_pay",
-                        "last_2_minute_total_receive",
-                        "pay_count",
-                    ],
-                ),
-            ),
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
                     [
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:01:59.999"),
-                            300.0,
-                            300.0,
-                            2,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:02:59.999"),
-                            300.0,
-                            300.0,
-                            2,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:03:59.999"),
-                            0.0,
-                            200.0,
-                            0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:04:59.999"),
-                            0.0,
-                            200.0,
-                            0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:05:59.999"),
-                            0.0,
-                            0.0,
-                            0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:06:59.999"),
-                            450.0,
-                            0.0,
-                            1,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:07:59.999"),
-                            450.0,
-                            0.0,
-                            1,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:08:59.999"),
-                            0.0,
-                            0.0,
-                            0,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-01 09:02:59.999"),
-                            400.0,
-                            500.0,
-                            1,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-01 09:03:59.999"),
-                            400.0,
-                            500.0,
-                            1,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-01 09:04:59.999"),
-                            300.0,
-                            0.0,
-                            1,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-01 09:05:59.999"),
-                            300.0,
-                            0.0,
-                            1,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-01 09:06:59.999"),
-                            0.0,
-                            0.0,
-                            0,
-                        ],
-                        [
-                            "Jack",
-                            to_epoch_millis("2022-01-01 09:05:59.999"),
-                            0.0,
-                            500.0,
-                            0,
-                        ],
-                        [
-                            "Jack",
-                            to_epoch_millis("2022-01-01 09:06:59.999"),
-                            0.0,
-                            500.0,
-                            0,
-                        ],
-                        [
-                            "Jack",
-                            to_epoch_millis("2022-01-01 09:07:59.999"),
-                            0.0,
-                            0.0,
-                            0,
-                        ],
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:05:59.999"),
+                        0.0,
+                        0.0,
+                        0,
                     ],
-                    columns=[
-                        "name",
-                        "window_time",
-                        "last_2_minute_total_pay",
-                        "last_2_minute_total_receive",
-                        "pay_count",
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:06:59.999"),
+                        450.0,
+                        0.0,
+                        1,
                     ],
-                ),
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:08:59.999"),
+                        0.0,
+                        0.0,
+                        0,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-01 09:02:59.999"),
+                        400.0,
+                        500.0,
+                        1,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-01 09:04:59.999"),
+                        300.0,
+                        0.0,
+                        1,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-01 09:06:59.999"),
+                        0.0,
+                        0.0,
+                        0,
+                    ],
+                    [
+                        "Jack",
+                        to_epoch_millis("2022-01-01 09:05:59.999"),
+                        0.0,
+                        500.0,
+                        0,
+                    ],
+                    [
+                        "Jack",
+                        to_epoch_millis("2022-01-01 09:07:59.999"),
+                        0.0,
+                        0.0,
+                        0,
+                    ],
+                ],
+                columns=[
+                    "name",
+                    "window_time",
+                    "last_2_minute_total_pay",
+                    "last_2_minute_total_receive",
+                    "pay_count",
+                ],
             ),
-        ]
+            DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:01:59.999"),
+                        300.0,
+                        300.0,
+                        2,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:02:59.999"),
+                        300.0,
+                        300.0,
+                        2,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:03:59.999"),
+                        0.0,
+                        200.0,
+                        0,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:04:59.999"),
+                        0.0,
+                        200.0,
+                        0,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:06:59.999"),
+                        450.0,
+                        0.0,
+                        1,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:07:59.999"),
+                        450.0,
+                        0.0,
+                        1,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-01 09:02:59.999"),
+                        400.0,
+                        500.0,
+                        1,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-01 09:03:59.999"),
+                        400.0,
+                        500.0,
+                        1,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-01 09:04:59.999"),
+                        300.0,
+                        0.0,
+                        1,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-01 09:05:59.999"),
+                        300.0,
+                        0.0,
+                        1,
+                    ],
+                    [
+                        "Jack",
+                        to_epoch_millis("2022-01-01 09:05:59.999"),
+                        0.0,
+                        500.0,
+                        0,
+                    ],
+                    [
+                        "Jack",
+                        to_epoch_millis("2022-01-01 09:06:59.999"),
+                        0.0,
+                        500.0,
+                        0,
+                    ],
+                ],
+                columns=[
+                    "name",
+                    "window_time",
+                    "last_2_minute_total_pay",
+                    "last_2_minute_total_receive",
+                    "pay_count",
+                ],
+            ),
+            ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:01:59.999"),
+                        300.0,
+                        300.0,
+                        2,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:02:59.999"),
+                        300.0,
+                        300.0,
+                        2,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:03:59.999"),
+                        0.0,
+                        200.0,
+                        0,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:04:59.999"),
+                        0.0,
+                        200.0,
+                        0,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:05:59.999"),
+                        0.0,
+                        0.0,
+                        0,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:06:59.999"),
+                        450.0,
+                        0.0,
+                        1,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:07:59.999"),
+                        450.0,
+                        0.0,
+                        1,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:08:59.999"),
+                        0.0,
+                        0.0,
+                        0,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-01 09:02:59.999"),
+                        400.0,
+                        500.0,
+                        1,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-01 09:03:59.999"),
+                        400.0,
+                        500.0,
+                        1,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-01 09:04:59.999"),
+                        300.0,
+                        0.0,
+                        1,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-01 09:05:59.999"),
+                        300.0,
+                        0.0,
+                        1,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-01 09:06:59.999"),
+                        0.0,
+                        0.0,
+                        0,
+                    ],
+                    [
+                        "Jack",
+                        to_epoch_millis("2022-01-01 09:05:59.999"),
+                        0.0,
+                        500.0,
+                        0,
+                    ],
+                    [
+                        "Jack",
+                        to_epoch_millis("2022-01-01 09:06:59.999"),
+                        0.0,
+                        500.0,
+                        0,
+                    ],
+                    [
+                        "Jack",
+                        to_epoch_millis("2022-01-01 09:07:59.999"),
+                        0.0,
+                        0.0,
+                        0,
+                    ],
+                ],
+                columns=[
+                    "name",
+                    "window_time",
+                    "last_2_minute_total_pay",
+                    "last_2_minute_total_receive",
+                    "pay_count",
+                ],
+            ),
+        }
 
-        for props, expected_result_df in expected_results:
+        for props in self.get_supported_sliding_window_config():
+            expected_result_df = expected_results.get(props)
             features = SlidingFeatureView(
                 name="features",
                 source=source,
@@ -713,7 +703,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                         ),
                     ),
                 ],
-                props=props,
+                props=props.value,
             )
 
             expected_result_df = expected_result_df.astype(
@@ -747,346 +737,338 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
         df = self.input_data.copy()
         source = self.create_file_source(df)
 
-        expected_results = [
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
+        expected_results = {
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
                     [
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 23:59:59.999"),
-                            "2022-01-01 08:01:00",
-                            "2022-01-01 08:01:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-02 23:59:59.999"),
-                            "2022-01-01 08:01:00",
-                            "2022-01-02 08:03:00",
-                            86520.0,
-                            2,
-                            43260.0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "2022-01-02 08:03:00",
-                            "2022-01-03 08:06:00",
-                            86580.0,
-                            2,
-                            43290.0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-04 23:59:59.999"),
-                            "2022-01-03 08:06:00",
-                            "2022-01-03 08:06:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-05 23:59:59.999"),
-                            None,
-                            None,
-                            None,
-                            0,
-                            None,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-01 23:59:59.999"),
-                            "2022-01-01 08:02:00",
-                            "2022-01-01 08:02:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-02 23:59:59.999"),
-                            "2022-01-01 08:02:00",
-                            "2022-01-02 08:04:00",
-                            86520.0,
-                            2,
-                            43260.0,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "2022-01-02 08:04:00",
-                            "2022-01-02 08:04:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-04 23:59:59.999"),
-                            None,
-                            None,
-                            None,
-                            0,
-                            None,
-                        ],
-                        [
-                            "Jack",
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "2022-01-03 08:05:00",
-                            "2022-01-03 08:05:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Jack",
-                            to_epoch_millis("2022-01-05 23:59:59.999"),
-                            None,
-                            None,
-                            None,
-                            0,
-                            None,
-                        ],
+                        "Alex",
+                        to_epoch_millis("2022-01-01 23:59:59.999"),
+                        "2022-01-01 08:01:00",
+                        "2022-01-01 08:01:00",
+                        0.0,
+                        1,
+                        0.0,
                     ],
-                    columns=[
-                        "name",
-                        "window_time",
-                        "first_time",
-                        "last_time",
-                        "total_time",
-                        "cnt",
-                        "avg_time_per_trip",
-                    ],
-                ),
-            ),
-            (
-                DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
                     [
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 23:59:59.999"),
-                            "2022-01-01 08:01:00",
-                            "2022-01-01 08:01:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-02 23:59:59.999"),
-                            "2022-01-01 08:01:00",
-                            "2022-01-02 08:03:00",
-                            86520.0,
-                            2,
-                            43260.0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "2022-01-02 08:03:00",
-                            "2022-01-03 08:06:00",
-                            86580.0,
-                            2,
-                            43290.0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-04 23:59:59.999"),
-                            "2022-01-03 08:06:00",
-                            "2022-01-03 08:06:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-01 23:59:59.999"),
-                            "2022-01-01 08:02:00",
-                            "2022-01-01 08:02:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-02 23:59:59.999"),
-                            "2022-01-01 08:02:00",
-                            "2022-01-02 08:04:00",
-                            86520.0,
-                            2,
-                            43260.0,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "2022-01-02 08:04:00",
-                            "2022-01-02 08:04:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Jack",
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "2022-01-03 08:05:00",
-                            "2022-01-03 08:05:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Jack",
-                            to_epoch_millis("2022-01-04 23:59:59.999"),
-                            "2022-01-03 08:05:00",
-                            "2022-01-03 08:05:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
+                        "Alex",
+                        to_epoch_millis("2022-01-02 23:59:59.999"),
+                        "2022-01-01 08:01:00",
+                        "2022-01-02 08:03:00",
+                        86520.0,
+                        2,
+                        43260.0,
                     ],
-                    columns=[
-                        "name",
-                        "window_time",
-                        "first_time",
-                        "last_time",
-                        "total_time",
-                        "cnt",
-                        "avg_time_per_trip",
-                    ],
-                ),
-            ),
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
                     [
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 23:59:59.999"),
-                            "2022-01-01 08:01:00",
-                            "2022-01-01 08:01:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-02 23:59:59.999"),
-                            "2022-01-01 08:01:00",
-                            "2022-01-02 08:03:00",
-                            86520.0,
-                            2,
-                            43260.0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "2022-01-02 08:03:00",
-                            "2022-01-03 08:06:00",
-                            86580.0,
-                            2,
-                            43290.0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-04 23:59:59.999"),
-                            "2022-01-03 08:06:00",
-                            "2022-01-03 08:06:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-05 23:59:59.999"),
-                            None,
-                            None,
-                            None,
-                            0,
-                            None,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-01 23:59:59.999"),
-                            "2022-01-01 08:02:00",
-                            "2022-01-01 08:02:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-02 23:59:59.999"),
-                            "2022-01-01 08:02:00",
-                            "2022-01-02 08:04:00",
-                            86520.0,
-                            2,
-                            43260.0,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "2022-01-02 08:04:00",
-                            "2022-01-02 08:04:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Emma",
-                            to_epoch_millis("2022-01-04 23:59:59.999"),
-                            None,
-                            None,
-                            None,
-                            0,
-                            None,
-                        ],
-                        [
-                            "Jack",
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "2022-01-03 08:05:00",
-                            "2022-01-03 08:05:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Jack",
-                            to_epoch_millis("2022-01-04 23:59:59.999"),
-                            "2022-01-03 08:05:00",
-                            "2022-01-03 08:05:00",
-                            0.0,
-                            1,
-                            0.0,
-                        ],
-                        [
-                            "Jack",
-                            to_epoch_millis("2022-01-05 23:59:59.999"),
-                            None,
-                            None,
-                            None,
-                            0,
-                            None,
-                        ],
+                        "Alex",
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "2022-01-02 08:03:00",
+                        "2022-01-03 08:06:00",
+                        86580.0,
+                        2,
+                        43290.0,
                     ],
-                    columns=[
-                        "name",
-                        "window_time",
-                        "first_time",
-                        "last_time",
-                        "total_time",
-                        "cnt",
-                        "avg_time_per_trip",
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-04 23:59:59.999"),
+                        "2022-01-03 08:06:00",
+                        "2022-01-03 08:06:00",
+                        0.0,
+                        1,
+                        0.0,
                     ],
-                ),
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-05 23:59:59.999"),
+                        None,
+                        None,
+                        None,
+                        0,
+                        None,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-01 23:59:59.999"),
+                        "2022-01-01 08:02:00",
+                        "2022-01-01 08:02:00",
+                        0.0,
+                        1,
+                        0.0,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-02 23:59:59.999"),
+                        "2022-01-01 08:02:00",
+                        "2022-01-02 08:04:00",
+                        86520.0,
+                        2,
+                        43260.0,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "2022-01-02 08:04:00",
+                        "2022-01-02 08:04:00",
+                        0.0,
+                        1,
+                        0.0,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-04 23:59:59.999"),
+                        None,
+                        None,
+                        None,
+                        0,
+                        None,
+                    ],
+                    [
+                        "Jack",
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "2022-01-03 08:05:00",
+                        "2022-01-03 08:05:00",
+                        0.0,
+                        1,
+                        0.0,
+                    ],
+                    [
+                        "Jack",
+                        to_epoch_millis("2022-01-05 23:59:59.999"),
+                        None,
+                        None,
+                        None,
+                        0,
+                        None,
+                    ],
+                ],
+                columns=[
+                    "name",
+                    "window_time",
+                    "first_time",
+                    "last_time",
+                    "total_time",
+                    "cnt",
+                    "avg_time_per_trip",
+                ],
             ),
-        ]
+            DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 23:59:59.999"),
+                        "2022-01-01 08:01:00",
+                        "2022-01-01 08:01:00",
+                        0.0,
+                        1,
+                        0.0,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-02 23:59:59.999"),
+                        "2022-01-01 08:01:00",
+                        "2022-01-02 08:03:00",
+                        86520.0,
+                        2,
+                        43260.0,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "2022-01-02 08:03:00",
+                        "2022-01-03 08:06:00",
+                        86580.0,
+                        2,
+                        43290.0,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-04 23:59:59.999"),
+                        "2022-01-03 08:06:00",
+                        "2022-01-03 08:06:00",
+                        0.0,
+                        1,
+                        0.0,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-01 23:59:59.999"),
+                        "2022-01-01 08:02:00",
+                        "2022-01-01 08:02:00",
+                        0.0,
+                        1,
+                        0.0,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-02 23:59:59.999"),
+                        "2022-01-01 08:02:00",
+                        "2022-01-02 08:04:00",
+                        86520.0,
+                        2,
+                        43260.0,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "2022-01-02 08:04:00",
+                        "2022-01-02 08:04:00",
+                        0.0,
+                        1,
+                        0.0,
+                    ],
+                    [
+                        "Jack",
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "2022-01-03 08:05:00",
+                        "2022-01-03 08:05:00",
+                        0.0,
+                        1,
+                        0.0,
+                    ],
+                    [
+                        "Jack",
+                        to_epoch_millis("2022-01-04 23:59:59.999"),
+                        "2022-01-03 08:05:00",
+                        "2022-01-03 08:05:00",
+                        0.0,
+                        1,
+                        0.0,
+                    ],
+                ],
+                columns=[
+                    "name",
+                    "window_time",
+                    "first_time",
+                    "last_time",
+                    "total_time",
+                    "cnt",
+                    "avg_time_per_trip",
+                ],
+            ),
+            ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 23:59:59.999"),
+                        "2022-01-01 08:01:00",
+                        "2022-01-01 08:01:00",
+                        0.0,
+                        1,
+                        0.0,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-02 23:59:59.999"),
+                        "2022-01-01 08:01:00",
+                        "2022-01-02 08:03:00",
+                        86520.0,
+                        2,
+                        43260.0,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "2022-01-02 08:03:00",
+                        "2022-01-03 08:06:00",
+                        86580.0,
+                        2,
+                        43290.0,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-04 23:59:59.999"),
+                        "2022-01-03 08:06:00",
+                        "2022-01-03 08:06:00",
+                        0.0,
+                        1,
+                        0.0,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-05 23:59:59.999"),
+                        None,
+                        None,
+                        None,
+                        0,
+                        None,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-01 23:59:59.999"),
+                        "2022-01-01 08:02:00",
+                        "2022-01-01 08:02:00",
+                        0.0,
+                        1,
+                        0.0,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-02 23:59:59.999"),
+                        "2022-01-01 08:02:00",
+                        "2022-01-02 08:04:00",
+                        86520.0,
+                        2,
+                        43260.0,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "2022-01-02 08:04:00",
+                        "2022-01-02 08:04:00",
+                        0.0,
+                        1,
+                        0.0,
+                    ],
+                    [
+                        "Emma",
+                        to_epoch_millis("2022-01-04 23:59:59.999"),
+                        None,
+                        None,
+                        None,
+                        0,
+                        None,
+                    ],
+                    [
+                        "Jack",
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "2022-01-03 08:05:00",
+                        "2022-01-03 08:05:00",
+                        0.0,
+                        1,
+                        0.0,
+                    ],
+                    [
+                        "Jack",
+                        to_epoch_millis("2022-01-04 23:59:59.999"),
+                        "2022-01-03 08:05:00",
+                        "2022-01-03 08:05:00",
+                        0.0,
+                        1,
+                        0.0,
+                    ],
+                    [
+                        "Jack",
+                        to_epoch_millis("2022-01-05 23:59:59.999"),
+                        None,
+                        None,
+                        None,
+                        0,
+                        None,
+                    ],
+                ],
+                columns=[
+                    "name",
+                    "window_time",
+                    "first_time",
+                    "last_time",
+                    "total_time",
+                    "cnt",
+                    "avg_time_per_trip",
+                ],
+            ),
+        }
 
-        for props, expected_result_df in expected_results:
+        for props in self.get_supported_sliding_window_config():
+            expected_result_df = expected_results.get(props)
             features = SlidingFeatureView(
                 name="feature_view",
                 source=source,
@@ -1136,7 +1118,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                         keys=["name"],
                     ),
                 ],
-                props=props,
+                props=props.value,
             )
 
             expected_result_df = expected_result_df.sort_values(
@@ -1187,49 +1169,41 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             name="source2",
         )
 
-        expected_results = [
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
-                    [
-                        ["Alex", "2022-01-01 09:01:00", None, None],
-                        ["Alex", "2022-01-01 09:02:00", 300.0, 2],
-                        ["Alex", "2022-01-01 09:05:00", 0.0, 0],
-                        ["Alex", "2022-01-01 09:07:00", 450.0, 1],
-                        ["Alex", "2022-01-01 09:09:00", 0.0, 0],
-                    ],
-                    columns=["name", "time", "last_2_minute_total_cost", "cnt"],
-                ),
+        expected_results = {
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    ["Alex", "2022-01-01 09:01:00", None, None],
+                    ["Alex", "2022-01-01 09:02:00", 300.0, 2],
+                    ["Alex", "2022-01-01 09:05:00", 0.0, 0],
+                    ["Alex", "2022-01-01 09:07:00", 450.0, 1],
+                    ["Alex", "2022-01-01 09:09:00", 0.0, 0],
+                ],
+                columns=["name", "time", "last_2_minute_total_cost", "cnt"],
             ),
-            (
-                DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
-                    [
-                        ["Alex", "2022-01-01 09:01:00", 0.0, 0],
-                        ["Alex", "2022-01-01 09:02:00", 300.0, 2],
-                        ["Alex", "2022-01-01 09:05:00", 0.0, 0],
-                        ["Alex", "2022-01-01 09:07:00", 450.0, 1],
-                        ["Alex", "2022-01-01 09:09:00", 0.0, 0],
-                    ],
-                    columns=["name", "time", "last_2_minute_total_cost", "cnt"],
-                ),
+            DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    ["Alex", "2022-01-01 09:01:00", 0.0, 0],
+                    ["Alex", "2022-01-01 09:02:00", 300.0, 2],
+                    ["Alex", "2022-01-01 09:05:00", 0.0, 0],
+                    ["Alex", "2022-01-01 09:07:00", 450.0, 1],
+                    ["Alex", "2022-01-01 09:09:00", 0.0, 0],
+                ],
+                columns=["name", "time", "last_2_minute_total_cost", "cnt"],
             ),
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
-                    [
-                        ["Alex", "2022-01-01 09:01:00", None, None],
-                        ["Alex", "2022-01-01 09:02:00", 300.0, 2],
-                        ["Alex", "2022-01-01 09:05:00", 0.0, 0],
-                        ["Alex", "2022-01-01 09:07:00", 450.0, 1],
-                        ["Alex", "2022-01-01 09:09:00", 0.0, 0],
-                    ],
-                    columns=["name", "time", "last_2_minute_total_cost", "cnt"],
-                ),
+            ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    ["Alex", "2022-01-01 09:01:00", None, None],
+                    ["Alex", "2022-01-01 09:02:00", 300.0, 2],
+                    ["Alex", "2022-01-01 09:05:00", 0.0, 0],
+                    ["Alex", "2022-01-01 09:07:00", 450.0, 1],
+                    ["Alex", "2022-01-01 09:09:00", 0.0, 0],
+                ],
+                columns=["name", "time", "last_2_minute_total_cost", "cnt"],
             ),
-        ]
+        }
 
-        for props, expected_result_df in expected_results:
+        for props in self.get_supported_sliding_window_config():
+            expected_result_df = expected_results.get(props)
             features = SlidingFeatureView(
                 name="features",
                 source=source,
@@ -1255,7 +1229,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                         ),
                     ),
                 ],
-                props=props,
+                props=props.value,
             )
 
             joined_feature = DerivedFeatureView(
@@ -1299,105 +1273,97 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
         schema = Schema(["name", "cost", "time"], [String, Float64, String])
         source = self.create_file_source(df, schema=schema, keys=["name"])
 
-        expected_results = [
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
+        expected_results = {
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
                     [
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:01:59.999"),
-                            {100.0: 2},
-                            2,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:02:59.999"),
-                            {200.0: 2, 100.0: 1},
-                            3,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:03:59.999"),
-                            {200.0: 2},
-                            2,
-                        ],
-                        ["Alex", to_epoch_millis("2022-01-01 09:04:59.999"), None, 0],
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:01:59.999"),
+                        {100.0: 2},
+                        2,
                     ],
-                    columns=[
-                        "name",
-                        "window_time",
-                        "last_2_minute_cost_value_counts",
-                        "cnt",
-                    ],
-                ),
-            ),
-            (
-                DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
                     [
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:01:59.999"),
-                            {100.0: 2},
-                            2,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:02:59.999"),
-                            {200.0: 2, 100.0: 1},
-                            3,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:03:59.999"),
-                            {200.0: 2},
-                            2,
-                        ],
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:02:59.999"),
+                        {200.0: 2, 100.0: 1},
+                        3,
                     ],
-                    columns=[
-                        "name",
-                        "window_time",
-                        "last_2_minute_cost_value_counts",
-                        "cnt",
-                    ],
-                ),
-            ),
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
                     [
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:01:59.999"),
-                            {100.0: 2},
-                            2,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:02:59.999"),
-                            {200.0: 2, 100.0: 1},
-                            3,
-                        ],
-                        [
-                            "Alex",
-                            to_epoch_millis("2022-01-01 09:03:59.999"),
-                            {200.0: 2},
-                            2,
-                        ],
-                        ["Alex", to_epoch_millis("2022-01-01 09:04:59.999"), None, 0],
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:03:59.999"),
+                        {200.0: 2},
+                        2,
                     ],
-                    columns=[
-                        "name",
-                        "window_time",
-                        "last_2_minute_cost_value_counts",
-                        "cnt",
-                    ],
-                ),
+                    ["Alex", to_epoch_millis("2022-01-01 09:04:59.999"), None, 0],
+                ],
+                columns=[
+                    "name",
+                    "window_time",
+                    "last_2_minute_cost_value_counts",
+                    "cnt",
+                ],
             ),
-        ]
+            DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:01:59.999"),
+                        {100.0: 2},
+                        2,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:02:59.999"),
+                        {200.0: 2, 100.0: 1},
+                        3,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:03:59.999"),
+                        {200.0: 2},
+                        2,
+                    ],
+                ],
+                columns=[
+                    "name",
+                    "window_time",
+                    "last_2_minute_cost_value_counts",
+                    "cnt",
+                ],
+            ),
+            ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:01:59.999"),
+                        {100.0: 2},
+                        2,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:02:59.999"),
+                        {200.0: 2, 100.0: 1},
+                        3,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:03:59.999"),
+                        {200.0: 2},
+                        2,
+                    ],
+                    ["Alex", to_epoch_millis("2022-01-01 09:04:59.999"), None, 0],
+                ],
+                columns=[
+                    "name",
+                    "window_time",
+                    "last_2_minute_cost_value_counts",
+                    "cnt",
+                ],
+            ),
+        }
 
-        for props, expected_result_df in expected_results:
+        for props in self.get_supported_sliding_window_config():
+            expected_result_df = expected_results.get(props)
             features = SlidingFeatureView(
                 name="features",
                 source=source,
@@ -1425,7 +1391,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                         ),
                     ),
                 ],
-                props=props,
+                props=props.value,
             )
 
             expected_result_df = expected_result_df.sort_values(
@@ -1461,115 +1427,107 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             df, schema=schema, keys=["name"], timestamp_format="%Y-%m-%d %H:%M:%S"
         )
 
-        expected_results = [
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
+        expected_results = {
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
                     [
-                        [
-                            "Alex",
-                            "2022-01-01 09:01:59.999",
-                            2,
-                            to_epoch("2022-01-01 09:01:59.999"),
-                        ],
-                        [
-                            "Alex",
-                            "2022-01-01 09:02:59.999",
-                            3,
-                            to_epoch("2022-01-01 09:02:59.999"),
-                        ],
-                        [
-                            "Alex",
-                            "2022-01-01 09:03:59.999",
-                            2,
-                            to_epoch("2022-01-01 09:03:59.999"),
-                        ],
-                        [
-                            "Alex",
-                            "2022-01-01 09:04:59.999",
-                            0,
-                            to_epoch("2022-01-01 09:04:59.999"),
-                        ],
+                        "Alex",
+                        "2022-01-01 09:01:59.999",
+                        2,
+                        to_epoch("2022-01-01 09:01:59.999"),
                     ],
-                    columns=[
-                        "name",
-                        "sliding_window_timestamp",
-                        "cnt",
-                        "epoch_window_time",
-                    ],
-                ),
-            ),
-            (
-                DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
                     [
-                        [
-                            "Alex",
-                            "2022-01-01 09:01:59.999",
-                            2,
-                            to_epoch("2022-01-01 09:01:59.999"),
-                        ],
-                        [
-                            "Alex",
-                            "2022-01-01 09:02:59.999",
-                            3,
-                            to_epoch("2022-01-01 09:02:59.999"),
-                        ],
-                        [
-                            "Alex",
-                            "2022-01-01 09:03:59.999",
-                            2,
-                            to_epoch("2022-01-01 09:03:59.999"),
-                        ],
+                        "Alex",
+                        "2022-01-01 09:02:59.999",
+                        3,
+                        to_epoch("2022-01-01 09:02:59.999"),
                     ],
-                    columns=[
-                        "name",
-                        "sliding_window_timestamp",
-                        "cnt",
-                        "epoch_window_time",
-                    ],
-                ),
-            ),
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
                     [
-                        [
-                            "Alex",
-                            "2022-01-01 09:01:59.999",
-                            2,
-                            to_epoch("2022-01-01 09:01:59.999"),
-                        ],
-                        [
-                            "Alex",
-                            "2022-01-01 09:02:59.999",
-                            3,
-                            to_epoch("2022-01-01 09:02:59.999"),
-                        ],
-                        [
-                            "Alex",
-                            "2022-01-01 09:03:59.999",
-                            2,
-                            to_epoch("2022-01-01 09:03:59.999"),
-                        ],
-                        [
-                            "Alex",
-                            "2022-01-01 09:04:59.999",
-                            0,
-                            to_epoch("2022-01-01 09:04:59.999"),
-                        ],
+                        "Alex",
+                        "2022-01-01 09:03:59.999",
+                        2,
+                        to_epoch("2022-01-01 09:03:59.999"),
                     ],
-                    columns=[
-                        "name",
-                        "sliding_window_timestamp",
-                        "cnt",
-                        "epoch_window_time",
+                    [
+                        "Alex",
+                        "2022-01-01 09:04:59.999",
+                        0,
+                        to_epoch("2022-01-01 09:04:59.999"),
                     ],
-                ),
+                ],
+                columns=[
+                    "name",
+                    "sliding_window_timestamp",
+                    "cnt",
+                    "epoch_window_time",
+                ],
             ),
-        ]
+            DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [
+                        "Alex",
+                        "2022-01-01 09:01:59.999",
+                        2,
+                        to_epoch("2022-01-01 09:01:59.999"),
+                    ],
+                    [
+                        "Alex",
+                        "2022-01-01 09:02:59.999",
+                        3,
+                        to_epoch("2022-01-01 09:02:59.999"),
+                    ],
+                    [
+                        "Alex",
+                        "2022-01-01 09:03:59.999",
+                        2,
+                        to_epoch("2022-01-01 09:03:59.999"),
+                    ],
+                ],
+                columns=[
+                    "name",
+                    "sliding_window_timestamp",
+                    "cnt",
+                    "epoch_window_time",
+                ],
+            ),
+            ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [
+                        "Alex",
+                        "2022-01-01 09:01:59.999",
+                        2,
+                        to_epoch("2022-01-01 09:01:59.999"),
+                    ],
+                    [
+                        "Alex",
+                        "2022-01-01 09:02:59.999",
+                        3,
+                        to_epoch("2022-01-01 09:02:59.999"),
+                    ],
+                    [
+                        "Alex",
+                        "2022-01-01 09:03:59.999",
+                        2,
+                        to_epoch("2022-01-01 09:03:59.999"),
+                    ],
+                    [
+                        "Alex",
+                        "2022-01-01 09:04:59.999",
+                        0,
+                        to_epoch("2022-01-01 09:04:59.999"),
+                    ],
+                ],
+                columns=[
+                    "name",
+                    "sliding_window_timestamp",
+                    "cnt",
+                    "epoch_window_time",
+                ],
+            ),
+        }
 
-        for props, expected_result_df in expected_results:
+        for props in self.get_supported_sliding_window_config():
+            expected_result_df = expected_results.get(props)
             features = SlidingFeatureView(
                 name="features",
                 source=source,
@@ -1587,12 +1545,13 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                     ),
                     Feature(
                         name="epoch_window_time",
-                        transform="UNIX_TIMESTAMP(sliding_window_timestamp)",
+                        transform="UNIX_TIMESTAMP(sliding_window_timestamp, "
+                        "'%Y-%m-%d %H:%M:%S.%f')",
                     ),
                 ],
                 timestamp_field="sliding_window_timestamp",
                 timestamp_format="%Y-%m-%d %H:%M:%S.%f",
-                props=props,
+                props=props.value,
             )
 
             expected_result_df = expected_result_df.sort_values(
@@ -1642,258 +1601,250 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             transform=PythonUdfTransform(lambda row: sqrt(row["total_cost"])),
         )
 
-        expected_results = [
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
+        expected_results = {
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
                     [
-                        [
-                            to_epoch_millis("2022-01-01 23:59:59.999"),
-                            "alex",
-                            100,
-                            sqrt(100),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-02 23:59:59.999"),
-                            "alex",
-                            400,
-                            sqrt(400),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "alex",
-                            1000,
-                            sqrt(1000),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-04 23:59:59.999"),
-                            "alex",
-                            900,
-                            sqrt(900),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-05 23:59:59.999"),
-                            "alex",
-                            600,
-                            sqrt(600),
-                        ],
-                        [to_epoch_millis("2022-01-06 23:59:59.999"), "alex", 0, 0],
-                        [
-                            to_epoch_millis("2022-01-01 23:59:59.999"),
-                            "emma",
-                            400,
-                            sqrt(400),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-02 23:59:59.999"),
-                            "emma",
-                            600,
-                            sqrt(600),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-04 23:59:59.999"),
-                            "emma",
-                            200,
-                            sqrt(200),
-                        ],
-                        [to_epoch_millis("2022-01-05 23:59:59.999"), "emma", 0, 0],
-                        [
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "jack",
-                            500,
-                            sqrt(500),
-                        ],
-                        [to_epoch_millis("2022-01-06 23:59:59.999"), "jack", 0, 0],
+                        to_epoch_millis("2022-01-01 23:59:59.999"),
+                        "alex",
+                        100,
+                        sqrt(100),
                     ],
-                    columns=[
-                        "window_time",
-                        "lower_name",
-                        "total_cost",
-                        "total_cost_sqrt",
-                    ],
-                ),
-            ),
-            (
-                DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
                     [
-                        [
-                            to_epoch_millis("2022-01-01 23:59:59.999"),
-                            "alex",
-                            100,
-                            sqrt(100),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-02 23:59:59.999"),
-                            "alex",
-                            400,
-                            sqrt(400),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "alex",
-                            1000,
-                            sqrt(1000),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-04 23:59:59.999"),
-                            "alex",
-                            900,
-                            sqrt(900),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-05 23:59:59.999"),
-                            "alex",
-                            600,
-                            sqrt(600),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-01 23:59:59.999"),
-                            "emma",
-                            400,
-                            sqrt(400),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-02 23:59:59.999"),
-                            "emma",
-                            600,
-                            sqrt(600),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "emma",
-                            600,
-                            sqrt(600),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-04 23:59:59.999"),
-                            "emma",
-                            200,
-                            sqrt(200),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "jack",
-                            500,
-                            sqrt(500),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-04 23:59:59.999"),
-                            "jack",
-                            500,
-                            sqrt(500),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-05 23:59:59.999"),
-                            "jack",
-                            500,
-                            sqrt(500),
-                        ],
+                        to_epoch_millis("2022-01-02 23:59:59.999"),
+                        "alex",
+                        400,
+                        sqrt(400),
                     ],
-                    columns=[
-                        "window_time",
-                        "lower_name",
-                        "total_cost",
-                        "total_cost_sqrt",
-                    ],
-                ),
-            ),
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
                     [
-                        [
-                            to_epoch_millis("2022-01-01 23:59:59.999"),
-                            "alex",
-                            100,
-                            sqrt(100),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-02 23:59:59.999"),
-                            "alex",
-                            400,
-                            sqrt(400),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "alex",
-                            1000,
-                            sqrt(1000),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-04 23:59:59.999"),
-                            "alex",
-                            900,
-                            sqrt(900),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-05 23:59:59.999"),
-                            "alex",
-                            600,
-                            sqrt(600),
-                        ],
-                        [to_epoch_millis("2022-01-06 23:59:59.999"), "alex", 0, 0],
-                        [
-                            to_epoch_millis("2022-01-01 23:59:59.999"),
-                            "emma",
-                            400,
-                            sqrt(400),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-02 23:59:59.999"),
-                            "emma",
-                            600,
-                            sqrt(600),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "emma",
-                            600,
-                            sqrt(600),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-04 23:59:59.999"),
-                            "emma",
-                            200,
-                            sqrt(200),
-                        ],
-                        [to_epoch_millis("2022-01-05 23:59:59.999"), "emma", 0, 0],
-                        [
-                            to_epoch_millis("2022-01-03 23:59:59.999"),
-                            "jack",
-                            500,
-                            sqrt(500),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-04 23:59:59.999"),
-                            "jack",
-                            500,
-                            sqrt(500),
-                        ],
-                        [
-                            to_epoch_millis("2022-01-05 23:59:59.999"),
-                            "jack",
-                            500,
-                            sqrt(500),
-                        ],
-                        [to_epoch_millis("2022-01-06 23:59:59.999"), "jack", 0, 0],
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "alex",
+                        1000,
+                        sqrt(1000),
                     ],
-                    columns=[
-                        "window_time",
-                        "lower_name",
-                        "total_cost",
-                        "total_cost_sqrt",
+                    [
+                        to_epoch_millis("2022-01-04 23:59:59.999"),
+                        "alex",
+                        900,
+                        sqrt(900),
                     ],
-                ),
+                    [
+                        to_epoch_millis("2022-01-05 23:59:59.999"),
+                        "alex",
+                        600,
+                        sqrt(600),
+                    ],
+                    [to_epoch_millis("2022-01-06 23:59:59.999"), "alex", 0, 0],
+                    [
+                        to_epoch_millis("2022-01-01 23:59:59.999"),
+                        "emma",
+                        400,
+                        sqrt(400),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-02 23:59:59.999"),
+                        "emma",
+                        600,
+                        sqrt(600),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-04 23:59:59.999"),
+                        "emma",
+                        200,
+                        sqrt(200),
+                    ],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "emma", 0, 0],
+                    [
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "jack",
+                        500,
+                        sqrt(500),
+                    ],
+                    [to_epoch_millis("2022-01-06 23:59:59.999"), "jack", 0, 0],
+                ],
+                columns=[
+                    "window_time",
+                    "lower_name",
+                    "total_cost",
+                    "total_cost_sqrt",
+                ],
             ),
-        ]
+            DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [
+                        to_epoch_millis("2022-01-01 23:59:59.999"),
+                        "alex",
+                        100,
+                        sqrt(100),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-02 23:59:59.999"),
+                        "alex",
+                        400,
+                        sqrt(400),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "alex",
+                        1000,
+                        sqrt(1000),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-04 23:59:59.999"),
+                        "alex",
+                        900,
+                        sqrt(900),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-05 23:59:59.999"),
+                        "alex",
+                        600,
+                        sqrt(600),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-01 23:59:59.999"),
+                        "emma",
+                        400,
+                        sqrt(400),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-02 23:59:59.999"),
+                        "emma",
+                        600,
+                        sqrt(600),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "emma",
+                        600,
+                        sqrt(600),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-04 23:59:59.999"),
+                        "emma",
+                        200,
+                        sqrt(200),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "jack",
+                        500,
+                        sqrt(500),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-04 23:59:59.999"),
+                        "jack",
+                        500,
+                        sqrt(500),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-05 23:59:59.999"),
+                        "jack",
+                        500,
+                        sqrt(500),
+                    ],
+                ],
+                columns=[
+                    "window_time",
+                    "lower_name",
+                    "total_cost",
+                    "total_cost_sqrt",
+                ],
+            ),
+            ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [
+                        to_epoch_millis("2022-01-01 23:59:59.999"),
+                        "alex",
+                        100,
+                        sqrt(100),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-02 23:59:59.999"),
+                        "alex",
+                        400,
+                        sqrt(400),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "alex",
+                        1000,
+                        sqrt(1000),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-04 23:59:59.999"),
+                        "alex",
+                        900,
+                        sqrt(900),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-05 23:59:59.999"),
+                        "alex",
+                        600,
+                        sqrt(600),
+                    ],
+                    [to_epoch_millis("2022-01-06 23:59:59.999"), "alex", 0, 0],
+                    [
+                        to_epoch_millis("2022-01-01 23:59:59.999"),
+                        "emma",
+                        400,
+                        sqrt(400),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-02 23:59:59.999"),
+                        "emma",
+                        600,
+                        sqrt(600),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "emma",
+                        600,
+                        sqrt(600),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-04 23:59:59.999"),
+                        "emma",
+                        200,
+                        sqrt(200),
+                    ],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "emma", 0, 0],
+                    [
+                        to_epoch_millis("2022-01-03 23:59:59.999"),
+                        "jack",
+                        500,
+                        sqrt(500),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-04 23:59:59.999"),
+                        "jack",
+                        500,
+                        sqrt(500),
+                    ],
+                    [
+                        to_epoch_millis("2022-01-05 23:59:59.999"),
+                        "jack",
+                        500,
+                        sqrt(500),
+                    ],
+                    [to_epoch_millis("2022-01-06 23:59:59.999"), "jack", 0, 0],
+                ],
+                columns=[
+                    "window_time",
+                    "lower_name",
+                    "total_cost",
+                    "total_cost_sqrt",
+                ],
+            ),
+        }
 
-        for props, expected_result_df in expected_results:
+        for props in self.get_supported_sliding_window_config():
+            expected_result_df = expected_results.get(props)
             features = SlidingFeatureView(
                 name="features",
                 source=source,
                 features=[f_lower_name, f_total_cost, f_total_cost_sqrt],
-                props=props,
+                props=props.value,
             )
 
             expected_result_df = expected_result_df.sort_values(
@@ -2254,63 +2205,55 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             dtype=Float64,
         )
 
-        expected_results = [
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
-                    [
-                        ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100.0],
-                        ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 300.0],
-                        ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 600.0],
-                        ["Alex", to_epoch_millis("2022-01-04 23:59:59.999"), 0.0],
-                        ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400.0],
-                        ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 200.0],
-                        ["Emma", to_epoch_millis("2022-01-03 23:59:59.999"), 0.0],
-                        ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500.0],
-                        ["Jack", to_epoch_millis("2022-01-04 23:59:59.999"), 0.0],
-                    ],
-                    columns=["name", "window_time", "total_cost"],
-                ),
+        expected_results = {
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100.0],
+                    ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 300.0],
+                    ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 600.0],
+                    ["Alex", to_epoch_millis("2022-01-04 23:59:59.999"), 0.0],
+                    ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400.0],
+                    ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 200.0],
+                    ["Emma", to_epoch_millis("2022-01-03 23:59:59.999"), 0.0],
+                    ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500.0],
+                    ["Jack", to_epoch_millis("2022-01-04 23:59:59.999"), 0.0],
+                ],
+                columns=["name", "window_time", "total_cost"],
             ),
-            (
-                DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
-                    [
-                        ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100.0],
-                        ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 300.0],
-                        ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 600.0],
-                        ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400.0],
-                        ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 200.0],
-                        ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500.0],
-                    ],
-                    columns=["name", "window_time", "total_cost"],
-                ),
+            DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100.0],
+                    ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 300.0],
+                    ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 600.0],
+                    ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400.0],
+                    ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 200.0],
+                    ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500.0],
+                ],
+                columns=["name", "window_time", "total_cost"],
             ),
-            (
-                ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
-                pd.DataFrame(
-                    [
-                        ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100.0],
-                        ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 300.0],
-                        ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 600.0],
-                        ["Alex", to_epoch_millis("2022-01-04 23:59:59.999"), 0.0],
-                        ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400.0],
-                        ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 200.0],
-                        ["Emma", to_epoch_millis("2022-01-03 23:59:59.999"), 0.0],
-                        ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500.0],
-                        ["Jack", to_epoch_millis("2022-01-04 23:59:59.999"), 0.0],
-                    ],
-                    columns=["name", "window_time", "total_cost"],
-                ),
+            ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100.0],
+                    ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 300.0],
+                    ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 600.0],
+                    ["Alex", to_epoch_millis("2022-01-04 23:59:59.999"), 0.0],
+                    ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400.0],
+                    ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 200.0],
+                    ["Emma", to_epoch_millis("2022-01-03 23:59:59.999"), 0.0],
+                    ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500.0],
+                    ["Jack", to_epoch_millis("2022-01-04 23:59:59.999"), 0.0],
+                ],
+                columns=["name", "window_time", "total_cost"],
             ),
-        ]
+        }
 
-        for props, expected_result_df in expected_results:
+        for props in self.get_supported_sliding_window_config():
+            expected_result_df = expected_results.get(props)
             features = SlidingFeatureView(
                 name="features",
                 source=source,
                 features=[f_total_cost],
-                props=props,
+                props=props.value,
             )
 
             result_df = (

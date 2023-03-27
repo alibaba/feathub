@@ -29,7 +29,10 @@ from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.feature_view import FeatureView
-from feathub.feature_views.sliding_feature_view import SlidingFeatureView
+from feathub.feature_views.sliding_feature_view import (
+    SlidingFeatureView,
+    WINDOW_TIME_EXPR,
+)
 from feathub.feature_views.sql_feature_view import SqlFeatureView
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
 from feathub.feature_views.transforms.join_transform import JoinTransform
@@ -539,7 +542,7 @@ class FlinkTableBuilder:
                 # TODO: Refactor FlinkAstEvaluator to properly handle CURRENT_EVENT_TIME
                 #  and expose CURRENT_EVENT_TIME as a built-in function of FeatHub
                 #  expression.
-                if feature.transform.expr == "CURRENT_EVENT_TIME()":
+                if feature.transform.expr == WINDOW_TIME_EXPR:
                     continue
                 tmp_table = self._evaluate_expression_transform(
                     tmp_table,

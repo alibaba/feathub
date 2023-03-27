@@ -98,9 +98,9 @@ def from_numpy_dtype(dtype: Type) -> DType:
         return Int32
     elif dtype == np.int64:
         return Int64
-    elif dtype == np.float:
+    elif dtype == np.float32:
         return Float32
-    elif dtype == np.double:
+    elif dtype == np.float64:
         return Float64
     elif dtype == np.object:
         return Unknown
@@ -118,9 +118,9 @@ def to_numpy_dtype(dtype: DType) -> Type:
     elif dtype == Int64:
         return np.int64
     elif dtype == Float32:
-        return np.float
+        return np.float32
     elif dtype == Float64:
-        return np.double
+        return np.float64
     elif isinstance(dtype, MapType):
         return np.object
     elif dtype == Unknown:

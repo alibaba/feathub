@@ -28,6 +28,7 @@ from feathub.feature_views.sliding_feature_view import (
     SlidingFeatureView,
     ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG,
     SKIP_SAME_WINDOW_OUTPUT_CONFIG,
+    WINDOW_TIME_EXPR,
 )
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.feature_views.transforms.sliding_window_transform import (
@@ -274,7 +275,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
         expected_timestamp_feature = Feature(
             name="window_time",
             dtype=types.Int64,
-            transform="CURRENT_EVENT_TIME()",
+            transform=WINDOW_TIME_EXPR,
             keys=["id"],
         )
 
@@ -294,7 +295,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
         expected_timestamp_feature = Feature(
             name="my_window_time_field",
             dtype=types.Int64,
-            transform="CURRENT_EVENT_TIME()",
+            transform=WINDOW_TIME_EXPR,
             keys=["id"],
         )
 
@@ -314,7 +315,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
         expected_timestamp_feature = Feature(
             name="my_window_time_field",
             dtype=types.Int64,
-            transform="CURRENT_EVENT_TIME()",
+            transform=WINDOW_TIME_EXPR,
             keys=["id"],
         )
 

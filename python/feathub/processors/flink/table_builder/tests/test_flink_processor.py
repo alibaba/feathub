@@ -67,7 +67,6 @@ from feathub.feature_views.transforms.tests.test_python_udf_transform import (
 from feathub.feature_views.transforms.tests.test_sliding_window_transform import (
     SlidingWindowTransformITTest,
 )
-from feathub.tests.test_get_features import GetFeaturesITTest
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.processors.flink import flink_table
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
@@ -84,6 +83,7 @@ from feathub.processors.flink.table_builder.tests.test_flink_sql_feature_view im
 )
 from feathub.registries.local_registry import LocalRegistry
 from feathub.table.schema import Schema
+from feathub.tests.test_get_features import GetFeaturesITTest
 
 
 # TODO: move this file to python/feathub/processors/flink/tests folder after

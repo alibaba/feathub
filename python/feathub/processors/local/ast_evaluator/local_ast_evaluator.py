@@ -51,6 +51,9 @@ class LocalAstEvaluator(AbstractAstEvaluator):
         left_value = self.eval(ast.left_child, variables)
         right_value = self.eval(ast.right_child, variables)
 
+        if left_value is None or right_value is None:
+            return None
+
         if ast.op_type == "+":
             return left_value + right_value
         elif ast.op_type == "-":

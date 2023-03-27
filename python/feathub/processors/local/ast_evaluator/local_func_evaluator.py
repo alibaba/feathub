@@ -25,8 +25,10 @@ class LocalFuncEvaluator:
         if func_name == "LOWER":
             return values[0].lower()
         elif func_name == "UNIX_TIMESTAMP":
+            if values[0] is None:
+                return None
             if len(values) == 1:
-                return to_unix_timestamp(values[0], tz=self.tz)
+                return int(to_unix_timestamp(values[0], tz=self.tz))
             else:
-                return to_unix_timestamp(values[0], values[1], self.tz)
+                return int(to_unix_timestamp(values[0], values[1], self.tz))
         raise RuntimeError(f"Unsupported function: {func_name}.")

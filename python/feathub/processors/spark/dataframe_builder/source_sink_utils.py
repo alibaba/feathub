@@ -29,7 +29,7 @@ from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.processors.spark.dataframe_builder.datagen_utils import (
     get_dataframe_from_data_gen_source,
 )
-from feathub.processors.spark.dataframe_builder.source_sink_utils_common import (
+from feathub.processors.spark.dataframe_builder.time_utils import (
     append_unix_time_attribute_column,
 )
 from feathub.processors.spark.spark_types_utils import to_spark_struct_type

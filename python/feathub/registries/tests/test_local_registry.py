@@ -15,6 +15,8 @@
 import unittest
 import tempfile
 import shutil
+
+import numpy as np
 import pandas as pd
 
 from feathub.common import types
@@ -121,5 +123,5 @@ class LocalRegistryTest(unittest.TestCase):
         expected_result_df = df
         expected_result_df["cost_per_mile"] = expected_result_df.apply(
             lambda row: row["cost"] / row["distance"] + 10, axis=1
-        )
+        ).astype(np.float32)
         self.assertTrue(expected_result_df.equals(result_df))
