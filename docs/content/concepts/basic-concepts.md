@@ -30,8 +30,6 @@ path and data format.
 See [Connectors](../connectors/_index.md) for the list of storage systems from
 which we can construct FeatureTable in FeatHub.
 
-<!-- TODO: Add documentations for all the available FeatureTables -->
-
 ### FeatureView
 
 A `FeatureView` provides metadata to derive a table of feature values from

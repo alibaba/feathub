@@ -16,6 +16,7 @@ applications.
 	- [Apache Flink](engines/flink.md)
 	- [Apache Spark](engines/spark.md)
 - [Connectors](connectors/_index.md)
+  - [Overview](connectors/overview.md) 
   - [MySql](connectors/mysql.md)
 - [How To](how-to/_index.md)
   - [Deploy FeatHub Job on Alibaba Cloud](how-to/deploy-on-alibaba-cloud.md)
