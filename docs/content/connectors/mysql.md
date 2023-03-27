@@ -4,15 +4,17 @@ FeatHub provides `MySQLSource` to read data from a MySQL table and `MySQLSink` t
 materialize feature view to a MySQL table. Currently, `MySQLSource` can only be used as 
 an online store source.
 
-## Supported Processors and Usages
+## Supported Processors and Modes
 
-- Flink: Online Store Source, Append Sink, Upsert Sink
+- Flink: Lookup<sup>1</sup>, Streaming Append, Streaming Upsert
 
-## Example
+1. Only supported in OnDemandFeatureView currently.
+
+## Examples
 
 Here are the examples of using `MySQLSource` and `MySQLSink`:
 
-### Use as Append/Upsert Sink
+### Use as Streaming Append/Upsert Sink
 
 If the feature view to be materialized has keys, the MySQLSink is in upsert mode 
 otherwise it is in append mode.
@@ -35,7 +37,7 @@ featub_client.materialize_features(
 ).wait(30000)
 ```
 
-### Use as Online Store Source
+### Use as Lookup Source for OnDemandFeatureView
 
 ```python
 feature_table_schema = (
