@@ -25,6 +25,9 @@ automatically compiling declarative feature definitions into performant
 distributed ETL jobs using state-of-the-art computation engines of their choice,
 such as Flink or Spark.
 
+Checkout [Documentation](docs/content/_index.md) for guidance on compute
+engines, connectors, expression language, and more.
+
 
 ## Core Benefits
 
@@ -71,7 +74,7 @@ avoiding lock-in. This allows for the support of additional computation engines
 in the future.
 
 Usability is a crucial factor that sets feature store projects apart. Our SDK is
-designed to be Pythonic, declarative, intuitive, and highly expressive to
+designed to be **Pythonic**, **declarative**, intuitive, and highly expressive to
 support all the necessary feature transformations. We understand that a feature
 store's success depends on its usability as it directly affects developers'
 productivity. Check out the [FeatHub SDK Highlights](#feathub-sdk-highlights)
