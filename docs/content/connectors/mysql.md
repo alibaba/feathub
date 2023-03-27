@@ -1,6 +1,6 @@
 # MySQL
 
-Feathub provides `MySQLSource` to read data from a MySQL table and `MySQLSink` to 
+FeatHub provides `MySQLSource` to read data from a MySQL table and `MySQLSink` to 
 materialize feature view to a MySQL table. Currently, `MySQLSource` can only be used as 
 an online store source.
 

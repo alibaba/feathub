@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -48,9 +48,9 @@ def _merge_nested_dict(a, b) -> None:
 
 class FeathubITTestBase(unittest.TestCase):
     """
-    Abstract base class for all Feathub integration tests. A child class of
+    Abstract base class for all FeatHub integration tests. A child class of
     this class must instantiate the corresponding FeathubClient instance and
-    have its test cases use Feathub public APIs to get and write features.
+    have its test cases use FeatHub public APIs to get and write features.
 
     This class also provides utility variables and methods to assist the construction
     of test cases.

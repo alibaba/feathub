@@ -1,4 +1,4 @@
-# Copyright 2022 The Feathub Authors
+# Copyright 2022 The FeatHub Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ class Schema:
 
     class Builder:
         """
-        A builder for constructing a Feathub Schema.
+        A builder for constructing a FeatHub Schema.
         """
 
         def __init__(self) -> None:

@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -78,7 +78,7 @@ class AstTypeDeriverTest(unittest.TestCase):
         ast = self.expr_parser.parse("true")
         self.assertEqual(Bool, ast.eval_dtype({}))
 
-        ast = self.expr_parser.parse("'Feathub'")
+        ast = self.expr_parser.parse("'FeatHub'")
         self.assertEqual(String, ast.eval_dtype({}))
 
     def test_type_cast_type_derive(self):

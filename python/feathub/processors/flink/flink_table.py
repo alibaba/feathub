@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -81,7 +81,7 @@ def flink_table_to_pandas(table: NativeFlinkTable) -> pd.DataFrame:
 
 class FlinkTable(Table):
     """
-    The implementation of Feathub Table for Flink.
+    The implementation of FeatHub Table for Flink.
 
     It can only be instantiated and processed by FlinkProcessor. It converts the feature
     to native Flink table internally with the FlinkTableBuilder.

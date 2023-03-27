@@ -1,7 +1,7 @@
 # Flink Command-Line Mode Quickstart
 
-In this document, we will show you the steps to submit a simple Feathub job with Flink 
-Commandline Tool to a standalone Flink cluster. The Feathub job simply consumes
+In this document, we will show you the steps to submit a simple FeatHub job with Flink 
+Commandline Tool to a standalone Flink cluster. The FeatHub job simply consumes
 the data from the Flink datagen connector, computes some feature, and prints out the 
 result.
 
@@ -35,7 +35,7 @@ $ ./flink-1.15.2/bin/start-cluster.sh
 You should be able to navigate to the web UI at [localhost:8081](http://localhost:8081)
 to view the Flink dashboard and see that the cluster is up and running.
 
-## Package Feathub Python Dependencies
+## Package FeatHub Python Dependencies
 
 Different Flink deployment modes have different ways to manage the dependencies for the
 Flink job. For example, when submitting to Yarn Cluster, user can specify a local zip 
@@ -43,11 +43,11 @@ file that contains the dependencies. When submitting to Kubernetes cluster, user
 to install the dependencies to the Docker image.
 
 We provide the script to package a zip that contains the Python dependencies to run
-Feathub job. You can build the Python dependencies with nightly version of Feathub or 
-with a Feathub wheel with the commands below.
+FeatHub job. You can build the Python dependencies with nightly version of FeatHub or 
+with a FeatHub wheel with the commands below.
 
 ```bash
-# Build Feathub Python Dependencies with nightly version of Feathub
+# Build FeatHub Python Dependencies with nightly version of FeatHub
 $ bash tools/cli-deps/build-cli-deps.sh
 ```
 
@@ -64,7 +64,7 @@ the Flink cluster runs.
 
 ## Deploy FeatHub Job in the Flink Cluster
 
-Now you can submit the Feathub job to the standalone Flink cluster with the following
+Now you can submit the FeatHub job to the standalone Flink cluster with the following
 command:
 
 ```bash

@@ -1,13 +1,13 @@
 # Tutorial
 
-This tutorial shows how to use Feathub to achieve the following objectives:
+This tutorial shows how to use FeatHub to achieve the following objectives:
 - Define, extract, transform and materialize features into feature stores.
 - Transform features into Pandas dataframe for offline training.
 - Materialize features into online feature store.
 - Fetch features with on-demand feature transformation from online feature store
   for online feature serving.
 
-This tutorial shows these Feathub capabilities by walking you through
+This tutorial shows these FeatHub capabilities by walking you through
 [nyc_taxi.py](../../../python/feathub/examples/nyc_taxi.py), which trains a
 GradientBoostingRegressor model on the NYC Taxi Records
 [dataset](https://www1.nyc.gov/site/tlc/about/tlc-trip-record-data.page) to

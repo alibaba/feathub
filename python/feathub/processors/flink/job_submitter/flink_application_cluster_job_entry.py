@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -34,18 +34,18 @@ logger = logging.getLogger(__file__)
 
 def run_job(feathub_job_descriptor_path: str) -> None:
     """
-    Run the Feathub job with the given feathub job descriptor.
+    Run the FeatHub job with the given feathub job descriptor.
 
     The method is expected to run at the JobManager in a remote Flink cluster as the
     Flink job entry point. It parses the FeathubJobDescriptor, including FlinkTable,
     Sink, etc., from the given feathub_job_path and execute the Flink job that computes
     features in table and inserts into the given Sink.
 
-    :param feathub_job_descriptor_path: The path of the Feathub job config.
+    :param feathub_job_descriptor_path: The path of the FeatHub job config.
     """
     with open(feathub_job_descriptor_path, "rb") as f:
         feathub_job_descriptor: FeathubJobDescriptor = pickle.load(f)
-    logger.info(f"Loaded Feathub job config: {str(feathub_job_descriptor)}")
+    logger.info(f"Loaded FeatHub job config: {str(feathub_job_descriptor)}")
 
     env = StreamExecutionEnvironment.get_execution_environment()
     t_env = StreamTableEnvironment.create(env)

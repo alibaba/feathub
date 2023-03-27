@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ logger = logging.getLogger(__file__)
 
 
 def to_flink_sql_expr(feathub_expr: str) -> str:
-    logger.debug(f"Parsing Feathub expr: {feathub_expr}")
+    logger.debug(f"Parsing FeatHub expr: {feathub_expr}")
     ast = _parser.parse(feathub_expr)
     flink_sql_expr = _ast_evaluator.eval(ast, {})
     logger.debug(f"Result Flink Sql expr: {flink_sql_expr}")

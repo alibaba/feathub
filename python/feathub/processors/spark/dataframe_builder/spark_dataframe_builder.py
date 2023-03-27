@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -58,14 +58,14 @@ from feathub.table.table_descriptor import TableDescriptor
 
 
 class SparkDataFrameBuilder:
-    """SparkDataFrameBuilder is used to convert Feathub feature to a Spark DataFrame."""
+    """SparkDataFrameBuilder is used to convert FeatHub feature to a Spark DataFrame."""
 
     def __init__(self, spark_session: SparkSession, registry: Registry):
         """
         Instantiate the SparkDataFrameBuilder.
 
         :param spark_session: The SparkSession where the DataFrames are created.
-        :param registry: The Feathub registry.
+        :param registry: The FeatHub registry.
         """
         self._spark_session = spark_session
         self._registry = registry

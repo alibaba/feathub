@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 class JavaUDFDescriptor:
     """
-    Descriptor of Feathub Java UDF.
+    Descriptor of FeatHub Java UDF.
     """
 
     def __init__(self, udf_name: str, java_class_name: str) -> None:
@@ -39,12 +39,12 @@ class JavaUDFDescriptor:
 
 def get_feathub_udf_jar_path() -> str:
     """
-    Return the path to the Feathub java udf jar.
+    Return the path to the FeatHub java udf jar.
     """
     lib_dir = find_jar_lib()
     jars = glob.glob(os.path.join(lib_dir, "flink-udf-*.jar"))
     if len(jars) < 1:
-        raise FeathubException(f"Can not find the Feathub udf jar at {lib_dir}.")
+        raise FeathubException(f"Can not find the FeatHub udf jar at {lib_dir}.")
     return jars[0]
 
 

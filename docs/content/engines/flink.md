@@ -29,11 +29,11 @@ configuration `deployment_mode`.
 
 ### Command-Line mode
 
-When running in CLI mode, Feathub itself will not submit the Flink job to a
-Flink cluster. Users need to manually submit the Feathub job as a Flink job
+When running in CLI mode, FeatHub itself will not submit the Flink job to a
+Flink cluster. Users need to manually submit the FeatHub job as a Flink job
 using the Flink [CLI tool](https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/cli/#command-line-interface).
 
-A quickstart of how to submit a simple Feathub job with CLI mode to a standalone Flink 
+A quickstart of how to submit a simple FeatHub job with CLI mode to a standalone Flink 
 cluster can be found in this [document](../get-started/quickstarts/flink-cli-mode.md).
 
 ### Session mode
@@ -50,7 +50,7 @@ which means one misbehaving job can affect other jobs. You can refer to
 the [Flink Docs](https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/overview/#session-mode)
 for explanation of session mode. 
 
-A quickstart of how to submit a simple Feathub job with session mode to a standalone 
+A quickstart of how to submit a simple FeatHub job with session mode to a standalone 
 Flink cluster can be found in this [document](../get-started/quickstarts/flink-session-mode.md).
 
 ### Kubernetes Application mode
@@ -69,7 +69,7 @@ for more explanation of Kubernetes Application mode.
 #### Kubernetes Image
 To run the Flink job in Kubernetes Application mode, a docker image is required.
 
-Feathub provides a base Docker image to run the Flink job that compute the Feathub 
+FeatHub provides a base Docker image to run the Flink job that compute the FeatHub 
 features. User can modify the [Dockerfile](../../../docker/Dockerfile) to further customize 
 the image. You can refer to [here](https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/resource-providers/standalone/docker/#further-customization)
 to learn how to customize the image. Then you can use the following command to build 

@@ -1,4 +1,4 @@
-#  Copyright 2022 The Feathub Authors
+#  Copyright 2022 The FeatHub Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -134,7 +134,7 @@ class SlidingFeatureView(FeatureView):
                                 SlidingFeatureView that represents the closed window end
                                 time for each row.
         :param timestamp_format: The format of the timestamp field.
-        :param filter_expr: Optional. If it is not None, it represents a Feathub
+        :param filter_expr: Optional. If it is not None, it represents a FeatHub
                             expression which evaluates to a boolean value. The filter
                             expression is evaluated after other transformations in the
                             feature view, and only those rows which evaluate to True

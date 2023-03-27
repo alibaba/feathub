@@ -1,4 +1,4 @@
-# Copyright 2022 The Feathub Authors
+# Copyright 2022 The FeatHub Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ if typing.TYPE_CHECKING:
 
 class SparkTable(Table):
     """
-    The implementation of Feathub Table for Spark.
+    The implementation of FeatHub Table for Spark.
 
     It can only be instantiated and processed by SparkProcessor. It converts the feature
     to native Spark DataFrame internally with the SparkDataFrameBuilder.

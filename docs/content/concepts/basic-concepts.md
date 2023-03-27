@@ -9,7 +9,7 @@ architecture.
 A `TableDescriptor` provides metadata to access, derive and interpret a
 table of feature values. Each column of the table corresponds to a feature.
 
-A table in Feathub is conceptually similar to a table in Apache Flink, with
+A table in FeatHub is conceptually similar to a table in Apache Flink, with
 first-class support for timestamp column. If a timestamp column is specified, it
 is guaranteed that all feature values of a row is available at the time
 specified by this column. This column is necessary to perform point-in-time correct
@@ -35,7 +35,7 @@ which we can construct FeatureTable in FeatHub.
 ### FeatureView
 
 A `FeatureView` provides metadata to derive a table of feature values from
-other tables. Feathub currently supports the following types of FeatureViews.
+other tables. FeatHub currently supports the following types of FeatureViews.
 
 - `DerivedFeatureView` derives features by applying the given transformations on
   an existing table. It supports per-row transformation, over window transformation 
@@ -59,21 +59,21 @@ defined by the following metadata:
 - `transform`: A declarative definition of how to derive this feature's values.
 - `keys`: an optional list of strings, corresponding to the names of fields in
   the parent table necessary to interpret this feature's values. If it is
-  specified, it is used as the join key when Feathub joins this feature onto
+  specified, it is used as the join key when FeatHub joins this feature onto
   another table.
 
 ## Transformation - Declarative Definition of Feature Computation
 
 A `Transformation` defines how to derive a new feature from existing features.
-Feathub currently supports the following types of Transformations.
+FeatHub currently supports the following types of Transformations.
 
-- `ExpressionTransform` derives feature values by applying Feathub expression on
-  one row of the parent table at a time. Feathub expression language is a
-  declarative language with build-in functions. See [Feathub
+- `ExpressionTransform` derives feature values by applying FeatHub expression on
+  one row of the parent table at a time. FeatHub expression language is a
+  declarative language with build-in functions. See [FeatHub
   expression](feathub_expression.md) for more information.
-- `OverWindowTransform` derives feature values by applying Feathub expression and
+- `OverWindowTransform` derives feature values by applying FeatHub expression and
   aggregation function on multiple rows of a table at a time.
-- `SlidingWindowTransform` derives feature values by applying Feathub expression and 
+- `SlidingWindowTransform` derives feature values by applying FeatHub expression and 
   aggregation function on multiple rows in a sliding window.
 - `JoinTransform` derives feature values by joining parent table with a feature
   from another table.
@@ -90,7 +90,7 @@ responsible to recognize declarative specifications of `Transformation`,
 `Source` and `Sink`, and compile them into the corresponding jobs (e.g. Flink
 jobs) for execution.
 
-Feathub currently supports `LocalProcessor`, which uses CPUs on the local
+FeatHub currently supports `LocalProcessor`, which uses CPUs on the local
 machine to compute features, with Pandas DataFrame as the underlying
 representation of tables. This processor allows data scientists to run
 experiments on a single machine, without relying on remote clusters, when the
@@ -104,7 +104,7 @@ distributed Flink cluster.
 
 Users should be able to switch between processors by simply specifying the
 processor type in the `FeathubClient` configuration, without having to change
-any code related to the feature generation. This allows Feathub to maximize
+any code related to the feature generation. This allows FeatHub to maximize
 developer velocity by providing data scientists with a smooth self-serving
 experiment-to-production experience.
 
@@ -116,10 +116,10 @@ descriptors, such as feature views with feature transformation definitions. It
 improves developer velocity by allowing different teams in an organization to
 collaborate, share, discover, and re-use features.
 
-Feathub currently supports `LocalRegistry`, which persists feature definitions
+FeatHub currently supports `LocalRegistry`, which persists feature definitions
 on local filesystem.
 
-In the future, we can implement additional registry to integrate Feathub with
+In the future, we can implement additional registry to integrate FeatHub with
 existing metadata platform such as
 [DataHub](https://github.com/datahub-project/datahub).
 

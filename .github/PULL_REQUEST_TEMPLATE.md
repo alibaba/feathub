@@ -1,5 +1,5 @@
 <!--
-*Thank you very much for contributing to Feathub - we are happy that you want to help us improve Feathub. To help the community review your contribution in the best possible way, please go through the checklist below, which will get the contribution into a shape in which it can be best reviewed.*
+*Thank you very much for contributing to FeatHub - we are happy that you want to help us improve FeatHub. To help the community review your contribution in the best possible way, please go through the checklist below, which will get the contribution into a shape in which it can be best reviewed.*
 ## Contribution Checklist
   - Fill out the template below to describe the changes contributed by the pull request. That will give reviewers the context they need to do the review. 
   - Each commit in the pull request has a meaningful commit message

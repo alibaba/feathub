@@ -66,7 +66,7 @@ class MemoryOnlineStore:
         timestamp.
 
         :param table_name: The table's name.
-        :param schema: The Feathub schema of the features.
+        :param schema: The FeatHub schema of the features.
         :param features: A DataFrame with rows to put into the specified table.
         :param key_fields: The name of fields in the DataFrame to construct the key.
         :param timestamp_field: Optional. If it is not None, it is the name of the field
