@@ -1,33 +1,34 @@
-# MySQL
+# Redis
 
-FeatHub provides `MySQLSource` to read data from a MySQL table and `MySQLSink` to 
-materialize feature view to a MySQL table. Currently, `MySQLSource` can only be used as 
-an online store source.
+FeatHub provides `RedisSource` to read data from a Redis database and
+`RedisSink` to materialize feature view to a Redis database. Currently,
+`RedisSource` can only be used as an online store source.
 
-## Supported Processors and Modes
+## Supported Processors and Usages
 
-- Flink: Lookup<sup>1</sup>, Streaming Append, Streaming Upsert
+- Flink: Lookup<sup>1</sup>, Streaming Upsert
 
 1. Only supported in OnDemandFeatureView currently.
 
 ## Examples
 
-Here are the examples of using `MySQLSource` and `MySQLSink`:
+Here are the examples of using `RedisSource` and `RedisSink`:
 
-### Use as Streaming Append/Upsert Sink
+### Use as Streaming Upsert Sink
 
-If the feature view to be materialized has keys, the MySQLSink is in upsert mode 
-otherwise it is in append mode.
+ `RedisSink` works in upsert mode and requires that the feature view to be
+ materialized must have keys.
 
 ```python
 feature_view = DerivedFeatureView(...)
 
-sink = MySQLSink(
-    database="database",
-    table="table",
-    host="localhost",
-    username="user",
+sink = RedisSink(
+    host="host",
+    port=6379,
+    username="username",
     password="password",
+    db_num=0,
+    namespace="namespace",
 )
 
 feathub_client.materialize_features(
@@ -48,15 +49,12 @@ feature_table_schema = (
     .build()
 )
 
-source = MySQLSource(
+source = RedisSource(
     name="feature_table",
-    database="database",
-    table="table",
     schema=feature_table_schema,
-    host="localhost",
-    username="user",
-    password="password",
     keys=["id"],
+    host="host",
+    port=6379,
     timestamp_field="ts",
 )
 
