@@ -69,6 +69,8 @@ class SlidingFeatureViewConfig(BaseConfig):
         self.update_config_values(sliding_feature_view_config_defs)
 
 
+# TODO: Add general and formal description for concepts like bounded/unbounded stream,
+#  max out of orderness, (watermark,) and late data in Feathub documents.
 class SlidingFeatureView(FeatureView):
     """
     Derives features by applying sliding window transformations on an existing table.

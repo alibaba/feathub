@@ -17,11 +17,13 @@
 package com.alibaba.feathub.flink.udf;
 
 import org.apache.flink.api.common.functions.AggregateFunction;
+import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
@@ -36,7 +38,10 @@ import org.apache.flink.table.runtime.typeutils.ExternalTypeInfo;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.LogicalTypeRoot;
 import org.apache.flink.types.Row;
+import org.apache.flink.util.OutputTag;
 
+import com.alibaba.feathub.flink.udf.aggregation.AggFunc;
+import com.alibaba.feathub.flink.udf.aggregation.AggFuncWithLimit;
 import com.alibaba.feathub.flink.udf.processfunction.SlidingWindowKeyedProcessFunction;
 import com.alibaba.feathub.flink.udf.processfunction.SlidingWindowZeroValuedRowExpiredRowHandler;
 
@@ -53,7 +58,6 @@ import java.util.stream.Collectors;
 import static org.apache.flink.table.api.Expressions.$;
 
 /** Utility methods to apply sliding windows. */
-@SuppressWarnings({"rawtypes", "unchecked"})
 public class SlidingWindowUtils {
 
     /**
@@ -75,6 +79,12 @@ public class SlidingWindowUtils {
             String rowTimeFieldName) {
         if (windowDescriptor.filterExpr != null) {
             table = table.filter(Expressions.callSql(windowDescriptor.filterExpr));
+        }
+
+        if (windowDescriptor.limit != null) {
+            aggDescriptors =
+                    getAggregationFieldsDescriptorsWithLimit(
+                            aggDescriptors, windowDescriptor.limit);
         }
 
         ResolvedSchema schema = table.getResolvedSchema();
@@ -108,55 +118,91 @@ public class SlidingWindowUtils {
         long offset = TimeZone.getTimeZone(tEnv.getConfig().getLocalTimeZone()).getRawOffset();
         offset = getModdedOffset(windowDescriptor.stepSize.toMillis(), -offset);
 
-        return stream.keyBy(
-                        (KeySelector<Row, Object>)
-                                value ->
-                                        Row.of(
-                                                windowDescriptor.groupByKeys.stream()
-                                                        .map(value::getField)
-                                                        .toArray()))
-                .window(
-                        TumblingEventTimeWindows.of(
-                                Time.milliseconds(windowDescriptor.stepSize.toMillis()),
-                                Time.milliseconds(offset)))
-                .aggregate(
-                        new SlidingWindowPreprocessAggregateFunction(
-                                windowDescriptor.groupByKeys,
-                                rowTimeFieldName,
-                                aggDescriptors,
-                                windowDescriptor.stepSize.toMillis(),
-                                offset,
-                                rowTimeFieldName),
-                        Types.ROW_NAMED(
-                                fieldNames.toArray(new String[0]),
-                                accumulatorFieldTypes.toArray(new TypeInformation[0])),
-                        Types.ROW_NAMED(
-                                fieldNames.toArray(new String[0]),
-                                resultFieldTypes.toArray(new TypeInformation[0])));
+        final OutputTag<Row> lateDataOutputTag = new OutputTag<Row>("late-data") {};
+
+        SingleOutputStreamOperator<Row> resultStream =
+                stream.keyBy(
+                                (KeySelector<Row, Object>)
+                                        value ->
+                                                Row.of(
+                                                        windowDescriptor.groupByKeys.stream()
+                                                                .map(value::getField)
+                                                                .toArray()))
+                        .window(
+                                TumblingEventTimeWindows.of(
+                                        Time.milliseconds(windowDescriptor.stepSize.toMillis()),
+                                        Time.milliseconds(offset)))
+                        .aggregate(
+                                new SlidingWindowPreprocessAggregateFunction(
+                                        windowDescriptor.groupByKeys,
+                                        rowTimeFieldName,
+                                        aggDescriptors,
+                                        windowDescriptor.stepSize.toMillis(),
+                                        offset),
+                                Types.ROW_NAMED(
+                                        fieldNames.toArray(new String[0]),
+                                        accumulatorFieldTypes.toArray(new TypeInformation[0])),
+                                Types.ROW_NAMED(
+                                        fieldNames.toArray(new String[0]),
+                                        resultFieldTypes.toArray(new TypeInformation[0])));
+
+        DataStream<Row> lateDataStream =
+                resultStream
+                        .getSideOutput(lateDataOutputTag)
+                        .map(
+                                new SingleDataToPreAggResultMapFunction(
+                                        windowDescriptor.groupByKeys,
+                                        rowTimeFieldName,
+                                        aggDescriptors,
+                                        windowDescriptor.stepSize.toMillis(),
+                                        offset))
+                        .returns(
+                                Types.ROW_NAMED(
+                                        fieldNames.toArray(new String[0]),
+                                        resultFieldTypes.toArray(new TypeInformation[0])));
+
+        return resultStream.union(lateDataStream);
+    }
+
+    // TODO: merge this method into AggregationFieldDescriptor's constructor after FeatHub supports
+    // limit parameter at Feature granularity.
+    // https://github.com/alibaba/feathub/issues/97
+    public static AggregationFieldsDescriptor getAggregationFieldsDescriptorsWithLimit(
+            AggregationFieldsDescriptor descriptors, long limit) {
+        List<AggregationFieldsDescriptor.AggregationFieldDescriptor> list = new ArrayList<>();
+        for (AggregationFieldsDescriptor.AggregationFieldDescriptor descriptor :
+                descriptors.getAggFieldDescriptors()) {
+            AggFunc aggFunc = new AggFuncWithLimit<>(descriptor.aggFuncWithoutRetract, limit);
+            list.add(
+                    new AggregationFieldsDescriptor.AggregationFieldDescriptor(
+                            descriptor.fieldName,
+                            descriptor.dataType,
+                            descriptor.windowSizeMs,
+                            aggFunc,
+                            aggFunc));
+        }
+        return new AggregationFieldsDescriptor(list);
     }
 
     private static class SlidingWindowPreprocessAggregateFunction
             implements AggregateFunction<Row, Row, Row> {
         private final List<String> keyFields;
-        private final String timestampField;
+        private final String rowTimeFieldName;
         private final AggregationFieldsDescriptor aggDescriptors;
         private final long size;
         private final long offset;
-        private final String rowTimeFieldName;
 
         public SlidingWindowPreprocessAggregateFunction(
                 List<String> keyFields,
-                String timestampField,
+                String rowTimeFieldName,
                 AggregationFieldsDescriptor aggDescriptors,
                 long size,
-                long offset,
-                String rowTimeFieldName) {
+                long offset) {
             this.keyFields = keyFields;
-            this.timestampField = timestampField;
+            this.rowTimeFieldName = rowTimeFieldName;
             this.aggDescriptors = aggDescriptors;
             this.size = size;
             this.offset = offset;
-            this.rowTimeFieldName = rowTimeFieldName;
         }
 
         @Override
@@ -172,7 +218,7 @@ public class SlidingWindowUtils {
 
         @Override
         public Row add(Row row, Row acc) {
-            long timestamp = ((Instant) row.getFieldAs(timestampField)).toEpochMilli();
+            long timestamp = ((Instant) row.getFieldAs(rowTimeFieldName)).toEpochMilli();
             for (AggregationFieldsDescriptor.AggregationFieldDescriptor descriptor :
                     aggDescriptors.getAggFieldDescriptors()) {
                 Object fieldValue = row.getFieldAs(descriptor.fieldName);
@@ -241,9 +287,9 @@ public class SlidingWindowUtils {
      * @param tEnv The StreamTableEnvironment of the table.
      * @param rowDataStream The input stream containing pre-aggregated results.
      * @param dataTypeMap The map containing the data type of the output fields.
-     * @param keyFieldNames The names of the group by keys for the sliding window.
+     * @param windowDescriptor The descriptor of the sliding window to be applied to the input
+     *     table.
      * @param rowTimeFieldName The name of the row time field.
-     * @param stepSizeMs The step size of the sliding window in milliseconds.
      * @param aggregationFieldsDescriptor The descriptor of the aggregation field in the sliding
      *     window.
      * @param zeroValuedRow If the zeroValuedRow is not null, the sliding window will output a row
@@ -255,12 +301,19 @@ public class SlidingWindowUtils {
             StreamTableEnvironment tEnv,
             DataStream<Row> rowDataStream,
             Map<String, DataType> dataTypeMap,
-            String[] keyFieldNames,
+            SlidingWindowDescriptor windowDescriptor,
             String rowTimeFieldName,
-            long stepSizeMs,
             AggregationFieldsDescriptor aggregationFieldsDescriptor,
             Row zeroValuedRow,
             boolean skipSameWindowOutput) {
+        String[] keyFieldNames = windowDescriptor.groupByKeys.toArray(new String[0]);
+
+        if (windowDescriptor.limit != null) {
+            aggregationFieldsDescriptor =
+                    getAggregationFieldsDescriptorsWithLimit(
+                            aggregationFieldsDescriptor, windowDescriptor.limit);
+        }
+
         final TypeSerializer<Row> rowTypeSerializer =
                 rowDataStream.getType().createSerializer(rowDataStream.getExecutionConfig());
 
@@ -306,7 +359,7 @@ public class SlidingWindowUtils {
                                         resultRowTypeInfo.createSerializer(null),
                                         keyFieldNames,
                                         rowTimeFieldName,
-                                        stepSizeMs,
+                                        windowDescriptor.stepSize.toMillis(),
                                         expiredRowHandler,
                                         skipSameWindowOutput))
                         .returns(resultRowTypeInfo);
@@ -447,5 +500,49 @@ public class SlidingWindowUtils {
                 rowTimeFieldName,
                 String.format("`%s` - INTERVAL '0.001' SECONDS", rowTimeFieldName));
         return builder.build();
+    }
+
+    /** MapFunction that converts each input data into a pre-aggregation result. */
+    private static class SingleDataToPreAggResultMapFunction implements MapFunction<Row, Row> {
+        private final AggregationFieldsDescriptor aggDescriptors;
+        private final List<String> keyFieldNames;
+        private final String rowTimeFieldName;
+        private final long stepSize;
+        private final long offset;
+
+        private SingleDataToPreAggResultMapFunction(
+                List<String> keyFieldNames,
+                String rowTimeFieldName,
+                AggregationFieldsDescriptor aggDescriptors,
+                long stepSize,
+                long offset) {
+            this.aggDescriptors = aggDescriptors;
+            this.keyFieldNames = keyFieldNames;
+            this.rowTimeFieldName = rowTimeFieldName;
+            this.stepSize = stepSize;
+            this.offset = offset;
+        }
+
+        @Override
+        public Row map(Row row) throws Exception {
+            long timestamp = ((Instant) row.getFieldAs(rowTimeFieldName)).toEpochMilli();
+            Row result = Row.withNames();
+            for (AggregationFieldsDescriptor.AggregationFieldDescriptor descriptor :
+                    aggDescriptors.getAggFieldDescriptors()) {
+                Object value = row.getFieldAs(descriptor.fieldName);
+                Object acc = descriptor.aggFuncWithoutRetract.createAccumulator();
+                descriptor.aggFuncWithoutRetract.add(acc, value, timestamp);
+                result.setField(descriptor.fieldName, acc);
+            }
+
+            result.setField(
+                    rowTimeFieldName,
+                    Instant.ofEpochMilli(getWindowTime(timestamp, stepSize, offset)));
+
+            for (String keyFieldName : keyFieldNames) {
+                result.setField(keyFieldName, row.getField(keyFieldName));
+            }
+            return result;
+        }
     }
 }
