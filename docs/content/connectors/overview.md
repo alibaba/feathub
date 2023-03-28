@@ -30,5 +30,6 @@ where "Y" means supported, "Y/N" means partially supported, "N" means unsupporte
 |-------------------|------------|----------------|---------------|-----------------|--------------|------------------|------------------|
 | [MySQL](mysql.md) | N          | N              | N             | Y/N<sup>1</sup> | N            | Y                | Y                |
 | [Kafka](kafka.md) | N          | Y              | N             | N               | N            | Y                | N                |
+| [Redis](redis.md) | N          | N              | N             | Y/N<sup>1</sup> | N            | N                | Y                |
 
 1. Only supported in OnDemandFeatureView currently.

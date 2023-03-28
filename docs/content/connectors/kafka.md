@@ -23,7 +23,7 @@ sink = KafkaSink(
     value_format="json",
 )
 
-featub_client.materialize_features(
+feathub_client.materialize_features(
     features=feature_view,
     sink=sink,
     allow_overwrite=True,

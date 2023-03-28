@@ -19,5 +19,6 @@ applications.
   - [Overview](connectors/overview.md) 
   - [MySql](connectors/mysql.md)
   - [Kafka](connectors/kafka.md)
+  - [Redis](connectors/redis.md)
 - [How To](how-to/_index.md)
   - [Deploy FeatHub Job on Alibaba Cloud](how-to/deploy-on-alibaba-cloud.md)
