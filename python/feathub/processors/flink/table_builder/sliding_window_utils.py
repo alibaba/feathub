@@ -175,12 +175,6 @@ def evaluate_sliding_window_transform(
         EVENT_TIME_ATTRIBUTE_NAME
     ] = table_schema._j_table_schema.getFieldDataType(EVENT_TIME_ATTRIBUTE_NAME).get()
 
-    group_by_keys = gateway.new_array(
-        gateway.jvm.String, len(window_descriptor.group_by_keys)
-    )
-    for idx, key in enumerate(window_descriptor.group_by_keys):
-        group_by_keys[idx] = key
-
     default_row = None
     if config.get(ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG):
         default_row = gateway.jvm.org.apache.flink.types.Row.withNames()
@@ -195,9 +189,8 @@ def evaluate_sliding_window_transform(
         t_env._j_tenv,
         j_stream,
         data_type_map,
-        group_by_keys,
+        window_descriptor.to_java_descriptor(),
         EVENT_TIME_ATTRIBUTE_NAME,
-        int(window_descriptor.step_size.total_seconds() * 1000),
         descriptor_builder.build(),
         default_row,
         config.get(SKIP_SAME_WINDOW_OUTPUT_CONFIG),

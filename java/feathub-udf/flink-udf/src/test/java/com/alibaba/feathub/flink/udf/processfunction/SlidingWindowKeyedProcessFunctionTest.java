@@ -29,7 +29,6 @@ import org.apache.flink.util.CollectionUtil;
 import com.alibaba.feathub.flink.udf.AggregationFieldsDescriptor;
 import com.alibaba.feathub.flink.udf.SlidingWindowDescriptor;
 import com.alibaba.feathub.flink.udf.SlidingWindowUtils;
-import org.assertj.core.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -108,9 +107,8 @@ public class SlidingWindowKeyedProcessFunctionTest {
                         tEnv,
                         stream,
                         dataTypeMap,
-                        Arrays.array("id"),
+                        windowDescriptor,
                         "ts",
-                        1000L,
                         aggDescriptors,
                         zeroValuedRow,
                         false);

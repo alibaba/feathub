@@ -16,6 +16,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from datetime import timedelta
 from typing import Optional, Dict
 from unittest.mock import MagicMock, Mock, patch
 
@@ -26,6 +27,7 @@ from pyflink.table import Table, TableSchema
 from feathub.common.exceptions import (
     FeathubException,
 )
+from feathub.common.test_utils import to_epoch_millis
 from feathub.common.types import Int32, Int64, String
 from feathub.feathub_client import FeathubClient
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
@@ -46,11 +48,16 @@ from feathub.feature_tables.tests.test_redis_source_sink import (
 )
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
+from feathub.feature_views.sliding_feature_view import SlidingFeatureView
 from feathub.feature_views.tests.test_derived_feature_view import (
     DerivedFeatureViewITTest,
 )
 from feathub.feature_views.tests.test_sliding_feature_view import (
     SlidingFeatureViewITTest,
+)
+from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
+from feathub.feature_views.transforms.sliding_window_transform import (
+    SlidingWindowTransform,
 )
 from feathub.feature_views.transforms.tests.test_expression_transform import (
     ExpressionTransformITTest,
@@ -66,6 +73,9 @@ from feathub.feature_views.transforms.tests.test_python_udf_transform import (
 )
 from feathub.feature_views.transforms.tests.test_sliding_window_transform import (
     SlidingWindowTransformITTest,
+    ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT,
+    DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
+    ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT,
 )
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.processors.flink import flink_table
@@ -496,16 +506,211 @@ class FlinkProcessorITTest(
     def test_random_field_length(self):
         pass
 
-    # TODO: Enable the following sliding window tests when
-    #  SlidingWindowKeyedProcessFunction can handle unordered data.
-    def test_sliding_window_with_millisecond_sliding_window_timestamp(self):
-        pass
-
+    # TODO: remove the following test case after
+    #  SlidingWindowKeyedProcessFunction can correctly deduplicate
+    #  results when limit is not None.
     def test_transform_with_expression_as_group_by_key(self):
-        pass
+        df = self.input_data.copy()
+        source = self.create_file_source(df)
 
+        def repeat_name(row: pd.Series) -> str:
+            return row["name"] + "_" + row["name"]
+
+        f_name_name = Feature(
+            name="name_name", dtype=String, transform=PythonUdfTransform(repeat_name)
+        )
+
+        f_total_cost = Feature(
+            name="total_cost",
+            transform=SlidingWindowTransform(
+                expr="cost",
+                agg_func="SUM",
+                window_size=timedelta(days=3),
+                group_by_keys=["name_name"],
+                limit=2,
+                step_size=timedelta(days=1),
+            ),
+        )
+
+        expected_results = {
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [to_epoch_millis("2022-01-01 23:59:59.999"), "Alex_Alex", 100],
+                    [to_epoch_millis("2022-01-02 23:59:59.999"), "Alex_Alex", 400],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Alex_Alex", 900],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), "Alex_Alex", 900],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "Alex_Alex", 600],
+                    [to_epoch_millis("2022-01-06 23:59:59.999"), "Alex_Alex", 0],
+                    [to_epoch_millis("2022-01-01 23:59:59.999"), "Emma_Emma", 400],
+                    [to_epoch_millis("2022-01-02 23:59:59.999"), "Emma_Emma", 600],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), "Emma_Emma", 200],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "Emma_Emma", 0],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Jack_Jack", 500],
+                    [to_epoch_millis("2022-01-06 23:59:59.999"), "Jack_Jack", 0],
+                ],
+                columns=["window_time", "name_name", "total_cost"],
+            ),
+            DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [to_epoch_millis("2022-01-01 23:59:59.999"), "Alex_Alex", 100],
+                    [to_epoch_millis("2022-01-02 23:59:59.999"), "Alex_Alex", 400],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Alex_Alex", 900],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), "Alex_Alex", 900],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "Alex_Alex", 600],
+                    [to_epoch_millis("2022-01-01 23:59:59.999"), "Emma_Emma", 400],
+                    [to_epoch_millis("2022-01-02 23:59:59.999"), "Emma_Emma", 600],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Emma_Emma", 600],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), "Emma_Emma", 200],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Jack_Jack", 500],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), "Jack_Jack", 500],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "Jack_Jack", 500],
+                ],
+                columns=["window_time", "name_name", "total_cost"],
+            ),
+            ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [to_epoch_millis("2022-01-01 23:59:59.999"), "Alex_Alex", 100],
+                    [to_epoch_millis("2022-01-02 23:59:59.999"), "Alex_Alex", 400],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Alex_Alex", 900],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), "Alex_Alex", 900],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "Alex_Alex", 600],
+                    [to_epoch_millis("2022-01-06 23:59:59.999"), "Alex_Alex", 0],
+                    [to_epoch_millis("2022-01-01 23:59:59.999"), "Emma_Emma", 400],
+                    [to_epoch_millis("2022-01-02 23:59:59.999"), "Emma_Emma", 600],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Emma_Emma", 600],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), "Emma_Emma", 200],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "Emma_Emma", 0],
+                    [to_epoch_millis("2022-01-03 23:59:59.999"), "Jack_Jack", 500],
+                    [to_epoch_millis("2022-01-04 23:59:59.999"), "Jack_Jack", 500],
+                    [to_epoch_millis("2022-01-05 23:59:59.999"), "Jack_Jack", 500],
+                    [to_epoch_millis("2022-01-06 23:59:59.999"), "Jack_Jack", 0],
+                ],
+                columns=["window_time", "name_name", "total_cost"],
+            ),
+        }
+
+        for props in self.get_supported_sliding_window_config():
+            expected_result_df = expected_results.get(props)
+            features = SlidingFeatureView(
+                name="features",
+                source=source,
+                features=[f_name_name, f_total_cost],
+                props=props.value,
+            )
+            expected_result_df = expected_result_df.sort_values(
+                by=["name_name", "window_time"]
+            ).reset_index(drop=True)
+
+            result_df = (
+                self.client.get_features(features=features)
+                .to_pandas()
+                .sort_values(by=["name_name", "window_time"])
+                .reset_index(drop=True)
+            )
+
+            self.assertTrue(
+                expected_result_df.equals(result_df),
+                f"Failed with props: {props}\nexpected: {expected_result_df}\n"
+                f"actual: {result_df}",
+            )
+
+    # TODO: remove the following test case after
+    #  SlidingWindowKeyedProcessFunction can correctly deduplicate
+    #  results when limit is not None.
     def test_transform_with_limit(self):
-        pass
+        df = self.input_data.copy()
+        source = self.create_file_source(df)
 
-    def test_transform_with_value_counts(self):
-        pass
+        f_total_cost = Feature(
+            name="total_cost",
+            transform=SlidingWindowTransform(
+                expr="cost",
+                agg_func="SUM",
+                window_size=timedelta(days=3),
+                group_by_keys=["name"],
+                limit=2,
+                step_size=timedelta(days=1),
+            ),
+        )
+
+        expected_results = {
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100],
+                    ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 400],
+                    ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 900],
+                    ["Alex", to_epoch_millis("2022-01-04 23:59:59.999"), 900],
+                    ["Alex", to_epoch_millis("2022-01-05 23:59:59.999"), 600],
+                    ["Alex", to_epoch_millis("2022-01-06 23:59:59.999"), 0],
+                    ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400],
+                    ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 600],
+                    ["Emma", to_epoch_millis("2022-01-04 23:59:59.999"), 200],
+                    ["Emma", to_epoch_millis("2022-01-05 23:59:59.999"), 0],
+                    ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500],
+                    ["Jack", to_epoch_millis("2022-01-06 23:59:59.999"), 0],
+                ],
+                columns=["name", "window_time", "total_cost"],
+            ),
+            DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100],
+                    ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 400],
+                    ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 900],
+                    ["Alex", to_epoch_millis("2022-01-04 23:59:59.999"), 900],
+                    ["Alex", to_epoch_millis("2022-01-05 23:59:59.999"), 600],
+                    ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400],
+                    ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 600],
+                    ["Emma", to_epoch_millis("2022-01-03 23:59:59.999"), 600],
+                    ["Emma", to_epoch_millis("2022-01-04 23:59:59.999"), 200],
+                    ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500],
+                    ["Jack", to_epoch_millis("2022-01-04 23:59:59.999"), 500],
+                    ["Jack", to_epoch_millis("2022-01-05 23:59:59.999"), 500],
+                ],
+                columns=["name", "window_time", "total_cost"],
+            ),
+            ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    ["Alex", to_epoch_millis("2022-01-01 23:59:59.999"), 100],
+                    ["Alex", to_epoch_millis("2022-01-02 23:59:59.999"), 400],
+                    ["Alex", to_epoch_millis("2022-01-03 23:59:59.999"), 900],
+                    ["Alex", to_epoch_millis("2022-01-04 23:59:59.999"), 900],
+                    ["Alex", to_epoch_millis("2022-01-05 23:59:59.999"), 600],
+                    ["Alex", to_epoch_millis("2022-01-06 23:59:59.999"), 0],
+                    ["Emma", to_epoch_millis("2022-01-01 23:59:59.999"), 400],
+                    ["Emma", to_epoch_millis("2022-01-02 23:59:59.999"), 600],
+                    ["Emma", to_epoch_millis("2022-01-03 23:59:59.999"), 600],
+                    ["Emma", to_epoch_millis("2022-01-04 23:59:59.999"), 200],
+                    ["Emma", to_epoch_millis("2022-01-05 23:59:59.999"), 0],
+                    ["Jack", to_epoch_millis("2022-01-03 23:59:59.999"), 500],
+                    ["Jack", to_epoch_millis("2022-01-04 23:59:59.999"), 500],
+                    ["Jack", to_epoch_millis("2022-01-05 23:59:59.999"), 500],
+                    ["Jack", to_epoch_millis("2022-01-06 23:59:59.999"), 0],
+                ],
+                columns=["name", "window_time", "total_cost"],
+            ),
+        }
+
+        for props in self.get_supported_sliding_window_config():
+            expected_result_df = expected_results.get(props)
+            features = SlidingFeatureView(
+                name="features",
+                source=source,
+                features=[f_total_cost],
+                props=props.value,
+            )
+            expected_result_df = expected_result_df.sort_values(
+                by=["name", "window_time"]
+            ).reset_index(drop=True)
+
+            result_df = (
+                self.client.get_features(features=features)
+                .to_pandas()
+                .sort_values(by=["name", "window_time"])
+                .reset_index(drop=True)
+            )
+
+            self.assertTrue(
+                expected_result_df.equals(result_df),
+                f"Failed with props: {props}\nexpected: {expected_result_df}\n"
+                f"actual: {result_df}",
+            )

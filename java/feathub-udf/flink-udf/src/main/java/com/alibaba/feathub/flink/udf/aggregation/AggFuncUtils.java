@@ -18,6 +18,11 @@ package com.alibaba.feathub.flink.udf.aggregation;
 
 import org.apache.flink.table.types.DataType;
 
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+
 /** Utility of aggregation functions. */
 public class AggFuncUtils {
     /**
@@ -89,5 +94,61 @@ public class AggFuncUtils {
         }
         throw new RuntimeException(
                 String.format("Unsupported type for getSumAggFunc %s.", inDataType));
+    }
+
+    /** Inserts an element into a sorted list. */
+    public static <T> void insertIntoSortedList(List<T> list, T value, Comparator<T> comparator) {
+        int index = 0;
+        for (T t : list) {
+            if (comparator.compare(t, value) > 0) {
+                break;
+            }
+            index++;
+        }
+
+        list.add(index, value);
+    }
+
+    /**
+     * Merges two sorted list.
+     *
+     * @return the merging result as a sorted LinkedList.
+     */
+    public static <T> LinkedList<T> mergeSortedLists(
+            List<T> list0, List<T> list1, Comparator<T> comparator) {
+        Iterator<T> iterator0 = list0.iterator();
+        Iterator<T> iterator1 = list1.iterator();
+        T t0 = getNextOrNull(iterator0);
+        T t1 = getNextOrNull(iterator1);
+        LinkedList<T> list = new LinkedList<>();
+        while (t0 != null && t1 != null) {
+            if (comparator.compare(t0, t1) < 0) {
+                list.add(t0);
+                t0 = getNextOrNull(iterator0);
+            } else {
+                list.add(t1);
+                t1 = getNextOrNull(iterator1);
+            }
+        }
+
+        while (t0 != null) {
+            list.add(t0);
+            t0 = getNextOrNull(iterator0);
+        }
+
+        while (t1 != null) {
+            list.add(t1);
+            t1 = getNextOrNull(iterator1);
+        }
+
+        return list;
+    }
+
+    private static <T> T getNextOrNull(Iterator<T> iterator) {
+        if (iterator.hasNext()) {
+            return iterator.next();
+        } else {
+            return null;
+        }
     }
 }

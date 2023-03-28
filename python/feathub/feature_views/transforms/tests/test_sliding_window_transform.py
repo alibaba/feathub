@@ -11,6 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import time
 from abc import ABC
 from datetime import timedelta
 from enum import Enum
@@ -18,6 +19,7 @@ from math import sqrt
 from typing import List
 
 import pandas as pd
+from feathub.feature_views.feature_view import FeatureView
 
 from feathub.common.test_utils import to_epoch_millis, to_epoch
 from feathub.common.types import Int64, String, Float64, Float32
@@ -2268,3 +2270,202 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 f"Failed with props: {props}\nexpected: {expected_result_df}\n"
                 f"actual: {result_df}",
             )
+
+    # TODO: Add tests for other SKIP_SAME_WINDOW_OUTPUT_CONFIG
+    #  and ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG combinations.
+    def test_late_data(self):
+        df = pd.DataFrame(
+            [
+                ["Alex", 100, 100, "2022-01-01 08:01:00"],
+                ["Alex", 200, 250, "2022-01-01 08:02:00"],
+                ["Alex", 300, 250, "2022-01-02 08:04:00"],
+                ["Alex", 400, 200, "2022-01-01 08:03:00"],
+                ["Alex", 500, 800, "2022-01-04 08:06:00"],
+            ],
+            columns=["name", "cost", "distance", "time"],
+        )
+
+        expected_result = pd.DataFrame(
+            [
+                [
+                    to_epoch_millis("2022-01-01 23:59:59.999"),
+                    {"100": 1, "200": 1, "400": 1},
+                    {"100": 1, "200": 1, "400": 1},
+                ],
+                [
+                    to_epoch_millis("2022-01-02 23:59:59.999"),
+                    {"300": 1},
+                    {"100": 1, "200": 1, "300": 1, "400": 1},
+                ],
+                [to_epoch_millis("2022-01-03 23:59:59.999"), None, {"300": 1}],
+                [to_epoch_millis("2022-01-04 23:59:59.999"), {"500": 1}, {"500": 1}],
+                [to_epoch_millis("2022-01-05 23:59:59.999"), None, {"500": 1}],
+                [to_epoch_millis("2022-01-06 23:59:59.999"), None, None],
+            ],
+            columns=["window_time", "total_cost", "total_cost_2"],
+        )
+
+        self._test_late_data(df, expected_result)
+
+    def test_late_data_at_first_position(self):
+        df = pd.DataFrame(
+            [
+                ["Emmy", 100, 100, "2022-01-02 08:01:00"],
+                ["Alex", 200, 250, "2022-01-01 08:02:00"],
+                ["Alex", 300, 250, "2022-01-02 08:04:00"],
+                ["Alex", 400, 200, "2022-01-03 08:03:00"],
+                ["Alex", 500, 800, "2022-01-04 08:06:00"],
+            ],
+            columns=["name", "cost", "distance", "time"],
+        )
+
+        expected_result = pd.DataFrame(
+            [
+                [to_epoch_millis("2022-01-01 23:59:59.999"), {"200": 1}, {"200": 1}],
+                [
+                    to_epoch_millis("2022-01-02 23:59:59.999"),
+                    {"300": 1},
+                    {"200": 1, "300": 1},
+                ],
+                [
+                    to_epoch_millis("2022-01-03 23:59:59.999"),
+                    {"400": 1},
+                    {"300": 1, "400": 1},
+                ],
+                [
+                    to_epoch_millis("2022-01-04 23:59:59.999"),
+                    {"500": 1},
+                    {"400": 1, "500": 1},
+                ],
+                [to_epoch_millis("2022-01-05 23:59:59.999"), None, {"500": 1}],
+                [to_epoch_millis("2022-01-06 23:59:59.999"), None, None],
+            ],
+            columns=["window_time", "total_cost", "total_cost_2"],
+        )
+
+        self._test_late_data(df, expected_result)
+
+    def test_late_data_at_last_position(self):
+        df = pd.DataFrame(
+            [
+                ["Alex", 100, 100, "2022-01-01 08:01:00"],
+                ["Alex", 200, 250, "2022-01-01 08:02:00"],
+                ["Alex", 300, 250, "2022-01-02 08:04:00"],
+                ["Alex", 500, 800, "2022-01-04 08:06:00"],
+                ["Alex", 400, 200, "2022-01-03 08:03:00"],
+            ],
+            columns=["name", "cost", "distance", "time"],
+        )
+
+        expected_result = pd.DataFrame(
+            [
+                [
+                    to_epoch_millis("2022-01-01 23:59:59.999"),
+                    {"100": 1, "200": 1},
+                    {"100": 1, "200": 1},
+                ],
+                [
+                    to_epoch_millis("2022-01-02 23:59:59.999"),
+                    {"300": 1},
+                    {"100": 1, "200": 1, "300": 1},
+                ],
+                [
+                    to_epoch_millis("2022-01-03 23:59:59.999"),
+                    {"400": 1},
+                    {"300": 1, "400": 1},
+                ],
+                [
+                    to_epoch_millis("2022-01-04 23:59:59.999"),
+                    {"500": 1},
+                    {"400": 1, "500": 1},
+                ],
+                [to_epoch_millis("2022-01-05 23:59:59.999"), None, {"500": 1}],
+                [to_epoch_millis("2022-01-06 23:59:59.999"), None, None],
+            ],
+            columns=["window_time", "total_cost", "total_cost_2"],
+        )
+
+        self._test_late_data(df, expected_result)
+
+    def _test_late_data(self, df, expected_result):
+        client = self.get_client(
+            {
+                "processor": {
+                    "flink": {
+                        "native.parallelism.default": "1",
+                        "native.pipeline.max-parallelism": "1",
+                    },
+                },
+            }
+        )
+
+        schema = (
+            Schema.new_builder()
+            .column("name", String)
+            .column("cost", String)
+            .column("distance", Int64)
+            .column("time", String)
+            .build()
+        )
+
+        source = self.create_file_source(df, schema=schema)
+
+        # TODO: When df contains 5 records, the following udf would
+        #  be invoked 15 times. Figure out why and fix this bug to
+        #  reduce performance overhead.
+        def sleep(row: pd.Series) -> str:
+            time.sleep(0.1)
+            return row["cost"]
+
+        features: FeatureView = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                Feature(
+                    name="cost2",
+                    dtype=String,
+                    transform=PythonUdfTransform(sleep),
+                    keys=["name"],
+                )
+            ],
+            keep_source_fields=True,
+        )
+
+        f_total_cost = Feature(
+            name="total_cost",
+            transform=SlidingWindowTransform(
+                expr="cost2",
+                agg_func="VALUE_COUNTS",
+                window_size=timedelta(days=1),
+                step_size=timedelta(days=1),
+                group_by_keys=["name"],
+            ),
+        )
+
+        f_total_cost_2 = Feature(
+            name="total_cost_2",
+            transform=SlidingWindowTransform(
+                expr="cost2",
+                agg_func="VALUE_COUNTS",
+                window_size=timedelta(days=2),
+                step_size=timedelta(days=1),
+                group_by_keys=["name"],
+            ),
+        )
+
+        features = SlidingFeatureView(
+            name="features",
+            source=features,
+            features=[f_total_cost, f_total_cost_2],
+        )
+
+        result_df = (
+            client.get_features(features=features)
+            .to_pandas()
+            .sort_values(by=["name", "window_time"])
+            .reset_index(drop=True)
+        )
+        result_df = result_df[result_df["name"] == "Alex"]
+        result_df = result_df.drop("name", axis=1)
+
+        self.assertTrue(expected_result.equals(result_df))
