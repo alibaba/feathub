@@ -29,5 +29,6 @@ where "Y" means supported, "Y/N" means partially supported, "N" means unsupporte
 | Connector\Modes   | Batch Scan | Streaming Scan | Streaming CDC | Lookup          | Batch Append | Streaming Append | Streaming Upsert |
 |-------------------|------------|----------------|---------------|-----------------|--------------|------------------|------------------|
 | [MySQL](mysql.md) | N          | N              | N             | Y/N<sup>1</sup> | N            | Y                | Y                |
+| [Kafka](kafka.md) | N          | Y              | N             | N               | N            | Y                | N                |
 
 1. Only supported in OnDemandFeatureView currently.
