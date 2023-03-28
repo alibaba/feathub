@@ -28,6 +28,7 @@ from feathub.common.types import MapType
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
 from feathub.processors.flink.flink_types_utils import to_feathub_schema
+from feathub.processors.type_utils import cast_dataframe_dtype
 from feathub.processors.processor_job import ProcessorJob
 from feathub.table.schema import Schema
 from feathub.table.table import Table
@@ -60,10 +61,9 @@ def flink_table_to_pandas(table: NativeFlinkTable) -> pd.DataFrame:
     schema = table.get_schema()
     field_names = schema.get_field_names()
     field_types = {
-        name: FLINK_DATA_TYPE_TO_NUMPY_TYPE.get(
-            type(schema.get_field_data_type(name)), None
-        )
+        name: FLINK_DATA_TYPE_TO_NUMPY_TYPE.get(type(schema.get_field_data_type(name)))
         for name in field_names
+        if type(schema.get_field_data_type(name)) in FLINK_DATA_TYPE_TO_NUMPY_TYPE
     }
     with table.execute().collect() as results:
         data: Dict[str, List[Any]] = defaultdict(list)
@@ -71,12 +71,8 @@ def flink_table_to_pandas(table: NativeFlinkTable) -> pd.DataFrame:
             for name, value in zip(field_names, row):
                 data[name].append(value)
 
-        return pd.DataFrame(
-            {
-                name: pd.Series(values, dtype=field_types[name])
-                for name, values in data.items()
-            }
-        )
+        df = pd.DataFrame({name: pd.Series(values) for name, values in data.items()})
+        return cast_dataframe_dtype(df, field_types)
 
 
 class FlinkTable(Table):

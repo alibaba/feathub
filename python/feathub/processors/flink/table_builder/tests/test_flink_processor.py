@@ -476,14 +476,6 @@ class FlinkProcessorITTest(
                 features=source, sink=sink, allow_overwrite=True
             )
 
-    # TODO: Fix the bug that FlinkProcessor to_pandas does not support none values.
-    def test_join_sliding_feature(self):
-        pass
-
-    # TODO: Fix the bug that FlinkProcessor to_pandas does not support none values.
-    def test_over_window_on_join_field(self):
-        pass
-
     def test_over_window_transform_first_last_value_with_window_size(self):
         pass
 
