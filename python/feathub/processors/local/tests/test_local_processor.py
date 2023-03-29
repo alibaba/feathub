@@ -83,28 +83,6 @@ class LocalProcessorITTest(
         result_df = self.client.get_features(features=source).to_pandas()
         self.assertTrue(df.equals(result_df))
 
-    # TODO: Make LocalProcessor throw FeatHub Exception when non-exist key is
-    #  encountered.
-    def test_get_table_with_non_exist_key(self):
-        pass
-
-    # TODO: Make LocalProcessor throw FeatHub Exception with unsupported FeatureView.
-    def test_get_table_with_unsupported_feature_view(self):
-        pass
-
+    # TODO: Enable this test after local processor support datagen source.
     def test_bounded_left_table_join_unbounded_right_table(self):
-        pass
-
-    # TODO: Update local processor types so that it support int with null value.
-    def test_over_window_on_join_field(self):
-        pass
-
-    # TODO: Support Map type conversion in local processor.
-    def test_over_window_transform_value_counts(self):
-        pass
-
-    def test_case(self):
-        pass
-
-    def test_case_else(self):
         pass
