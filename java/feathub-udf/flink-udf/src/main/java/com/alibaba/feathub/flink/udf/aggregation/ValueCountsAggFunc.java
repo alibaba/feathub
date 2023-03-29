@@ -74,7 +74,7 @@ public class ValueCountsAggFunc implements AggFunc<Object, Map<Object, Long>, Ma
         if (accumulator.isEmpty()) {
             return null;
         }
-        return accumulator;
+        return new HashMap<>(accumulator);
     }
 
     @Override

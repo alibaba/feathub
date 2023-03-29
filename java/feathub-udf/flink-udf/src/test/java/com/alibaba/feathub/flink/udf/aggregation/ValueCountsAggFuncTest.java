@@ -31,8 +31,10 @@ class ValueCountsAggFuncTest {
     @Test
     void testValueCountsAggregationFunction() {
         final ValueCountsAggFunc aggFunc = new ValueCountsAggFunc(DataTypes.STRING());
+
         Map<Object, Long> accumulator = aggFunc.createAccumulator();
         assertThat(aggFunc.getResult(accumulator)).isNull();
+
         aggFunc.add(accumulator, "a", 0);
         aggFunc.add(accumulator, "a", 0);
         aggFunc.add(accumulator, "b", 0);
@@ -40,7 +42,12 @@ class ValueCountsAggFuncTest {
         expectedResult.put("a", 2L);
         expectedResult.put("b", 1L);
         assertThat(aggFunc.getResult(accumulator)).isEqualTo(expectedResult);
+
         aggFunc.retract(accumulator, "b");
-        assertThat(aggFunc.getResult(accumulator)).isEqualTo(Collections.singletonMap("a", 2L));
+        Map<Object, Long> result = aggFunc.getResult(accumulator);
+        assertThat(result).isEqualTo(Collections.singletonMap("a", 2L));
+
+        aggFunc.add(accumulator, "b", 0);
+        assertThat(result).isEqualTo(Collections.singletonMap("a", 2L));
     }
 }
