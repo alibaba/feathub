@@ -17,6 +17,12 @@ from feathub.feathub_client import FeathubClient
 from feathub.feature_tables.tests.test_file_system_source_sink import (
     FileSystemSourceSinkITTest,
 )
+from feathub.feature_views.tests.test_derived_feature_view import (
+    DerivedFeatureViewITTest,
+)
+from feathub.feature_views.tests.test_sliding_feature_view import (
+    SlidingFeatureViewITTest,
+)
 from feathub.feature_views.transforms.tests.test_expression_transform import (
     ExpressionTransformITTest,
 )
@@ -47,6 +53,8 @@ class LocalProcessorITTest(
     OverWindowTransformITTest,
     PythonUDFTransformITTest,
     SlidingWindowTransformITTest,
+    DerivedFeatureViewITTest,
+    SlidingFeatureViewITTest,
 ):
     __test__ = True
 

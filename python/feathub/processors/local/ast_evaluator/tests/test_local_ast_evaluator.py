@@ -15,6 +15,8 @@
 import unittest
 from datetime import datetime
 
+import numpy as np
+
 from feathub.common.exceptions import FeathubException, FeathubExpressionException
 from feathub.dsl.expr_parser import ExprParser
 from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstEvaluator
@@ -112,6 +114,9 @@ class LocalAstEvaluatorTest(unittest.TestCase):
         self.assertEqual(False, self._eval("a IS NULL", {"a": 1}))
         self.assertEqual(False, self._eval("a IS NOT NULL", {"a": None}))
         self.assertEqual(True, self._eval("a IS NOT NULL", {"a": 1}))
+        self.assertEqual(False, self._eval("a IS NOT NULL", {"a": np.NAN}))
+        self.assertEqual(True, self._eval("a IS NOT NULL", {"a": "123"}))
+        self.assertEqual(True, self._eval("a IS NOT NULL", {"a": {"k": 1}}))
 
     def test_case_op(self):
         expr = "CASE WHEN a > b THEN 1 WHEN a < b THEN 2 ELSE 3 END"

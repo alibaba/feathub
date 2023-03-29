@@ -155,7 +155,17 @@ class LocalAstEvaluator(AbstractAstEvaluator):
 
     def eval_is_op(self, ast: IsOp, variables: Optional[Dict]) -> Any:
         left_value = self.eval(ast.left_child, variables)
-        is_none = left_value is None or np.isnan(left_value)
+        is_none = left_value is None
+
+        # Pandas converts None value of numeric type to NAN. Therefore, it is unclear
+        # whether NAN represents None or NAN. We treat all the NAN as None here as it
+        # should be the common case. This may result in a different behavior from
+        # Spark/Flink processor where they have NULL to represent None value.
+        # TODO: Add docs for LocalProcessor and warn about the different behavior from
+        #  Spark/Flink processor.
+        if isinstance(left_value, float) or isinstance(left_value, np.generic):
+            is_none = np.isnan(left_value)
+
         if ast.is_not:
             return not is_none
 

@@ -250,11 +250,6 @@ class LocalProcessor(Processor):
     def _get_table_from_derived_feature_view(
         self, feature_view: DerivedFeatureView
     ) -> LocalTable:
-        # TODO: Support filtering DerivedFeatureView in LocalProcessor.
-        if feature_view.filter_expr is not None:
-            raise FeathubException(
-                "LocalProcessor does not support filtering DerivedFeatureView."
-            )
 
         source_table = self._get_table(feature_view.source)
         source_df = source_table.df
@@ -316,6 +311,9 @@ class LocalProcessor(Processor):
             source_df[feature.name] = cast_series_dtype(
                 source_df[feature.name], to_numpy_dtype(feature.dtype)
             )
+
+        if feature_view.filter_expr is not None:
+            source_df = self._filter_dataframe(source_df, feature_view.filter_expr)
 
         output_fields = feature_view.get_output_fields(source_fields)
 
@@ -594,6 +592,9 @@ class LocalProcessor(Processor):
                     f"Unsupported transformation type: {type(feature.transform)}."
                 )
 
+        if feature_view.filter_expr is not None:
+            agg_df = self._filter_dataframe(agg_df, feature_view.filter_expr)
+
         output_fields = feature_view.get_output_fields(source_fields)
 
         return LocalTable(
@@ -611,3 +612,7 @@ class LocalProcessor(Processor):
             if feature not in dependent_features:
                 dependent_features.append(feature)
         return dependent_features
+
+    def _filter_dataframe(self, df: pd.DataFrame, filter_expr: str) -> pd.DataFrame:
+        filter_ast = self.parser.parse(filter_expr)
+        return df[df.apply(lambda r: self.ast_evaluator.eval(filter_ast, r), axis=1)]
