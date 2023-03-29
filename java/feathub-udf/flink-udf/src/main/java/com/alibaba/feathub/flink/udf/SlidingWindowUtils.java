@@ -132,6 +132,7 @@ public class SlidingWindowUtils {
                                 TumblingEventTimeWindows.of(
                                         Time.milliseconds(windowDescriptor.stepSize.toMillis()),
                                         Time.milliseconds(offset)))
+                        .sideOutputLateData(lateDataOutputTag)
                         .aggregate(
                                 new SlidingWindowPreprocessAggregateFunction(
                                         windowDescriptor.groupByKeys,

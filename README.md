@@ -42,10 +42,11 @@ accuracy of machine learning models.
 state-of-the-art computation engines, such as Flink or Spark. This speeds up the
 feature deployment process and eliminates the need for data engineers to
 re-write Python programs into distributed stream or batch processing jobs.
-- **Performant feature generation**: FeatHub offers a range of built-in
-  optimizations that leverage commonly observed feature ETL job patterns. These
-optimizations are automatically applied to ETL jobs compiled from the
-declarative feature definitions, much like how SQL optimizations are applied.
+- **Performant feature generation**: FeatHub offers a range of [built-in
+  optimizations](docs/content/deep-dive/optimizations.md) that leverage commonly
+observed feature ETL job patterns. These optimizations are automatically applied
+to ETL jobs compiled from the declarative feature definitions, much like how SQL
+optimizations are applied.
 - **Assisted feature monitoring**: FeatHub provides built-in metrics to monitor
   the quality of features and alert users to issues such as feature drift. This
 helps to improve the accuracy and reliability of machine learning models.
@@ -90,8 +91,9 @@ With FeatHub, you can:
 expressions, aggregations, and cross-table joins on existing features, all with
 point-in-time correctness.
 - **Read and write features data**: Read and write feature data into a variety
-of offline, nearline, and online storage systems for both offline training and
-online serving.
+  of offline, nearline, and online [storage
+systems](docs/content/connectors/_index.md) for both offline training and online
+serving.
 - **Backfill features data**: Process historical data with the given time range
 and/or keys to backfill feature data, whic
 - **Run experiments**: Run experiments on the local machine using

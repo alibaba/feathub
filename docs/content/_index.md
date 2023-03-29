@@ -20,5 +20,7 @@ applications.
   - [MySql](connectors/mysql.md)
   - [Kafka](connectors/kafka.md)
   - [Redis](connectors/redis.md)
+- [Deep Dive](deep-dive/_index.md)
+	- [Built-in Optimizations](deep-dive/optimizations.md)
 - [How To](how-to/_index.md)
   - [Deploy FeatHub Job on Alibaba Cloud](how-to/deploy-on-alibaba-cloud.md)
