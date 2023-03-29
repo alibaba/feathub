@@ -104,6 +104,11 @@ class LocalProcessor(Processor):
         df = self._get_table(features).df
         if keys is not None:
             keys = self._get_table(keys).df
+            if not set(keys.columns).issubset(set(df.columns)):
+                raise FeathubException(
+                    f"Not all given key {keys.columns} in the table fields "
+                    f"{df.columns}."
+                )
             keys = keys.drop_duplicates()
             idx = df[list(keys.columns)].apply(
                 lambda row: any([row.equals(key) for _, key in keys.iterrows()]),
@@ -182,7 +187,7 @@ class LocalProcessor(Processor):
                 timestamp_format="unknown",
             )
 
-        # TODO: Support SlidingFeatureView, KafkaSource, DataGenSource.
+        # TODO: Support KafkaSource, DataGenSource.
         if isinstance(features, FileSystemSource):
             return self._get_table_from_file_source(features)
         elif isinstance(features, DerivedFeatureView):
@@ -190,7 +195,7 @@ class LocalProcessor(Processor):
         elif isinstance(features, SlidingFeatureView):
             return self._get_table_from_sliding_feature_view(features)
 
-        raise RuntimeError(
+        raise FeathubException(
             f"Unsupported type '{type(features).__name__}' for '{features}'."
         )
 

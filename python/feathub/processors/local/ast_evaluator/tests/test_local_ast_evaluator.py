@@ -15,7 +15,7 @@
 import unittest
 from datetime import datetime
 
-from feathub.common.exceptions import FeathubException
+from feathub.common.exceptions import FeathubException, FeathubExpressionException
 from feathub.dsl.expr_parser import ExprParser
 from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstEvaluator
 
@@ -103,3 +103,23 @@ class LocalAstEvaluatorTest(unittest.TestCase):
         self.assertEqual(True, self._eval("false OR True"))
         self.assertEqual(True, self._eval("a OR True", {"a": True}))
         self.assertEqual(False, self._eval("true AND FALSE"))
+
+    def test_null_node(self):
+        self.assertEqual(None, self._eval("NULL"))
+
+    def test_is_op(self):
+        self.assertEqual(True, self._eval("a IS NULL", {"a": None}))
+        self.assertEqual(False, self._eval("a IS NULL", {"a": 1}))
+        self.assertEqual(False, self._eval("a IS NOT NULL", {"a": None}))
+        self.assertEqual(True, self._eval("a IS NOT NULL", {"a": 1}))
+
+    def test_case_op(self):
+        expr = "CASE WHEN a > b THEN 1 WHEN a < b THEN 2 ELSE 3 END"
+        self.assertEqual(1, self._eval(expr, {"a": 2, "b": 1}))
+        expr = "CASE WHEN a > b THEN 1 WHEN a < b THEN 2 ELSE 3 END"
+        self.assertEqual(2, self._eval(expr, {"a": 1, "b": 2}))
+        expr = "CASE WHEN a > b THEN 1 WHEN a < b THEN 2 ELSE 3 END"
+        self.assertEqual(3, self._eval(expr, {"a": 1, "b": 1}))
+
+        with self.assertRaises(FeathubExpressionException):
+            self._eval("CASE WHEN 1 + 1 THEN 2 END")

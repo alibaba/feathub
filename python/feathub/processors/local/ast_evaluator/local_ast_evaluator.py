@@ -14,6 +14,8 @@
 from datetime import datetime, timezone, tzinfo
 from typing import Any, Dict, Optional
 
+import numpy as np
+
 from feathub.common.exceptions import FeathubException, FeathubExpressionException
 from feathub.dsl.abstract_ast_evaluator import AbstractAstEvaluator
 from feathub.dsl.ast import (
@@ -152,10 +154,27 @@ class LocalAstEvaluator(AbstractAstEvaluator):
         return self.eval(ast.child, variables)
 
     def eval_is_op(self, ast: IsOp, variables: Optional[Dict]) -> Any:
-        raise RuntimeError("IS/IS NOT operation is not supported.")
+        left_value = self.eval(ast.left_child, variables)
+        is_none = left_value is None or np.isnan(left_value)
+        if ast.is_not:
+            return not is_none
+
+        return is_none
 
     def eval_null_node(self, ast: NullNode, variables: Optional[Dict]) -> Any:
-        raise RuntimeError("NULL operation is not supported.")
+        return None
 
     def eval_case_op(self, ast: CaseOp, variables: Optional[Dict]) -> Any:
-        raise RuntimeError("CASE operation is not supported.")
+        for condition_ast, result_ast in zip(ast.conditions, ast.results):
+            condition_res = self.eval(condition_ast, variables)
+            if not isinstance(condition_res, bool):
+                raise FeathubExpressionException(
+                    "The condition expression should all be boolean type."
+                )
+            if condition_res is True:
+                return self.eval(result_ast, variables)
+
+        if ast.default is not None:
+            return self.eval(ast.default, variables)
+
+        return None
