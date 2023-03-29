@@ -30,7 +30,7 @@ from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from feathub.processors.local.aggregation_utils import AGG_FUNCTIONS
 from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstEvaluator
 from feathub.processors.local.time_utils import append_unix_time_column
-from feathub.processors.local.type_utils import cast_dataframe_dtype
+from feathub.processors.type_utils import cast_dataframe_dtype
 
 
 # TODO: Unify common classes across all processors.

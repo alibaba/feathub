@@ -65,7 +65,7 @@ from feathub.processors.local.time_utils import (
     append_and_sort_unix_time_column,
     append_unix_time_column,
 )
-from feathub.processors.local.type_utils import cast_series_dtype
+from feathub.processors.type_utils import cast_series_dtype
 from feathub.processors.processor import Processor
 from feathub.registries.registry import Registry
 from feathub.table.schema import Schema
