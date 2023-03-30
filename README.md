@@ -230,13 +230,10 @@ cluster with different deployment modes:
 
 #### Quickstart using Apache Spark cluster
 
-Execute the following command to compute features defined in
-[nyc_taxi_spark_client.py](python/feathub/examples/nyc_taxi_spark_client.py) in
-a Spark cluster with client deployment mode.
+You can use the following quickstart guides to compute features in a standalone
+Spark cluster.
 
-```bash
-$ python python/feathub/examples/nyc_taxi_spark_client.py
-```
+- [Spark Processor Client Mode Quickstart](docs/content/get-started/quickstarts/spark-client-mode.md)
 
 ## Developer Guide
 
