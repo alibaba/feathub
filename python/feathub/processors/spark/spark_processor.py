@@ -89,20 +89,14 @@ class SparkProcessor(Processor):
         start_datetime: Optional[datetime] = None,
         end_datetime: Optional[datetime] = None,
     ) -> SparkTable:
-
-        if start_datetime is not None or end_datetime is not None:
-            # TODO: Add support for timestamp and watermark with window transform.
-            raise FeathubException(
-                "Spark processor does not support filtering features with "
-                "start/end datetime."
-            )
-
         features = self._resolve_table_descriptor(features)
 
         return SparkTable(
             feature=features,
             spark_processor=self,
             keys=keys,
+            start_datetime=start_datetime,
+            end_datetime=end_datetime,
         )
 
     def materialize_features(
@@ -122,7 +116,11 @@ class SparkProcessor(Processor):
 
         resolved_features = self._resolve_table_descriptor(features)
 
-        dataframe = self.get_spark_dataframe(resolved_features)
+        dataframe = self.get_spark_dataframe(
+            feature=resolved_features,
+            start_datetime=start_datetime,
+            end_datetime=end_datetime,
+        )
 
         future = insert_into_sink(
             executor=self._executor,
@@ -148,5 +146,9 @@ class SparkProcessor(Processor):
         self,
         feature: TableDescriptor,
         keys: Union[pd.DataFrame, TableDescriptor, None] = None,
+        start_datetime: Optional[datetime] = None,
+        end_datetime: Optional[datetime] = None,
     ) -> NativeSparkDataFrame:
-        return self._dataframe_builder.build(feature, keys)
+        return self._dataframe_builder.build(
+            feature, keys, start_datetime, end_datetime
+        )

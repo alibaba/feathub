@@ -25,6 +25,9 @@ from feathub.feature_tables.tests.test_file_system_source_sink import (
     FileSystemSourceSinkITTest,
 )
 from feathub.feature_tables.tests.test_print_sink import PrintSinkITTest
+from feathub.feature_views.tests.test_derived_feature_view import (
+    DerivedFeatureViewITTest,
+)
 from feathub.feature_views.transforms.tests.test_expression_transform import (
     ExpressionTransformITTest,
 )
@@ -53,6 +56,7 @@ class SparkProcessorITTest(
     OnlineFeaturesITTest,
     JoinTransformITTest,
     GetFeaturesITTest,
+    DerivedFeatureViewITTest,
 ):
     __test__ = True
 
@@ -102,6 +106,8 @@ class SparkProcessorITTest(
         df = df.sort_values(by=["time"]).reset_index(drop=True)
         self.assertTrue(self.input_data.equals(df))
 
+    # TODO: Add back following test cases after SparkProcessor supports aggregations
+    #  on both limited and timed window
     def test_over_window_on_join_field(self):
         pass
 
@@ -123,17 +129,5 @@ class SparkProcessorITTest(
     def test_over_window_transform_filter_expr_with_window_size_and_limit(self):
         pass
 
-    def test_case(self):
-        pass
-
-    def test_case_else(self):
-        pass
-
     def test_bounded_left_table_join_unbounded_right_table(self):
-        pass
-
-    def test_get_table_with_start_datetime(self):
-        pass
-
-    def test_get_table_with_end_datetime(self):
         pass
