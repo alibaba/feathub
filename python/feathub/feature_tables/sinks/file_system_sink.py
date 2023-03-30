@@ -21,7 +21,7 @@ class FileSystemSink(Sink):
 
     def __init__(self, path: str, data_format: str) -> None:
         """
-        :param path: The path to files.
+        :param path: The path to directory of files to write to.
         :param data_format: The format of the data that are written to the file.
         """
         super().__init__(

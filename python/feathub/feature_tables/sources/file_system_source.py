@@ -34,7 +34,9 @@ class FileSystemSource(FeatureTable):
     ):
         """
         :param name: The name that uniquely identifies this source in a registry.
-        :param path: The path to files.
+        :param path: The path to a file or a directory of files to read. Note that there
+                     is no defined order of ingestion for the files inside the
+                     directory.
         :param data_format: The format that should be used to read files.
         :param schema: The schema of the data.
         :param keys: Optional. The names of fields in this feature view that are

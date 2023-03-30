@@ -30,6 +30,7 @@ from feathub.common.exceptions import FeathubException, FeathubTransformationExc
 from feathub.common.types import to_numpy_dtype
 from feathub.dsl.expr_parser import ExprParser
 from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
@@ -53,6 +54,10 @@ from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from feathub.processors.local.aggregation_utils import AGG_FUNCTIONS
 from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstEvaluator
+from feathub.processors.local.file_system_utils import (
+    insert_into_file_sink,
+    get_dataframe_from_file_source,
+)
 from feathub.processors.local.local_job import LocalJob
 from feathub.processors.local.local_processor_config import LocalProcessorConfig
 from feathub.processors.local.local_table import LocalTable
@@ -65,8 +70,8 @@ from feathub.processors.local.time_utils import (
     append_and_sort_unix_time_column,
     append_unix_time_column,
 )
-from feathub.processors.type_utils import cast_series_dtype
 from feathub.processors.processor import Processor
+from feathub.processors.type_utils import cast_series_dtype
 from feathub.registries.registry import Registry
 from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
@@ -153,8 +158,6 @@ class LocalProcessor(Processor):
         if ttl is not None or not allow_overwrite:
             raise RuntimeError("Unsupported operation.")
         features = self._resolve_table_descriptor(features)
-        if features.keys is None:
-            raise FeathubException(f"Features keys must not be None {features}.")
 
         features_df = self.get_table(
             features=features,
@@ -165,6 +168,8 @@ class LocalProcessor(Processor):
 
         # TODO: handle allow_overwrite.
         if isinstance(sink, MemoryStoreSink):
+            if features.keys is None:
+                raise FeathubException(f"Features keys must not be None {features}.")
             return self._write_features_to_online_store(
                 features=features_df,
                 schema=utils.get_table_schema(features),
@@ -173,6 +178,9 @@ class LocalProcessor(Processor):
                 timestamp_field=features.timestamp_field,
                 timestamp_format=features.timestamp_format,
             )
+        elif isinstance(sink, FileSystemSink):
+            insert_into_file_sink(features_df, sink)
+            return LocalJob()
 
         raise RuntimeError(f"Unsupported sink: {sink}.")
 
@@ -216,24 +224,12 @@ class LocalProcessor(Processor):
         return LocalJob()
 
     def _get_table_from_file_source(self, source: FileSystemSource) -> LocalTable:
-        if source.data_format == "csv":
-            df = pd.read_csv(
-                source.path,
-                names=source.schema.field_names,
-                dtype={
-                    name: to_numpy_dtype(dtype)
-                    for name, dtype in zip(
-                        source.schema.field_names, source.schema.field_types
-                    )
-                },
-            )
-            return LocalTable(
-                df=df,
-                timestamp_field=source.timestamp_field,
-                timestamp_format=source.timestamp_format,
-            )
-
-        raise RuntimeError(f"Unsupported file format: {source.data_format}.")
+        df = get_dataframe_from_file_source(source)
+        return LocalTable(
+            df=df,
+            timestamp_field=source.timestamp_field,
+            timestamp_format=source.timestamp_format,
+        )
 
     def _evaluate_expression_transform(
         self, df: pd.DataFrame, transform: ExpressionTransform

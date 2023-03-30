@@ -85,12 +85,6 @@ class LocalProcessorITTest(
             extra_config,
         )
 
-    def test_file_source(self):
-        df = self.input_data.copy()
-        source = self.create_file_source(df)
-        result_df = self.client.get_features(features=source).to_pandas()
-        self.assertTrue(df.equals(result_df))
-
     # TODO: Enable this test after local processor support datagen source.
     def test_bounded_left_table_join_unbounded_right_table(self):
         pass
