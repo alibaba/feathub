@@ -24,12 +24,25 @@ A Sink can operate on one of the following modes:
 The tables below describe the supported connectors and modes for different processors, 
 where "Y" means supported, "Y/N" means partially supported, "N" means unsupported.
 
+### Connectors and Modes Supported by LocalProcessor
+
+| Connector\Modes             | Batch Scan | Streaming Scan | Streaming CDC | Lookup          | Batch Append | Streaming Append | Streaming Upsert |
+|-----------------------------|------------|----------------|---------------|-----------------|--------------|------------------|------------------|
+| [FileSystem](filesystem.md) | Y          | N              | N             | N               | Y            | N                | N                |
+
 ### Connectors and Modes Supported by FlinkProcessor
 
-| Connector\Modes   | Batch Scan | Streaming Scan | Streaming CDC | Lookup          | Batch Append | Streaming Append | Streaming Upsert |
-|-------------------|------------|----------------|---------------|-----------------|--------------|------------------|------------------|
-| [MySQL](mysql.md) | N          | N              | N             | Y/N<sup>1</sup> | N            | Y                | Y                |
-| [Kafka](kafka.md) | N          | Y              | N             | N               | N            | Y                | N                |
-| [Redis](redis.md) | N          | N              | N             | Y/N<sup>1</sup> | N            | N                | Y                |
+| Connector\Modes             | Batch Scan | Streaming Scan | Streaming CDC | Lookup          | Batch Append | Streaming Append | Streaming Upsert |
+|-----------------------------|------------|----------------|---------------|-----------------|--------------|------------------|------------------|
+| [FileSystem](filesystem.md) | N          | Y              | N             | N               | N            | Y                | N                |
+| [MySQL](mysql.md)           | N          | N              | N             | Y/N<sup>1</sup> | N            | Y                | Y                |
+| [Kafka](kafka.md)           | N          | Y              | N             | N               | N            | Y                | N                |
+| [Redis](redis.md)           | N          | N              | N             | Y/N<sup>1</sup> | N            | N                | Y                |
 
 1. Only supported in OnDemandFeatureView currently.
+
+### Connectors and Modes Supported by SparkProcessor
+
+| Connector\Modes             | Batch Scan | Streaming Scan | Streaming CDC | Lookup          | Batch Append | Streaming Append | Streaming Upsert |
+|-----------------------------|------------|----------------|---------------|-----------------|--------------|------------------|------------------|
+| [FileSystem](filesystem.md) | Y          | N              | N             | N               | Y            | N                | N                |
