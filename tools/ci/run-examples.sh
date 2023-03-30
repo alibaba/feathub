@@ -22,6 +22,7 @@ CURRENT_DIR=$(dirname "${BASH_SOURCE-$0}")
 PROJECT_DIR=$(cd "${CURRENT_DIR}/../.."; pwd)
 
 FLINK_VERSION=1.15.2
+SPARK_VERSION=3.3.1
 
 cd "${PROJECT_DIR}"
 
@@ -29,6 +30,7 @@ wheel_files=`ls ./wheels/*`
 wheel_file=${wheel_files[0]}
 python -m pip install "${wheel_file}"
 python -m pip install "${wheel_file}[flink]"
+python -m pip install "${wheel_file}[spark]"
 
 echo "Running local processor quickstart."
 python python/feathub/examples/nyc_taxi.py
@@ -63,7 +65,22 @@ done
 echo "Stopping standalone Flink cluster."
 ./flink-"${FLINK_VERSION}"/bin/stop-cluster.sh
 
-python -m pip install "${wheel_file}[spark]"
+echo "Downloading Spark."
+curl -LO https://archive.apache.org/dist/spark/spark-"${SPARK_VERSION}"/spark-"${SPARK_VERSION}"-bin-hadoop3.tgz
+tar -xzf spark-"${SPARK_VERSION}"-bin-hadoop3.tgz
+
+# Add localhost to known hosts for starting standalone spark cluster.
+key_file="$HOME/.ssh/id_rsa"
+if [ ! -f "${key_file}" ]; then
+    ssh-keygen -t rsa -f "${key_file}" -P ""
+fi
+cat "${key_file}".pub >> ~/.ssh/authorized_keys
+
+echo "Starting standalone Spark cluster."
+./spark-"${SPARK_VERSION}"-bin-hadoop3/sbin/start-all.sh && sleep 5
 
 echo "Running Spark processor quickstart."
 python python/feathub/examples/nyc_taxi_spark_client.py
+
+echo "Stopping standalone Spark cluster."
+./spark-"${SPARK_VERSION}"-bin-hadoop3/sbin/stop-all.sh

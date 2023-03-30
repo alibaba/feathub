@@ -1,7 +1,9 @@
 # Flink Session Mode Quickstart
 
-In this document, we will show you the steps to submit a simple FeatHub job to a standalone Flink cluster in session mode. 
-The FeatHub job simply consumes the data from the Flink datagen connector, computes some feature, and prints out the result.
+In this document, we will show you the steps to submit a simple FeatHub job
+to a standalone Flink cluster in session mode. The FeatHub job simply consumes
+the data from the Flink datagen connector, computes some feature, and prints 
+out the result.
 
 ## Prerequisites
 

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import sys
+import socket
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent.parent.resolve()))
@@ -24,7 +25,10 @@ from feathub.feathub_client import FeathubClient
 def main() -> None:
     client = FeathubClient(
         props={
-            "processor": {"type": "spark", "spark": {"master": "local[1]"}},
+            "processor": {
+                "type": "spark",
+                "spark": {"master": f"spark://{socket.gethostname()}:7077"},
+            },
             "registry": {"type": "local", "local": {"namespace": "default"}},
             "feature_service": {"type": "local", "local": {}},
         }
