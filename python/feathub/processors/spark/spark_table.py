@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import typing
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import Optional, Union
 
 import pandas as pd
@@ -44,6 +44,8 @@ class SparkTable(Table):
         feature: TableDescriptor,
         spark_processor: "SparkProcessor",
         keys: Union[pd.DataFrame, TableDescriptor, None],
+        start_datetime: Optional[datetime],
+        end_datetime: Optional[datetime],
     ) -> None:
         """
         Instantiate the SparkTable.
@@ -55,15 +57,33 @@ class SparkTable(Table):
                      transformed into a table of keys. If it is not None, the computed
                      table only include rows whose key fields match at least one
                      row of the keys.
+        :param start_datetime: Optional. If it is not None, the `features` table should
+                               have a timestamp field. And the table will only
+                               include features whose
+                               timestamp >= start_datetime. If any field (e.g. minute)
+                               is not specified in the start_datetime, we assume this
+                               field has the minimum possible value.
+        :param end_datetime: Optional. If it is not None, the `features` table should
+                             have a timestamp field. And the table will only
+                             include features whose timestamp < end_datetime. If any
+                             field (e.g. minute) is not specified in the end_datetime,
+                             we assume this field has the maximum possible value.
         """
         super().__init__(feature.timestamp_field, feature.timestamp_format)
         self._feature = feature
         self._spark_processor = spark_processor
         self._keys = keys
+        self.start_datetime = start_datetime
+        self.end_datetime = end_datetime
 
     def get_schema(self) -> Schema:
         return to_feathub_schema(
-            self._spark_processor.get_spark_dataframe(self._feature, self._keys).schema
+            self._spark_processor.get_spark_dataframe(
+                feature=self._feature,
+                keys=self._keys,
+                start_datetime=self.start_datetime,
+                end_datetime=self.end_datetime,
+            ).schema
         )
 
     def to_pandas(self, force_bounded: bool = False) -> pd.DataFrame:
@@ -76,7 +96,12 @@ class SparkTable(Table):
                 )
             feature = feature.get_bounded_view()
 
-        dataframe = self._spark_processor.get_spark_dataframe(feature, self._keys)
+        dataframe = self._spark_processor.get_spark_dataframe(
+            feature=feature,
+            keys=self._keys,
+            start_datetime=self.start_datetime,
+            end_datetime=self.end_datetime,
+        )
 
         return dataframe.toPandas()
 
@@ -91,6 +116,8 @@ class SparkTable(Table):
             sink=sink,
             ttl=ttl,
             allow_overwrite=allow_overwrite,
+            start_datetime=self.start_datetime,
+            end_datetime=self.end_datetime,
         )
 
     def __eq__(self, other: typing.Any) -> bool:
@@ -99,4 +126,6 @@ class SparkTable(Table):
             and self._feature == other._feature
             and self._spark_processor == other._spark_processor
             and self._keys == other._keys
+            and self.start_datetime == other.start_datetime
+            and self.end_datetime == other.end_datetime
         )

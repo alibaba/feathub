@@ -85,10 +85,23 @@ class SparkAstEvaluator(AbstractAstEvaluator):
         return f"({self.eval(ast.child, variables)})"
 
     def eval_is_op(self, ast: IsOp, variables: Optional[Dict]) -> Any:
-        raise RuntimeError("IS/IS NOT operation is not supported.")
+        left_child = self.eval(ast.left_child, variables)
+        if ast.is_not:
+            return f"{left_child} IS NOT NULL"
+        else:
+            return f"{left_child} IS NULL"
 
     def eval_null_node(self, ast: NullNode, variables: Optional[Dict]) -> Any:
-        raise RuntimeError("NULL operation is not supported.")
+        return "NULL"
 
     def eval_case_op(self, ast: CaseOp, variables: Optional[Dict]) -> Any:
-        raise RuntimeError("CASE operation is not supported.")
+        eval_result = "CASE "
+        for ast_condition, ast_result in zip(ast.conditions, ast.results):
+            condition = self.eval(ast_condition, variables)
+            result = self.eval(ast_result, variables)
+            eval_result = eval_result + f"WHEN {condition} THEN {result} "
+        if not isinstance(ast.default, NullNode):
+            default = self.eval(ast.default, variables)
+            eval_result = eval_result + f"ELSE {default} "
+        eval_result = eval_result + "END"
+        return eval_result

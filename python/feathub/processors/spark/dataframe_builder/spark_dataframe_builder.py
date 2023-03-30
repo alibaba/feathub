@@ -11,7 +11,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Dict, Tuple, List, Sequence, Union
+from datetime import datetime
+from typing import Dict, Tuple, List, Sequence, Union, Optional
 
 import pandas as pd
 
@@ -78,6 +79,8 @@ class SparkDataFrameBuilder:
         self,
         features: TableDescriptor,
         keys: Union[pd.DataFrame, TableDescriptor, None] = None,
+        start_datetime: Optional[datetime] = None,
+        end_datetime: Optional[datetime] = None,
     ) -> NativeSparkDataFrame:
         """
         Convert the given features to native Spark DataFrame.
@@ -88,6 +91,17 @@ class SparkDataFrameBuilder:
         :param features: The feature to convert to Spark DataFrame.
         :param keys: Optional. If it is not none, then the returned table only includes
                      rows whose key fields match at least one row of the keys.
+        :param start_datetime: Optional. If it is not None, the `features` table should
+                               have a timestamp field. And the output table will only
+                               include features whose
+                               timestamp >= start_datetime. If any field (e.g. minute)
+                               is not specified in the start_datetime, we assume this
+                               field has the minimum possible value.
+        :param end_datetime: Optional. If it is not None, the `features` table should
+                             have a timestamp field. And the output table will only
+                             include features whose timestamp < end_datetime. If any
+                             field (e.g. minute) is not specified in the end_datetime,
+                             we assume this field has the maximum possible value.
         :return: The native Spark DataFrame that represents the given features.
         """
 
@@ -100,6 +114,16 @@ class SparkDataFrameBuilder:
 
         if keys is not None:
             dataframe = self._filter_dataframe_by_keys(dataframe, keys)
+
+        if start_datetime is not None or end_datetime is not None:
+            if features.timestamp_field is None:
+                raise FeathubException(
+                    "Feature is missing timestamp_field. It cannot be ranged "
+                    "by start_datetime or end_datetime."
+                )
+            dataframe = self._filter_dataframe_by_time(
+                dataframe, start_datetime, end_datetime
+            )
 
         if EVENT_TIME_ATTRIBUTE_NAME in dataframe.columns:
             dataframe = dataframe.drop(EVENT_TIME_ATTRIBUTE_NAME)
@@ -152,12 +176,6 @@ class SparkDataFrameBuilder:
     def _get_dataframe_from_derived_feature_view(
         self, feature_view: DerivedFeatureView
     ) -> NativeSparkDataFrame:
-        # TODO: Support filtering DerivedFeatureView in SparkProcessor.
-        if feature_view.filter_expr is not None:
-            raise FeathubException(
-                "SparkProcessor does not support filtering DerivedFeatureView."
-            )
-
         source_dataframe = self._get_spark_dataframe(feature_view.get_resolved_source())
         tmp_dataframe = source_dataframe
 
@@ -322,10 +340,40 @@ class SparkDataFrameBuilder:
                     f"{type(feature.transform).__name__} for feature {feature.name}."
                 )
 
+        # TODO: Apply filtering as early as possible to improve performance.
+        if feature_view.filter_expr is not None:
+            tmp_dataframe = tmp_dataframe.filter(
+                functions.expr(to_spark_sql_expr(feature_view.filter_expr))
+            )
+
         output_fields = feature_view.get_output_fields(
             source_fields=source_dataframe.schema.fieldNames()
         )
         return tmp_dataframe.select(output_fields)
+
+    @staticmethod
+    def _filter_dataframe_by_time(
+        dataframe: NativeSparkDataFrame,
+        start_datetime: Optional[datetime],
+        end_datetime: Optional[datetime],
+    ) -> NativeSparkDataFrame:
+        if start_datetime is not None:
+            dataframe = dataframe.filter(
+                functions.expr(
+                    EVENT_TIME_ATTRIBUTE_NAME
+                    + " >= "
+                    + str(int(start_datetime.timestamp() * 1000))
+                )
+            )
+        if end_datetime is not None:
+            dataframe = dataframe.filter(
+                functions.expr(
+                    EVENT_TIME_ATTRIBUTE_NAME
+                    + " < "
+                    + str(int(end_datetime.timestamp() * 1000))
+                )
+            )
+        return dataframe
 
     @staticmethod
     def _evaluate_python_udf_transform(
