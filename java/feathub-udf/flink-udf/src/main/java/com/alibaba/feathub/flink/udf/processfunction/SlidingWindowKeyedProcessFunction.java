@@ -44,6 +44,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -267,8 +268,11 @@ public class SlidingWindowKeyedProcessFunction extends KeyedProcessFunction<Row,
             return;
         }
 
-        state.lastOutputRow.update(outputRow);
-        out.collect(outputRow);
+        if (!skipSameWindowOutput
+                || !hasEqualAggregationResult(state.lastOutputRow.value(), outputRow)) {
+            state.lastOutputRow.update(outputRow);
+            out.collect(outputRow);
+        }
 
         final Long earliestRowTime = timestampList.get(0);
         if (earliestRowTime
@@ -277,6 +281,22 @@ public class SlidingWindowKeyedProcessFunction extends KeyedProcessFunction<Row,
                         - pruneRowGracePeriod) {
             state.pruneRow(timestamp, aggregationFieldsDescriptor);
         }
+    }
+
+    private boolean hasEqualAggregationResult(Row row0, Row row1) {
+        if (row0 == null || row1 == null) {
+            return row0 == null && row1 == null;
+        }
+
+        for (AggregationFieldsDescriptor.AggregationFieldDescriptor descriptor :
+                aggregationFieldsDescriptor.getAggFieldDescriptors()) {
+            if (!Objects.equals(
+                    row0.getField(descriptor.fieldName), row1.getField(descriptor.fieldName))) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /** The state of {@link SlidingWindowKeyedProcessFunction}. */
