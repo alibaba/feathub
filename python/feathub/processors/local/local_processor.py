@@ -141,7 +141,6 @@ class LocalProcessor(Processor):
             timestamp_format=features.timestamp_format,
         )
 
-    # TODO: figure out whether and how to support long running feature materialization.
     def materialize_features(
         self,
         features: Union[str, TableDescriptor],
@@ -151,7 +150,6 @@ class LocalProcessor(Processor):
         end_datetime: Optional[datetime] = None,
         allow_overwrite: bool = False,
     ) -> LocalJob:
-        # TODO: support ttl
         if ttl is not None or not allow_overwrite:
             raise RuntimeError("Unsupported operation.")
         features = self._resolve_table_descriptor(features)
@@ -166,7 +164,6 @@ class LocalProcessor(Processor):
         ).to_pandas()
 
         # TODO: handle allow_overwrite.
-        # TODO: Support FileSystemSink, KafkaSink, PrintSink.
         if isinstance(sink, MemoryStoreSink):
             return self._write_features_to_online_store(
                 features=features_df,
@@ -187,7 +184,6 @@ class LocalProcessor(Processor):
                 timestamp_format="unknown",
             )
 
-        # TODO: Support KafkaSource, DataGenSource.
         if isinstance(features, FileSystemSource):
             return self._get_table_from_file_source(features)
         elif isinstance(features, DerivedFeatureView):

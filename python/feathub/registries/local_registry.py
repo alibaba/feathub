@@ -57,7 +57,6 @@ class LocalRegistry(Registry):
         self.namespace = local_registry_config.get(NAMESPACE_CONFIG)
         self.tables: Dict[str, TableDescriptor] = {}
 
-    # TODO: persist metadata on disks if cache_only == True.
     # TODO: maintain the version and version_timestamp so that we can recover the
     # lineage information of a table as upstream table evolves.
     def build_features(

@@ -537,11 +537,6 @@ class FlinkTableBuilder:
 
         for feature in per_row_transform_features_following_first_sliding_feature:
             if isinstance(feature.transform, ExpressionTransform):
-                # This is a temporary solution to ignore the CURRENT_EVENT_TIME function
-                # as the event time (window time) is added above.
-                # TODO: Refactor FlinkAstEvaluator to properly handle CURRENT_EVENT_TIME
-                #  and expose CURRENT_EVENT_TIME as a built-in function of FeatHub
-                #  expression.
                 if feature.transform.expr == WINDOW_TIME_EXPR:
                     continue
                 tmp_table = self._evaluate_expression_transform(

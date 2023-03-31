@@ -25,7 +25,6 @@ from feathub.feature_views.transforms.over_window_transform import OverWindowTra
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
 
 
-# TODO: enforce dtype
 class Feature:
     """
     A feature belongs to a table (e.g. Source, FeatureView). It is uniquely

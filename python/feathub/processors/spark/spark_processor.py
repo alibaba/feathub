@@ -109,7 +109,6 @@ class SparkProcessor(Processor):
         allow_overwrite: bool = False,
     ) -> SparkJob:
         if ttl is not None:
-            # TODO: Add support for sinks with ttl.
             raise FeathubException(
                 "Spark processor does not support inserting features with ttl."
             )
