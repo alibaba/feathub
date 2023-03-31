@@ -2271,8 +2271,6 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 f"actual: {result_df}",
             )
 
-    # TODO: Add tests for other SKIP_SAME_WINDOW_OUTPUT_CONFIG
-    #  and ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG combinations.
     def test_late_data(self):
         df = pd.DataFrame(
             [

@@ -44,7 +44,6 @@ class FeathubClient:
             registry=self.registry,
         )
 
-    # TODO: check whether the start_datetime and end_datetime should be strict.
     def get_features(
         self,
         features: Union[str, TableDescriptor],

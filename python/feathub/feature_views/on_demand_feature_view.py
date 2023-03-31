@@ -98,7 +98,6 @@ class OnDemandFeatureView(FeatureView):
                     f"'{type(feature.transform)}'."
                 )
 
-    # TODO: cache the feature view itself in the registry. Same for other views.
     def build(
         self, registry: Registry, props: Optional[Dict] = None
     ) -> TableDescriptor:

@@ -159,8 +159,6 @@ class MemoryOnlineStore:
             row = table[key]
             rows.append(row)
 
-        # TODO: move this logic to FeatureService.
-
         schema = self.table_infos[table_name].schema
         features = (
             pd.concat(rows, axis=1)

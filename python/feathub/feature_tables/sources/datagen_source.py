@@ -151,7 +151,6 @@ class DataGenSource(FeatureTable):
         self.field_configs = field_configs if field_configs is not None else {}
         self.max_out_of_orderness = max_out_of_orderness
 
-        # TODO: Add validation of field type and field config.
         for field_name, _ in self.field_configs.items():
             if field_name not in schema.field_names:
                 raise FeathubException(f"Field {field_name} is not in the schema.")
