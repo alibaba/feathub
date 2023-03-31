@@ -24,7 +24,6 @@ from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.processors.flink.flink_types_utils import to_flink_schema
 from feathub.processors.flink.table_builder.source_sink_utils_common import (
-    generate_random_table_name,
     get_schema_from_table,
     define_watermark,
 )
@@ -63,14 +62,10 @@ def get_table_from_file_source(
         # Set ignore-parse-errors to set null in case of csv parse error
         descriptor_builder.option("csv.ignore-parse-errors", "true")
 
-    table_name = generate_random_table_name(file_source.name)
-    t_env.create_temporary_table(table_name, descriptor_builder.build())
-    return t_env.from_path(table_name)
+    return t_env.from_descriptor(descriptor_builder.build())
 
 
-def insert_into_file_sink(
-    t_env: StreamTableEnvironment, table: NativeFlinkTable, sink: FileSystemSink
-) -> TableResult:
+def insert_into_file_sink(table: NativeFlinkTable, sink: FileSystemSink) -> TableResult:
     path = sink.path
 
     # TODO: Remove this check after FLINK-28513 is resolved.
@@ -79,17 +74,10 @@ def insert_into_file_sink(
             "Cannot sink files in CSV format to s3 due to FLINK-28513."
         )
 
-    # TODO: Alibaba Cloud Realtime Compute has bug that assumes all the tables should
-    # have a name in VVR-6.0.2, which should be fixed in next version VVR-6.0.3. As a
-    # current workaround, we have to generate a random table name. We should update the
-    # code to use anonymous table sink after VVR-6.0.3 is released.
-    random_sink_name = generate_random_table_name("FileSink")
-    t_env.create_temporary_table(
-        random_sink_name,
+    return table.execute_insert(
         NativeFlinkTableDescriptor.for_connector("filesystem")
         .schema(get_schema_from_table(table))
         .format(sink.data_format)
         .option("path", path)
-        .build(),
+        .build()
     )
-    return table.execute_insert(random_sink_name)

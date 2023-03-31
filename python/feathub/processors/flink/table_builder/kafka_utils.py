@@ -35,7 +35,6 @@ from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_
 from feathub.processors.flink.flink_types_utils import to_flink_schema
 from feathub.processors.flink.table_builder.source_sink_utils_common import (
     define_watermark,
-    generate_random_table_name,
     get_schema_from_table,
 )
 from feathub.processors.flink.table_builder.time_utils import (
@@ -138,9 +137,7 @@ def get_table_from_kafka_source(
     if kafka_source.key_format == "csv":
         descriptor_builder.option("key.csv.ignore-parse-errors", "true")
 
-    table_name = generate_random_table_name(kafka_source.name)
-    t_env.create_temporary_table(table_name, descriptor_builder.build())
-    table = t_env.from_path(table_name)
+    table = t_env.from_descriptor(descriptor_builder.build())
 
     if (
         kafka_source.timestamp_format != "epoch"
@@ -198,15 +195,7 @@ def insert_into_kafka_sink(
     for k, v in sink.producer_properties.items():
         kafka_sink_descriptor_builder.option(f"properties.{k}", v)
 
-    # TODO: Alibaba Cloud Realtime Compute has bug that assumes all the tables should
-    # have a name in VVR-6.0.2, which should be fixed in next version VVR-6.0.3. As a
-    # current workaround, we have to generate a random table name. We should update the
-    # code to use anonymous table sink after VVR-6.0.3 is released.
-    random_sink_name = generate_random_table_name("KafkaSink")
-    t_env.create_temporary_table(
-        random_sink_name, kafka_sink_descriptor_builder.build()
-    )
-    return table.execute_insert(random_sink_name)
+    return table.execute_insert(kafka_sink_descriptor_builder.build())
 
 
 def _get_kafka_connector_jar() -> str:

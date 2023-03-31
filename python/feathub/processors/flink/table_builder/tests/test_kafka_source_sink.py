@@ -86,11 +86,11 @@ class KafkaSourceSinkTest(unittest.TestCase):
         )
 
         with patch.object(
-            self.t_env, "create_temporary_table"
-        ) as create_temporary_table, patch.object(self.t_env, "from_path"):
+            self.t_env, "from_descriptor"
+        ) as from_descriptor, patch.object(self.t_env, "from_path"):
             get_table_from_source(self.t_env, source)
             flink_table_descriptor: NativeFlinkTableDescriptor = (
-                create_temporary_table.call_args[0][1]
+                from_descriptor.call_args[0][0]
             )
 
             expected_col_strs = [
@@ -122,7 +122,7 @@ class KafkaSourceSinkTest(unittest.TestCase):
 
             bounded_source = source.get_bounded_view()
             get_table_from_source(self.t_env, cast(FeatureTable, bounded_source))
-            flink_table_descriptor = create_temporary_table.call_args[0][1]
+            flink_table_descriptor = from_descriptor.call_args[0][0]
 
             expected_col_strs = [
                 "`id` STRING",
@@ -161,14 +161,11 @@ class KafkaSourceSinkTest(unittest.TestCase):
         )
 
         table = self.t_env.from_elements([(1,)])
-        with patch.object(
-            self.t_env, "create_temporary_table"
-        ) as create_temporary_table, patch.object(table, "execute_insert"):
-
+        with patch.object(table, "execute_insert") as execute_insert:
             descriptor: TableDescriptor = MockTableDescriptor(keys=["id"])
             insert_into_sink(self.t_env, table, descriptor, sink)
             flink_table_descriptor: NativeFlinkTableDescriptor = (
-                create_temporary_table.call_args[0][1]
+                execute_insert.call_args[0][0]
             )
 
             expected_options = {
