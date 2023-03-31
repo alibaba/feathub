@@ -11,14 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import glob
-import tempfile
 from typing import Optional, Dict
 
-import pandas as pd
-
 from feathub.feathub_client import FeathubClient
-from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.feature_tables.tests.test_black_hole_sink import BlackHoleSinkITTest
 from feathub.feature_tables.tests.test_datagen_source import DataGenSourceITTest
 from feathub.feature_tables.tests.test_file_system_source_sink import (
@@ -31,18 +26,17 @@ from feathub.feature_views.tests.test_derived_feature_view import (
 from feathub.feature_views.transforms.tests.test_expression_transform import (
     ExpressionTransformITTest,
 )
+from feathub.feature_views.transforms.tests.test_join_transform import (
+    JoinTransformITTest,
+)
 from feathub.feature_views.transforms.tests.test_over_window_transform import (
     OverWindowTransformITTest,
 )
 from feathub.feature_views.transforms.tests.test_python_udf_transform import (
     PythonUDFTransformITTest,
 )
-from feathub.tests.test_online_features import OnlineFeaturesITTest
-
-from feathub.feature_views.transforms.tests.test_join_transform import (
-    JoinTransformITTest,
-)
 from feathub.tests.test_get_features import GetFeaturesITTest
+from feathub.tests.test_online_features import OnlineFeaturesITTest
 
 
 class SparkProcessorITTest(
@@ -84,27 +78,6 @@ class SparkProcessorITTest(
             },
             extra_config,
         )
-
-    def test_file_system_source_sink(self):
-        source = self.create_file_source(self.input_data)
-
-        sink_path = tempfile.NamedTemporaryFile(dir=self.temp_dir, suffix=".csv").name
-
-        sink = FileSystemSink(sink_path, "csv")
-
-        self.client.materialize_features(
-            features=source,
-            sink=sink,
-            allow_overwrite=True,
-        ).wait()
-
-        files = glob.glob(f"{sink_path}/*.csv")
-        df = pd.DataFrame()
-        for f in files:
-            csv = pd.read_csv(f, names=["name", "cost", "distance", "time"])
-            df = df.append(csv)
-        df = df.sort_values(by=["time"]).reset_index(drop=True)
-        self.assertTrue(self.input_data.equals(df))
 
     # TODO: Add back following test cases after SparkProcessor supports aggregations
     #  on both limited and timed window

@@ -11,7 +11,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-import glob
 import os
 import shutil
 import tempfile
@@ -444,27 +443,6 @@ class FlinkProcessorITTest(
                 extra_config,
             )
         return self._cached_clients[str(extra_config)]
-
-    def test_read_write(self):
-        source = self.create_file_source(self.input_data)
-
-        sink_path = tempfile.NamedTemporaryFile(dir=self.temp_dir, suffix=".csv").name
-
-        sink = FileSystemSink(sink_path, "csv")
-
-        self.client.materialize_features(
-            features=source,
-            sink=sink,
-            allow_overwrite=True,
-        ).wait()
-
-        files = glob.glob(f"{sink_path}/*")
-        df = pd.DataFrame()
-        for f in files:
-            csv = pd.read_csv(f, names=["name", "cost", "distance", "time"])
-            df = df.append(csv)
-        df = df.sort_values(by=["time"]).reset_index(drop=True)
-        self.assertTrue(self.input_data.equals(df))
 
     def test_unsupported_file_format(self):
         source = self.create_file_source(self.input_data)
