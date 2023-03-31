@@ -24,6 +24,7 @@ from pyflink.table import Table, TableSchema
 
 from feathub.common.exceptions import (
     FeathubException,
+    FeathubConfigurationException,
 )
 from feathub.common.types import Int32, Int64, String
 from feathub.feathub_client import FeathubClient
@@ -370,6 +371,26 @@ class FlinkProcessorTest(unittest.TestCase):
         self.assertEqual(
             processor.flink_table_builder.t_env.get_config().get("key", None), "value"
         )
+
+    def test_native_config_conflict(self):
+        with self.assertRaises(FeathubConfigurationException):
+            FlinkProcessor(
+                props={
+                    "processor.flink.deployment_mode": "kubernetes-application",
+                    "processor.flink.kubernetes.image": "image1",
+                    "processor.flink.native.kubernetes.container.image": "my_image",
+                },
+                registry=self.registry,
+            )
+
+        with self.assertRaises(FeathubConfigurationException):
+            FlinkProcessor(
+                props={
+                    "processor.flink.deployment_mode": "kubernetes-application",
+                    "processor.flink.native.table.local-time-zone": "Asia/Beijing",
+                },
+                registry=self.registry,
+            )
 
 
 class FlinkProcessorITTest(

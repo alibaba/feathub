@@ -20,7 +20,7 @@ from pyspark.sql import DataFrame as NativeSparkDataFrame
 from pyspark.sql import SparkSession
 
 from feathub.common.config import TIMEZONE_CONFIG
-from feathub.common.exceptions import FeathubException
+from feathub.common.exceptions import FeathubException, FeathubConfigurationException
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_views.feature_view import FeatureView
 from feathub.processors.processor import Processor
@@ -35,6 +35,7 @@ from feathub.processors.spark.spark_processor_config import (
     SparkProcessorConfig,
     MASTER_CONFIG,
     NATIVE_CONFIG_PREFIX,
+    NATIVE_CONFIG_PROCESSOR_CONFIG_MAP,
 )
 from feathub.processors.spark.spark_table import SparkTable
 from feathub.registries.registry import Registry
@@ -72,10 +73,21 @@ class SparkProcessor(Processor):
         spark_session_builder = spark_session_builder.config(
             "spark.sql.session.timeZone", config.get(TIMEZONE_CONFIG)
         )
+
+        prefix_len = len(NATIVE_CONFIG_PREFIX)
         for k, v in config.original_props_with_prefix(
-            NATIVE_CONFIG_PREFIX, True
+            NATIVE_CONFIG_PREFIX, False
         ).items():
-            spark_session_builder = spark_session_builder.config(k, v)
+            if (
+                k in NATIVE_CONFIG_PROCESSOR_CONFIG_MAP
+                and NATIVE_CONFIG_PROCESSOR_CONFIG_MAP[k] in config.config_values
+                and v != config.config_values[NATIVE_CONFIG_PROCESSOR_CONFIG_MAP[k]]
+            ):
+                raise FeathubConfigurationException(
+                    f"Native config: {k} is conflict with processor config: "
+                    f"{NATIVE_CONFIG_PROCESSOR_CONFIG_MAP[k]}."
+                )
+            spark_session_builder = spark_session_builder.config(k[prefix_len:], v)
         spark_session = spark_session_builder.getOrCreate()
 
         self._dataframe_builder = SparkDataFrameBuilder(spark_session, self._registry)

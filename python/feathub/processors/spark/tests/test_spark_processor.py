@@ -11,8 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import unittest
 from typing import Optional, Dict
 
+from feathub.common.exceptions import FeathubConfigurationException
 from feathub.feathub_client import FeathubClient
 from feathub.feature_tables.tests.test_black_hole_sink import BlackHoleSinkITTest
 from feathub.feature_tables.tests.test_datagen_source import DataGenSourceITTest
@@ -35,8 +37,34 @@ from feathub.feature_views.transforms.tests.test_over_window_transform import (
 from feathub.feature_views.transforms.tests.test_python_udf_transform import (
     PythonUDFTransformITTest,
 )
+from feathub.processors.spark.spark_processor import SparkProcessor
+from feathub.registries.local_registry import LocalRegistry
 from feathub.tests.test_get_features import GetFeaturesITTest
 from feathub.tests.test_online_features import OnlineFeaturesITTest
+
+
+class SparkProcessorTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.registry = LocalRegistry(props={})
+
+    def test_native_config_conflict(self):
+        with self.assertRaises(FeathubConfigurationException):
+            SparkProcessor(
+                props={
+                    "processor.spark.master": "local[1]",
+                    "processor.spark.native.spark.master": "local[2]",
+                },
+                registry=self.registry,
+            )
+
+        with self.assertRaises(FeathubConfigurationException):
+            SparkProcessor(
+                props={
+                    "processor.spark.master": "local[1]",
+                    "processor.spark.native.spark.sql.session.timeZone": "Asia/Beijing",
+                },
+                registry=self.registry,
+            )
 
 
 class SparkProcessorITTest(

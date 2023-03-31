@@ -13,7 +13,7 @@
 #  limitations under the License.
 from typing import List, Dict, Any
 
-from feathub.common.config import ConfigDef
+from feathub.common.config import ConfigDef, TIMEZONE_CONFIG
 from feathub.processors.processor_config import ProcessorConfig, PROCESSOR_PREFIX
 
 SPARK_PROCESSOR_PREFIX = PROCESSOR_PREFIX + "spark."
@@ -32,6 +32,12 @@ spark_processor_config_defs: List[ConfigDef] = [
         description=MASTER_DOC,
     ),
 ]
+
+# Map from native Spark configs to the corresponding FeatHub processor configs
+NATIVE_CONFIG_PROCESSOR_CONFIG_MAP = {
+    NATIVE_CONFIG_PREFIX + "spark.master": MASTER_CONFIG,
+    NATIVE_CONFIG_PREFIX + "spark.sql.session.timeZone": TIMEZONE_CONFIG,
+}
 
 
 class SparkProcessorConfig(ProcessorConfig):

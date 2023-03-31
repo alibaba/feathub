@@ -18,14 +18,17 @@ from typing import Optional, Union, Dict
 from urllib.parse import urlparse
 
 import pandas as pd
+from pyflink.common import Configuration
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import (
     StreamTableEnvironment,
+    EnvironmentSettings,
 )
 
 from feathub.common.config import TIMEZONE_CONFIG
 from feathub.common.exceptions import (
     FeathubException,
+    FeathubConfigurationException,
 )
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_views.feature_view import FeatureView
@@ -37,6 +40,7 @@ from feathub.processors.flink.flink_processor_config import (
     DEPLOYMENT_MODE_CONFIG,
     MASTER_CONFIG,
     NATIVE_CONFIG_PREFIX,
+    NATIVE_CONFIG_PROCESSOR_CONFIG_MAP,
 )
 from feathub.processors.flink.flink_table import FlinkTable
 from feathub.processors.flink.job_submitter.flink_job_submitter import FlinkJobSubmitter
@@ -224,18 +228,34 @@ class FlinkProcessor(Processor):
                 f"remote -m {jobmanager_rpc_address}:{jobmanager_rpc_port}",
             )
 
-        env = StreamExecutionEnvironment.get_execution_environment()
-        table_env = StreamTableEnvironment.create(env)
-
-        table_env.get_config().set(
+        native_flink_config = Configuration()
+        native_flink_config.set_string(
             "table.local-time-zone", self.config.get(TIMEZONE_CONFIG)
         )
 
-        # TODO: report error when processor configs conflict with native.* configs.
+        prefix_len = len(NATIVE_CONFIG_PREFIX)
         for k, v in self.config.original_props_with_prefix(
-            NATIVE_CONFIG_PREFIX, True
+            NATIVE_CONFIG_PREFIX, False
         ).items():
-            table_env.get_config().set(k, v)
+            if (
+                k in NATIVE_CONFIG_PROCESSOR_CONFIG_MAP
+                and NATIVE_CONFIG_PROCESSOR_CONFIG_MAP[k] in self.config.config_values
+                and v
+                != self.config.config_values[NATIVE_CONFIG_PROCESSOR_CONFIG_MAP[k]]
+            ):
+                raise FeathubConfigurationException(
+                    f"Native config: {k} is conflict with processor config: "
+                    f"{NATIVE_CONFIG_PROCESSOR_CONFIG_MAP[k]}."
+                )
+            native_flink_config.set_string(k[prefix_len:], v)
+
+        env = StreamExecutionEnvironment.get_execution_environment()
+        table_env = StreamTableEnvironment.create(
+            env,
+            EnvironmentSettings.new_instance()
+            .with_configuration(native_flink_config)
+            .build(),
+        )
 
         if jobmanager_rpc_address is not None and jobmanager_rpc_port is not None:
             os.environ.pop("SUBMIT_ARGS")

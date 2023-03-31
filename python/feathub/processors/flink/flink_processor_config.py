@@ -14,7 +14,7 @@
 
 from typing import Dict, Any, List
 
-from feathub.common.config import ConfigDef
+from feathub.common.config import ConfigDef, TIMEZONE_CONFIG
 from feathub.common.validators import in_list
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
 from feathub.processors.processor_config import ProcessorConfig, PROCESSOR_PREFIX
@@ -87,6 +87,16 @@ flink_processor_config_defs: List[ConfigDef] = [
         default_value="~/.kube/config",
     ),
 ]
+
+# Map from native Flink configs to the corresponding FeatHub processor configs
+NATIVE_CONFIG_PROCESSOR_CONFIG_MAP = {
+    NATIVE_CONFIG_PREFIX + "rest.address": MASTER_CONFIG,
+    NATIVE_CONFIG_PREFIX + "rest.port": MASTER_CONFIG,
+    NATIVE_CONFIG_PREFIX + "kubernetes.container.image": KUBERNETES_IMAGE_CONFIG,
+    NATIVE_CONFIG_PREFIX + "kubernetes.namespace": KUBERNETES_NAMESPACE_CONFIG,
+    NATIVE_CONFIG_PREFIX + "kubernetes.config.file": KUBERNETES_CONFIG_FILE_CONFIG,
+    NATIVE_CONFIG_PREFIX + "table.local-time-zone": TIMEZONE_CONFIG,
+}
 
 
 class FlinkProcessorConfig(ProcessorConfig):
