@@ -35,7 +35,6 @@ from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_
 from feathub.processors.flink.flink_types_utils import to_feathub_schema
 from feathub.processors.flink.table_builder.source_sink_utils_common import (
     get_schema_from_table,
-    generate_random_table_name,
 )
 from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
@@ -88,11 +87,7 @@ def insert_into_redis_sink(
             "timestampField", features_desc.timestamp_field
         )
 
-    random_sink_name = generate_random_table_name("RedisSink")
-    t_env.create_temporary_table(
-        random_sink_name, redis_sink_descriptor_builder.build()
-    )
-    return features_table.execute_insert(random_sink_name)
+    return features_table.execute_insert(redis_sink_descriptor_builder.build())
 
 
 def _get_redis_connector_jars() -> list:

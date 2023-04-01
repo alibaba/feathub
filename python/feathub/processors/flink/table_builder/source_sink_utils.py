@@ -82,11 +82,11 @@ def insert_into_sink(
     Insert the flink table to the given sink.
     """
     if isinstance(sink, FileSystemSink):
-        return insert_into_file_sink(t_env, features_table, sink)
+        return insert_into_file_sink(features_table, sink)
     elif isinstance(sink, KafkaSink):
         return insert_into_kafka_sink(t_env, features_table, sink, features_desc.keys)
     elif isinstance(sink, PrintSink):
-        return insert_into_print_sink(t_env, features_table)
+        return insert_into_print_sink(features_table)
     elif isinstance(sink, RedisSink):
         return insert_into_redis_sink(t_env, features_table, features_desc, sink)
     elif isinstance(sink, MySQLSink):

@@ -49,14 +49,12 @@ class RedisSourceSinkTest(unittest.TestCase):
         )
 
         table = t_env.from_elements([(1,)]).alias("id")
-        with patch.object(
-            t_env, "create_temporary_table"
-        ) as create_temporary_table, patch("pyflink.table.table.Table.execute_insert"):
+        with patch("pyflink.table.table.Table.execute_insert") as execute_insert:
             descriptor: TableDescriptor = MockTableDescriptor(keys=["id"])
 
             insert_into_sink(t_env, table, descriptor, sink)
             flink_table_descriptor: NativeFlinkTableDescriptor = (
-                create_temporary_table.call_args[0][1]
+                execute_insert.call_args[0][0]
             )
 
             expected_options = {
