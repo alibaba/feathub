@@ -60,7 +60,7 @@ class KafkaSourceSinkTest(unittest.TestCase):
             os.environ.pop("PYFLINK_GATEWAY_DISABLED")
 
     def test_kafka_source(self):
-        schema = Schema(["id", "val", "ts"], [String, Int64, Int64])
+        schema = Schema(["id1", "id2", "val", "ts"], [String, String, Int64, Int64])
         source = KafkaSource(
             "kafka_source",
             bootstrap_server="localhost:9092",
@@ -94,7 +94,8 @@ class KafkaSourceSinkTest(unittest.TestCase):
             )
 
             expected_col_strs = [
-                "`id` STRING",
+                "`id1` STRING",
+                "`id2` STRING",
                 "`val` BIGINT",
                 "`ts` BIGINT",
             ]
@@ -125,7 +126,8 @@ class KafkaSourceSinkTest(unittest.TestCase):
             flink_table_descriptor = create_temporary_table.call_args[0][1]
 
             expected_col_strs = [
-                "`id` STRING",
+                "`id1` STRING",
+                "`id2` STRING",
                 "`val` BIGINT",
                 "`ts` BIGINT",
             ]

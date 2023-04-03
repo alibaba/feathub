@@ -74,6 +74,23 @@ class FeatureTable(TableDescriptor, ABC):
         self.properties = properties
         self.schema = schema
 
+        if schema is not None:
+            if (
+                timestamp_field is not None
+                and timestamp_field not in schema.field_names
+            ):
+                raise FeathubException(
+                    f"Timestamp field '{timestamp_field}' it is not present "
+                    f"in the schema '{schema}'."
+                )
+            if keys is not None:
+                missing_keys = set(keys) - set(schema.field_names)
+                if len(missing_keys) > 0:
+                    raise FeathubException(
+                        f"Key field(s) '{missing_keys}' is not present "
+                        f"in the schema '{schema}'."
+                    )
+
     def get_output_features(self) -> List[Feature]:
         if self.schema is None:
             raise FeathubException(

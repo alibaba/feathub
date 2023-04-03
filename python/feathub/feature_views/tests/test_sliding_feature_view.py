@@ -46,7 +46,10 @@ class SlidingFeatureViewTest(unittest.TestCase):
             name="source_1",
             path="dummy_source_file",
             data_format="csv",
-            schema=Schema(["id", "fare_amount"], [types.Int32, types.Int32]),
+            schema=Schema(
+                ["id", "fare_amount", "lpep_dropoff_datetime"],
+                [types.Int32, types.Int32, types.Int64],
+            ),
             timestamp_field="lpep_dropoff_datetime",
             timestamp_format="%Y-%m-%d %H:%M:%S",
         )
