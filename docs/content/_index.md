@@ -12,7 +12,6 @@ applications.
 		- [Flink Cli Mode Quickstart](get-started/quickstarts/flink-cli-mode.md)
 		- [Flink Session Mode Quickstart](get-started/quickstarts/flink-session-mode.md)
 		- [Spark Client Mode Quickstart](get-started/quickstarts/spark-client-mode.md)
-	- [Tutorial](get-started/tutorial.md)
 - [Engines](engines/_index.md)
 	- [Apache Flink](engines/flink.md)
 	- [Apache Spark](engines/spark.md)

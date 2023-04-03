@@ -126,7 +126,7 @@ FeatHub supports the following compute engines to execute feature ETL pipeline:
 The following examples demonstrate how to define a variety of features
 concisely using FeatHub SDK.
 
-See [Tutorial](docs/content/get-started/tutorial.md) to learn more about how to
+See [NYC Taxi Demo](docs/examples/nyc_taxi.ipynb) to learn more about how to
 define, generate and serve features using FeatHub SDK.
 
 - Define features via table joins with point-in-time correctness
@@ -239,6 +239,12 @@ You can use the following quickstart guides to compute features in a standalone
 Spark cluster.
 
 - [Spark Processor Client Mode Quickstart](docs/content/get-started/quickstarts/spark-client-mode.md)
+
+### Examples
+
+| Name                                           | Description                                                  |
+| ---------------------------------------------- | ------------------------------------------------------------ |
+| [NYC Taxi Demo](./docs/examples/nyc_taxi.ipynb) | Quickstart notebook that demonstrates how to define, extract, transform and materialize features with NYC taxi-fare prediction sample data. |
 
 ## Developer Guide
 
