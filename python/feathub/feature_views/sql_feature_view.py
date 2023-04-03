@@ -103,6 +103,9 @@ class SqlFeatureView(FeatureView):
     def get_output_fields(self, source_fields: List[str]) -> List[str]:
         return self.schema.field_names.copy()
 
+    def get_output_features(self) -> List[Feature]:
+        return [self.get_feature(field_name) for field_name in self.schema.field_names]
+
     def get_feature(self, feature_name: str) -> Feature:
         return Feature(
             name=feature_name,
@@ -112,7 +115,7 @@ class SqlFeatureView(FeatureView):
         )
 
     def get_resolved_features(self) -> Sequence[Feature]:
-        return [self.get_feature(field_name) for field_name in self.schema.field_names]
+        return self.get_output_features()
 
     def get_resolved_source(self) -> TableDescriptor:
         raise FeathubException("Unsupported Operation.")
