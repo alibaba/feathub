@@ -96,5 +96,11 @@ class Feature:
     def __str__(self) -> str:
         return json.dumps(self.to_json(), indent=2, sort_keys=True)
 
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __hash__(self) -> int:
+        return hash(((k, v) for k, v in self.to_json().items()))
+
     def __eq__(self, other: object) -> bool:
         return isinstance(other, Feature) and self.to_json() == other.to_json()

@@ -34,7 +34,10 @@ class FeatureViewTest(unittest.TestCase):
             name="source_1",
             path="dummy_source_file",
             data_format="csv",
-            schema=Schema(["lpep_dropoff_datetime"], [Int64]),
+            schema=Schema(
+                ["lpep_dropoff_datetime", "fare_amount", "trip_distance"],
+                [Int64, Int64, Int64],
+            ),
             timestamp_field="lpep_dropoff_datetime",
             timestamp_format="%Y-%m-%d %H:%M:%S",
         )

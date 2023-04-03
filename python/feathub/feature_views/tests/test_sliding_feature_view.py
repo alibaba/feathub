@@ -47,8 +47,8 @@ class SlidingFeatureViewTest(unittest.TestCase):
             path="dummy_source_file",
             data_format="csv",
             schema=Schema(
-                ["id", "fare_amount", "lpep_dropoff_datetime"],
-                [types.Int32, types.Int32, types.Int64],
+                ["id", "id2", "fare_amount", "distance", "lpep_dropoff_datetime"],
+                [types.Int32, types.Int32, types.Int32, types.Int32, types.Int64],
             ),
             timestamp_field="lpep_dropoff_datetime",
             timestamp_format="%Y-%m-%d %H:%M:%S",
@@ -101,7 +101,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
                 features=[
                     feature_1,
                 ],
-            )
+            ).build(self.registry)
 
     def test_expression_transform_not_grouping_key(self):
         feature_1 = Feature(
@@ -130,11 +130,84 @@ class SlidingFeatureViewTest(unittest.TestCase):
                     feature_1,
                     feature_2,
                 ],
-            )
+            ).build(self.registry)
         self.assertIn("not used as grouping key", cm.exception.args[0])
 
+    def test_sliding_with_expression_transform(self):
+        feature_1 = Feature(
+            name="feature_1",
+            transform="id + 1",
+        )
+
+        sliding_feature_1 = Feature(
+            name="sliding_feature_1",
+            transform=SlidingWindowTransform(
+                expr="CAST(fare_amount AS FLOAT) + 1",
+                agg_func="SUM",
+                window_size=timedelta(seconds=30),
+                group_by_keys=["id", "feature_1"],
+                step_size=timedelta(seconds=10),
+            ),
+        )
+
+        after_sliding_feature = Feature(
+            name="after_sliding_feature",
+            transform="sliding_feature_1 + id + window_time",
+        )
+
+        features = [
+            feature_1,
+            sliding_feature_1,
+            after_sliding_feature,
+        ]
+        feature_view = SlidingFeatureView(
+            name="feature_view_1",
+            source=self.source,
+            features=features,
+        )
+
+        built_feature_view = feature_view.build(self.registry)
+
+        self.assertTrue(
+            set([f.name for f in features]).issubset(
+                set([f.name for f in built_feature_view.get_output_features()])
+            )
+        )
+
+    def test_expression_transform_not_depends_on_sliding_window(self):
+        sliding_feature = Feature(
+            name="sliding_feature",
+            transform=SlidingWindowTransform(
+                expr="CAST(fare_amount AS FLOAT) + 1",
+                agg_func="SUM",
+                window_size=timedelta(seconds=30),
+                group_by_keys=["id"],
+                step_size=timedelta(seconds=10),
+            ),
+        )
+
+        after_sliding_feature = Feature(
+            name="after_sliding_feature", transform="fare_amount * 2"
+        )
+
+        with self.assertRaises(FeathubException) as cm:
+            SlidingFeatureView(
+                name="feature_view_1",
+                source=self.source,
+                features=[
+                    sliding_feature,
+                    after_sliding_feature,
+                ],
+            ).build(self.registry)
+
+        self.assertIn(
+            "after sliding window should only depend on timestamp field, "
+            "sliding window features, or group-by keys.",
+            cm.exception.args[0],
+        )
+
     def test_str_feature_not_grouping_key(self):
-        feature_1 = "feature_1"
+        feature_1 = "distance"
 
         feature_2 = Feature(
             name="feature_2",
@@ -156,7 +229,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
                     feature_1,
                     feature_2,
                 ],
-            )
+            ).build(self.registry)
         self.assertIn("not used as grouping key", cm.exception.args[0])
 
     def test_different_group_by_keys(self):
@@ -192,7 +265,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
                     feature_1,
                     feature_2,
                 ],
-            )
+            ).build(self.registry)
         self.assertIn("different group-by keys", cm.exception.args[0])
 
     def test_different_step(self):
@@ -228,16 +301,16 @@ class SlidingFeatureViewTest(unittest.TestCase):
                     feature_1,
                     feature_2,
                 ],
-            )
+            ).build(self.registry)
         self.assertIn("different step size", cm.exception.args[0])
 
     def test_without_sliding_window_transform(self):
-        feature_1 = "feature_1"
+        feature_1 = "fare_amount"
 
         feature_2 = Feature(
             name="feature_2",
             dtype=types.Float32,
-            transform="feature_1 + 1",
+            transform="fare_amount + 1",
         )
 
         with self.assertRaises(FeathubException) as cm:
@@ -248,7 +321,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
                     feature_1,
                     feature_2,
                 ],
-            )
+            ).build(self.registry)
 
         self.assertIn(
             "at least one feature with SlidingWindowTransform", cm.exception.args[0]

@@ -14,13 +14,16 @@
 
 from __future__ import annotations
 
-from typing import Union, Dict, Sequence, Optional
+from typing import Union, Dict, Sequence, Optional, List
 
 from feathub.common.exceptions import FeathubException
+from feathub.dsl.expr_utils import get_variables
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
 from feathub.feature_views.transforms.join_transform import JoinTransform
+from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
+from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
 from feathub.registries.registry import Registry
 from feathub.table.table_descriptor import TableDescriptor
 
@@ -95,9 +98,7 @@ class DerivedFeatureView(FeatureView):
                 feature = self._get_feature_from_feature_str(feature, registry, source)
             features.append(feature)
 
-        # TODO: Validate ExpressionTransform features that depends on
-        #  OverWindowTransform or JoinTransform features are listed after the first
-        #  OverWindowTransform or JoinTransform feature.
+        self._validate(features, source)
 
         return DerivedFeatureView(
             name=self.name,
@@ -106,6 +107,42 @@ class DerivedFeatureView(FeatureView):
             keep_source_fields=self.keep_source_fields,
             filter_expr=self.filter_expr,
         )
+
+    @staticmethod
+    def _validate(features: List[Feature], source: TableDescriptor) -> None:
+        # Check if the feature only depends on the features specified earlier or the
+        # features in the source table.
+        valid_variables = set([f.name for f in source.get_output_features()])
+        for feature in features:
+            transform = feature.transform
+            if isinstance(transform, JoinTransform):
+                variables = set()
+            elif isinstance(transform, PythonUdfTransform):
+                variables = {f.name for f in feature.input_features}
+            elif isinstance(transform, OverWindowTransform):
+                variables = {
+                    *(
+                        get_variables(transform.filter_expr)
+                        if transform.filter_expr is not None
+                        else set()
+                    ),
+                    *get_variables(transform.expr),
+                    *transform.group_by_keys,
+                }
+            elif isinstance(transform, ExpressionTransform):
+                variables = get_variables(transform.expr)
+            else:
+                raise FeathubException(
+                    f"Unexpected transform {transform} of feature {feature.name} in "
+                    f"DerivedFeatureView."
+                )
+
+            if not variables.issubset(valid_variables):
+                raise FeathubException(
+                    f"Feature {feature} should only depend on features specified "
+                    f"earlier or the features in the source table."
+                )
+            valid_variables.add(feature.name)
 
     @staticmethod
     def _get_feature_from_feature_str(

@@ -11,18 +11,123 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import unittest
 from abc import ABC
 from typing import Optional
 
 import pandas as pd
 
 from feathub.common import types
+from feathub.common.exceptions import FeathubException
 from feathub.common.types import String, Float64
+from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
+from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
 from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
+from feathub.registries.local_registry import LocalRegistry
 from feathub.table.schema import Schema
 from feathub.tests.feathub_it_test_base import FeathubITTestBase
+
+
+class DerivedFeatureViewTest(unittest.TestCase):
+    def setUp(self):
+        self.registry = LocalRegistry(props={})
+        self.source = FileSystemSource(
+            name="source_1",
+            path="dummy_source_file",
+            data_format="csv",
+            schema=Schema(
+                ["id", "fare_amount", "lpep_dropoff_datetime"],
+                [types.Int32, types.Int32, types.String],
+            ),
+            keys=["id"],
+            timestamp_field="lpep_dropoff_datetime",
+            timestamp_format="%Y-%m-%d %H:%M:%S",
+        )
+
+        self.source_2 = FileSystemSource(
+            name="source_2",
+            path="dummy_source_file",
+            data_format="csv",
+            schema=Schema(
+                ["id", "distance", "lpep_dropoff_datetime"],
+                [types.Int32, types.Int32, types.String],
+            ),
+            keys=["id"],
+            timestamp_field="lpep_dropoff_datetime",
+            timestamp_format="%Y-%m-%d %H:%M:%S",
+        )
+
+    def test_derived_feature_view_order(self):
+        join_feature = "source_2.distance"
+        expr_feature_1 = Feature(name="id_plus_distance", transform="id + distance")
+        over_feature_1 = Feature(
+            name="over_window",
+            transform=OverWindowTransform(
+                expr="fare_amount + distance", agg_func="AVG"
+            ),
+            keys=["id"],
+        )
+        over_feature_2 = Feature(
+            name="over_window_2",
+            transform=OverWindowTransform(expr="fare_amount", agg_func="AVG"),
+            keys=["id_plus_distance"],
+        )
+        expr_feature_2 = Feature(name="expression_feature", transform="over_window + 1")
+        feature_view = DerivedFeatureView(
+            name="derived_feature_view",
+            source=self.source,
+            features=[
+                join_feature,
+                expr_feature_1,
+                over_feature_1,
+                over_feature_2,
+                expr_feature_2,
+            ],
+        )
+
+        self.registry.build_features([self.source_2])
+        built_feature_view = feature_view.build(self.registry)
+        self.assertTrue(
+            {
+                "distance",
+                "id_plus_distance",
+                "over_window",
+                "over_window_2",
+                "expression_feature",
+            }.issubset(set([f.name for f in built_feature_view.get_output_features()]))
+        )
+
+        # expr_feature_1 depends on the join_feature. Exception should be raised if we
+        # put expr_feature_1 before join_feature.
+        with self.assertRaises(FeathubException):
+            DerivedFeatureView(
+                name="derived_feature_view",
+                source=self.source,
+                features=[
+                    expr_feature_1,
+                    join_feature,
+                    over_feature_1,
+                    over_feature_2,
+                    expr_feature_2,
+                ],
+            ).build(self.registry)
+
+        # expr_feature_2 depends on the over_feature_1. Exception should be raised if we
+        # put expr_feature_2 before over_feature_1.
+        with self.assertRaises(FeathubException):
+            DerivedFeatureView(
+                name="derived_feature_view",
+                source=self.source,
+                features=[
+                    join_feature,
+                    expr_feature_1,
+                    expr_feature_2,
+                    over_feature_1,
+                    over_feature_2,
+                ],
+            ).build(self.registry)
 
 
 class DerivedFeatureViewITTest(ABC, FeathubITTestBase):
