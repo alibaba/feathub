@@ -289,6 +289,7 @@ class FlinkSqlFeatureViewITTest(ABC, FeathubITTestBase):
             name="unbounded_source",
             schema=(
                 Schema.new_builder()
+                .column("id", types.Int64)
                 .column("name", types.String)
                 .column("cost", types.Int64)
                 .build()

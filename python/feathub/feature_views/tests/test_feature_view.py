@@ -34,7 +34,7 @@ class FeatureViewTest(unittest.TestCase):
             name="source_1",
             path="dummy_source_file",
             data_format="csv",
-            schema=Schema([], []),
+            schema=Schema(["lpep_dropoff_datetime"], [Int64]),
             timestamp_field="lpep_dropoff_datetime",
             timestamp_format="%Y-%m-%d %H:%M:%S",
         )
@@ -108,7 +108,9 @@ class FeatureViewTest(unittest.TestCase):
     def test_feature_view_boundedness(self):
         source = DataGenSource(
             name="source_1",
-            schema=Schema(["id", "val1"], [Int64, Int64]),
+            schema=Schema(
+                ["id", "val1", "lpep_dropoff_datetime"], [Int64, Int64, Int64]
+            ),
             timestamp_field="lpep_dropoff_datetime",
             timestamp_format="%Y-%m-%d %H:%M:%S",
             keys=["id"],
@@ -116,7 +118,9 @@ class FeatureViewTest(unittest.TestCase):
 
         source_2 = DataGenSource(
             name="source_2",
-            schema=Schema(["id", "val2"], [Int64, Int64]),
+            schema=Schema(
+                ["id", "val2", "lpep_dropoff_datetime"], [Int64, Int64, Int64]
+            ),
             timestamp_field="lpep_dropoff_datetime",
             timestamp_format="%Y-%m-%d %H:%M:%S",
             keys=["id"],
@@ -145,7 +149,9 @@ class FeatureViewTest(unittest.TestCase):
             name="bounded_source",
             path="dummy_source_file",
             data_format="csv",
-            schema=Schema(["id", "val1"], [Int64, Int64]),
+            schema=Schema(
+                ["id", "val1", "lpep_dropoff_datetime"], [Int64, Int64, Int64]
+            ),
             timestamp_field="lpep_dropoff_datetime",
             timestamp_format="%Y-%m-%d %H:%M:%S",
             keys=["id"],
@@ -154,7 +160,9 @@ class FeatureViewTest(unittest.TestCase):
             name="bounded_source_2",
             path="dummy_source_file",
             data_format="csv",
-            schema=Schema(["id", "val2"], [Int64, Int64]),
+            schema=Schema(
+                ["id", "val2", "lpep_dropoff_datetime"], [Int64, Int64, Int64]
+            ),
             timestamp_field="lpep_dropoff_datetime",
             timestamp_format="%Y-%m-%d %H:%M:%S",
             keys=["id"],
@@ -174,7 +182,9 @@ class FeatureViewTest(unittest.TestCase):
     def test_duplicate_feature_names_throw_exception(self):
         source = DataGenSource(
             name="source",
-            schema=Schema(["id", "val1"], [Int64, Int64]),
+            schema=Schema(
+                ["id", "val1", "lpep_dropoff_datetime"], [Int64, Int64, Int64]
+            ),
             timestamp_field="lpep_dropoff_datetime",
             timestamp_format="%Y-%m-%d %H:%M:%S",
             keys=["id"],
