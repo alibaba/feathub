@@ -13,7 +13,7 @@
 #  limitations under the License.
 import json
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Optional
 
 from feathub.common.exceptions import FeathubException, FeathubExpressionException
 from feathub.common.types import (
@@ -23,21 +23,12 @@ from feathub.common.types import (
     Float32,
     Float64,
     Bool,
-    String,
     get_type_by_name,
     from_python_type,
 )
+from feathub.dsl.built_in_func import get_builtin_func_def
 
 TYPE_PRECISION_RANK: List[DType] = [Float64, Float32, Int64, Int32]
-
-# A map from the FeatHub built-in function name to a callable that is used to
-# evaluate the result data type of the function. The callable takes a list of
-# data types of arguments and returns the data type of the result.
-# TODO: Add a dedicated class to keep track of all the FeatHub function.
-FUNCTION_RESULT_TYPE_EVALUATOR: Dict[str, Callable[[List[DType]], DType]] = {
-    "LOWER": lambda _: String,
-    "UNIX_TIMESTAMP": lambda _: Int64,
-}
 
 
 def _get_higher_precision_type(*dtype: DType) -> Optional[DType]:
@@ -234,12 +225,8 @@ class FuncCallOp(ExprAST):
 
     def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
         arg_types = [arg.eval_dtype(variable_types) for arg in self.args.values]
-        function_type_evaluator = FUNCTION_RESULT_TYPE_EVALUATOR.get(self.func_name)
-        if function_type_evaluator is None:
-            raise RuntimeError(
-                f"Unknown result type evaluator for function {self.func_name}."
-            )
-        return function_type_evaluator(arg_types)
+        builtin_func_def = get_builtin_func_def(self.func_name)
+        return builtin_func_def.get_result_type(arg_types)
 
     def to_json(self) -> Dict:
         return {
