@@ -20,7 +20,7 @@ from feathub.common.config import (
     flatten_dict,
 )
 from feathub.common.exceptions import FeathubConfigurationException
-from feathub.common.validators import in_list, is_subset
+from feathub.common.validators import in_list, is_subset, not_none
 
 
 class MockConfig(BaseConfig):
@@ -116,11 +116,19 @@ class ConfigTest(unittest.TestCase):
                 default_value=["a", "b"],
                 validator=is_subset("a", "b"),
             ),
+            ConfigDef(
+                name="a.d",
+                value_type=str,
+                description="a_d",
+                default_value="a",
+                validator=not_none(),
+            ),
         ]
 
         config = MockConfig(config_options, {"a.b": "b"})
         self.assertEqual("b", config.get("a.b"))
         self.assertEqual(["a", "b"], config.get("a.c"))
+        self.assertEqual("a", config.get("a.d"))
 
         with self.assertRaises(FeathubConfigurationException) as cm:
             MockConfig(config_options, {"a.b": "c"})
@@ -129,6 +137,10 @@ class ConfigTest(unittest.TestCase):
         with self.assertRaises(FeathubConfigurationException) as cm:
             MockConfig(config_options, {"a.c": ["a", "b", "c"]})
         self.assertIn("Invalid value c of a.c", cm.exception.args[0])
+
+        with self.assertRaises(FeathubConfigurationException) as cm:
+            MockConfig(config_options, {"a.d": None})
+        self.assertIn("cannot be None", cm.exception.args[0])
 
     def test_originals_with_prefix(self):
         config = MockConfig([], {"a.b": "b", "a.b.a": "a", "a.b.b": "b", "a.c.c": "c"})

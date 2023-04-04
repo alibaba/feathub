@@ -37,6 +37,16 @@ class Validator(ABC, Generic[T]):
         pass
 
 
+class NotNoneValidator(Validator[T]):
+    def ensure_valid(self, name: str, value: T) -> None:
+        if value is None:
+            raise FeathubConfigurationException(f"Value of {name} cannot be None.")
+
+
+def not_none() -> Validator[T]:
+    return NotNoneValidator()
+
+
 class InListValidator(Validator[T]):
     def __init__(self, *allowed: T):
         self.allowed = allowed

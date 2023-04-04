@@ -66,6 +66,17 @@ class SparkProcessorTest(unittest.TestCase):
                 registry=self.registry,
             )
 
+    def test_none_master_config(self):
+        with self.assertRaises(FeathubConfigurationException) as cm:
+            SparkProcessor(
+                props={
+                    "processor.spark.master": None,
+                },
+                registry=self.registry,
+            )
+
+        self.assertIn("cannot be None", cm.exception.args[0])
+
 
 class SparkProcessorITTest(
     BlackHoleSinkITTest,

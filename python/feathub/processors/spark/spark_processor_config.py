@@ -14,6 +14,7 @@
 from typing import List, Dict, Any
 
 from feathub.common.config import ConfigDef, TIMEZONE_CONFIG
+from feathub.common.validators import not_none
 from feathub.processors.processor_config import ProcessorConfig, PROCESSOR_PREFIX
 
 SPARK_PROCESSOR_PREFIX = PROCESSOR_PREFIX + "spark."
@@ -23,13 +24,12 @@ MASTER_DOC = "The Spark master URL to connect to."
 
 NATIVE_CONFIG_PREFIX = SPARK_PROCESSOR_PREFIX + "native."
 
-# TODO: Add a validator class that are used to validate the legality of
-#  configuration values, and validate that spark master is not None.
 spark_processor_config_defs: List[ConfigDef] = [
     ConfigDef(
         name=MASTER_CONFIG,
         value_type=str,
         description=MASTER_DOC,
+        validator=not_none(),
     ),
 ]
 
