@@ -91,7 +91,7 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
             [source_2, feature_view_2, feature_view_3]
         )
 
-        expected_result_df = df_1
+        expected_result_df = df_1[["name", "time", "cost", "distance"]]
         expected_result_df["avg_cost"] = pd.Series(
             [None, None, 200.0, 400.0, None, 200.0]
         )
@@ -193,7 +193,7 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
             [source_2, feature_view_2]
         )
 
-        expected_result_df = df_1
+        expected_result_df = df_1[["name", "time", "cost", "distance"]]
         expected_result_df["avg_cost"] = pd.Series(
             [None, None, 200.0, 400.0, None, 200.0]
         )
@@ -305,7 +305,7 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
             [source_2, feature_view_2, feature_view_3]
         )
 
-        expected_result_df = df_1
+        expected_result_df = df_1[["name", "time", "cost", "distance"]]
         expected_result_df["avg_cost"] = pd.Series(
             [None, None, 100.0, 400.0, None, 200.0]
         )
