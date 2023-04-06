@@ -121,10 +121,14 @@ class FeatureView(TableDescriptor, ABC):
         """
         Returns the names of fields of this table descriptor. This method should be
         called after the FeatureView is resolved, otherwise exception will be raised.
-        The output fields include:
-        - All fields in the source_fields if keep_source_fields is True.
-        - The timestamp field if it is not None.
-        - All features and features' keys.
+        The output fields and orders follows the below principle:
+
+        - If keep_source_fields is True, outputs all source fields that are not
+          overwritten by features in the order that they appear in the source fields.
+        - If keep_source_fields is False, outputs the timestamp field and features'
+          keys that are not overwritten by features in the order that they appear in the
+          source fields.
+        - Outputs all features in the order specified by users.
 
         :param source_fields: The names of fields of the source table.
         :return: The names of fields of this table descriptor.
@@ -133,25 +137,21 @@ class FeatureView(TableDescriptor, ABC):
             raise FeathubException(
                 "Build this feature view before getting output fields."
             )
-        output_fields = []
+
+        feature_fields = [feature.name for feature in self.get_resolved_features()]
         if self.keep_source_fields:
-            output_fields.extend(source_fields)
-        elif self.timestamp_field is not None:
-            output_fields.append(self.timestamp_field)
-
-        for feature in self.get_resolved_features():
-            if feature.keys is not None:
-                output_fields.extend(feature.keys)
-            output_fields.append(feature.name)
-
-        # Order output fields similar to their order in the source table.
-        reordered_output_fields = []
-        for field in source_fields:
-            if field in output_fields:
-                reordered_output_fields.append(field)
-        reordered_output_fields.extend(output_fields)
-
-        return list(OrderedDict.fromkeys(reordered_output_fields))
+            extra_fields = list(set(source_fields) - set(feature_fields))
+        else:
+            timestamp_and_keys = (
+                [self.timestamp_field] if self.timestamp_field is not None else []
+            )
+            for feature in self.get_resolved_features():
+                if feature.keys is not None:
+                    timestamp_and_keys.extend(feature.keys)
+            extra_fields = list(set(timestamp_and_keys) - set(feature_fields))
+        # Order extra fields in the same order as their position in source.
+        extra_fields = [f for f in source_fields if f in extra_fields]
+        return extra_fields + feature_fields
 
     def get_output_features(self) -> List[Feature]:
         if self.is_unresolved():

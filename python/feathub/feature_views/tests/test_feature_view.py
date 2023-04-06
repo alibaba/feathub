@@ -15,7 +15,7 @@
 import unittest
 
 from feathub.common.exceptions import FeathubException
-from feathub.common.types import Int64
+from feathub.common.types import Int64, String
 from feathub.feature_tables.sources.datagen_source import DataGenSource
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_views.feature import Feature
@@ -201,3 +201,71 @@ class FeatureViewTest(unittest.TestCase):
                 keep_source_fields=True,
             )
         self.assertIn("contains duplicated feature name", ctx.exception.args[0])
+
+    def test_get_output_fields(self):
+        field_names = ["id", "val1", "val2", "val3", "time"]
+        source = DataGenSource(
+            name="source_1",
+            schema=Schema(field_names, [Int64, Int64, Int64, Int64, String]),
+            timestamp_field="time",
+            timestamp_format="%Y-%m-%d %H:%M:%S",
+            keys=["id"],
+        )
+
+        feature_1 = Feature(
+            name="derived_val_1", dtype=types.Int64, transform="val1 + 1", keys=["val1"]
+        )
+
+        feature_2 = Feature(
+            name="derived_val_2", dtype=types.Int64, transform="val2 + 1", keys=["val2"]
+        )
+
+        feature_view_1 = DerivedFeatureView(
+            name="feature_view_1",
+            source=source,
+            features=["time", feature_1, feature_2],
+            keep_source_fields=True,
+        )
+
+        built_feature_view_1 = feature_view_1.build(self.registry)
+
+        self.assertEqual(
+            [
+                "id",
+                "val1",
+                "val2",
+                "val3",
+                "time",
+                "derived_val_1",
+                "derived_val_2",
+            ],
+            built_feature_view_1.get_output_fields(field_names),  # type: ignore
+        )
+
+        feature_view_2 = DerivedFeatureView(
+            name="feature_view_2",
+            source=source,
+            features=["time", feature_1, feature_2],
+            keep_source_fields=False,
+        )
+
+        built_feature_view_2 = feature_view_2.build(self.registry)
+
+        self.assertEqual(
+            ["id", "val1", "val2", "time", "derived_val_1", "derived_val_2"],
+            built_feature_view_2.get_output_fields(field_names),  # type: ignore
+        )
+
+        feature_view_3 = DerivedFeatureView(
+            name="feature_view_3",
+            source=source,
+            features=["time", "val3", "val2", "val1", "id"],
+            keep_source_fields=False,
+        )
+
+        built_feature_view_3 = feature_view_3.build(self.registry)
+
+        self.assertEqual(
+            ["time", "val3", "val2", "val1", "id"],
+            built_feature_view_3.get_output_fields(field_names),  # type: ignore
+        )

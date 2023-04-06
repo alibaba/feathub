@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Dict, Union, Sequence, Set, Any, Optional
+from typing import Dict, Union, Sequence, Set, Any, Optional, List, OrderedDict
 
 from feathub.common import types
 from feathub.common.config import BaseConfig, ConfigDef
@@ -192,6 +192,24 @@ class SlidingFeatureView(FeatureView):
             transform=WINDOW_TIME_EXPR,
         )
         return window_time_feature
+
+    def get_output_fields(self, source_fields: List[str]) -> List[str]:
+        if self.is_unresolved():
+            raise FeathubException(
+                "Build this feature view before getting output fields."
+            )
+
+        key_fields = [
+            key
+            for feature in self.get_resolved_features()
+            if feature.keys is not None
+            for key in feature.keys
+        ]
+        output_fields = [f for f in source_fields if f in key_fields]
+        output_fields.append(self.timestamp_field)
+        output_fields.extend([feature.name for feature in self.get_resolved_features()])
+
+        return list(OrderedDict.fromkeys(output_fields))
 
     def build(
         self, registry: Registry, props: Optional[Dict] = None

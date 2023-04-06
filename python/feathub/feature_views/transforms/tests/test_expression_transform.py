@@ -329,7 +329,9 @@ class ExpressionTransformITTest(ABC, FeathubITTestBase):
             .reset_index(drop=True)
         )
 
-        expected_result_df = self.input_data.copy()
+        expected_result_df = self.input_data.copy()[
+            ["name", "distance", "time", "cost"]
+        ]
         expected_result_df["cost"] = expected_result_df.apply(
             lambda row: row["cost"] + 1, axis=1
         )
