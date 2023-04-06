@@ -68,6 +68,9 @@ ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
     AggFunc.AVG: JavaUDFDescriptor(
         "TIME_WINDOWED_AVG", "com.alibaba.feathub.flink.udf.TimeWindowedAvgAggFunc"
     ),
+    AggFunc.COUNT: JavaUDFDescriptor(
+        "TIME_WINDOWED_COUNT", "com.alibaba.feathub.flink.udf.TimeWindowedCountAggFunc"
+    ),
     AggFunc.SUM: JavaUDFDescriptor(
         "TIME_WINDOWED_SUM", "com.alibaba.feathub.flink.udf.TimeWindowedSumAggFunc"
     ),

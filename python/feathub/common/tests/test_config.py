@@ -35,8 +35,7 @@ class ConfigTest(unittest.TestCase):
             "processor": {
                 "type": "flink",
                 "flink": {
-                    "rest.address": "localhost",
-                    "rest.port": "8081",
+                    "master": "localhost:8081",
                     "flink.default.parallelism": "2",
                 },
             },
@@ -59,8 +58,7 @@ class ConfigTest(unittest.TestCase):
 
         expected_result = {
             "processor.type": "flink",
-            "processor.flink.rest.address": "localhost",
-            "processor.flink.rest.port": "8081",
+            "processor.flink.master": "localhost:8081",
             "processor.flink.flink.default.parallelism": "2",
             "online_store.types": ["memory"],
             "registry.type": "local",

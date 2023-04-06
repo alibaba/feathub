@@ -38,8 +38,7 @@ class ProcessorInstantiateTest(unittest.TestCase):
                 "processor": {
                     "type": "flink",
                     "flink": {
-                        "rest.address": "localhost",
-                        "rest.port": 8081,
+                        "master": "localhost:8081",
                     },
                 }
             }

@@ -229,6 +229,8 @@ def _get_over_window_agg_select_expr(
 
     if agg_func == AggFunc.AVG:
         result = expr.avg
+    elif agg_func == AggFunc.COUNT:
+        result = expr.count
     elif agg_func == AggFunc.MIN:
         result = expr.min
     elif agg_func == AggFunc.MAX:

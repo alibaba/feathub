@@ -24,11 +24,8 @@ FLINK_PROCESSOR_PREFIX = PROCESSOR_PREFIX + "flink."
 DEPLOYMENT_MODE_CONFIG = FLINK_PROCESSOR_PREFIX + "deployment_mode"
 DEPLOYMENT_MODE_DOC = "The flink job deployment mode."
 
-REST_ADDRESS_CONFIG = FLINK_PROCESSOR_PREFIX + "rest.address"
-REST_ADDRESS_DOC = "The ip or hostname where the JobManager runs."
-
-REST_PORT_CONFIG = FLINK_PROCESSOR_PREFIX + "rest.port"
-REST_PORT_DOC = "The port where the JobManager runs."
+MASTER_CONFIG = FLINK_PROCESSOR_PREFIX + "master"
+MASTER_DOC = "The Flink JobManager URL to connect to."
 
 FLINK_HOME_CONFIG = FLINK_PROCESSOR_PREFIX + "flink_home"
 FLINK_HOME_DOC = (
@@ -60,15 +57,9 @@ flink_processor_config_defs: List[ConfigDef] = [
         validator=in_list(*[t.value for t in DeploymentMode]),
     ),
     ConfigDef(
-        name=REST_ADDRESS_CONFIG,
+        name=MASTER_CONFIG,
         value_type=str,
-        description=REST_ADDRESS_DOC,
-        default_value=None,
-    ),
-    ConfigDef(
-        name=REST_PORT_CONFIG,
-        value_type=int,
-        description=REST_PORT_DOC,
+        description=MASTER_DOC,
         default_value=None,
     ),
     ConfigDef(

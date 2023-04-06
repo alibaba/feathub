@@ -16,10 +16,12 @@ from typing import Optional
 
 import pandas as pd
 
+from feathub.common import types
 from feathub.common.types import String, Float64
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
+from feathub.table.schema import Schema
 from feathub.tests.feathub_it_test_base import FeathubITTestBase
 
 
@@ -142,5 +144,48 @@ class DerivedFeatureViewITTest(ABC, FeathubITTestBase):
         expected_result_df = expected_result_df.sort_values(by=["time"]).reset_index(
             drop=True
         )
+
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_reserved_keyword_as_field_name(self):
+        df = pd.DataFrame(
+            [
+                ["Alex", 100, 100, "2022-01-01 08:01:00"],
+                ["Emma", 400, 250, "2022-01-01 08:02:00"],
+                ["Alex", 300, 200, "2022-01-02 08:03:00"],
+                ["Emma", 200, 250, "2022-01-02 08:04:00"],
+                ["Jack", 500, 500, "2022-01-03 08:05:00"],
+                ["Alex", 600, 800, "2022-01-03 08:06:00"],
+            ],
+            columns=["name", "cost", "distance", "timestamp"],
+        )
+
+        schema = (
+            Schema.new_builder()
+            .column("name", types.String)
+            .column("cost", types.Int64)
+            .column("distance", types.Int64)
+            .column("timestamp", types.String)
+            .build()
+        )
+        source = self.create_file_source(df, schema=schema, timestamp_field="timestamp")
+
+        features = DerivedFeatureView(
+            name="feature_view_2",
+            source=source,
+            features=["timestamp"],
+            keep_source_fields=False,
+        )
+
+        self.client.build_features([features])
+
+        result_df = (
+            self.client.get_features(features=features)
+            .to_pandas()
+            .sort_values(by=["timestamp"])
+            .reset_index(drop=True)
+        )
+
+        expected_result_df = result_df[["timestamp"]]
 
         self.assertTrue(expected_result_df.equals(result_df))

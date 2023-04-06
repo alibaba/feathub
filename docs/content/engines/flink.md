@@ -38,9 +38,13 @@ cluster can be found in this [document](../get-started/quickstarts/flink-cli-mod
 
 ### Session mode
 
-Session mode assumes that there is a running cluster and the Flink job is submitted to 
-the Flink cluster. User has to specify the `rest.address` and `rest.port` where the
-JobManager runs.
+Session mode assumes that there is a running cluster and the Flink job is
+submitted to the Flink cluster. User needs to specify the `master` configuration
+with the address and the port where the JobManager runs.
+
+Specifically, if `master` is configured to `"local"`, FlinkProcessor would set
+up a Flink MiniCluster to execute the submitted job. This case can be used for
+development and proof of concept.
 
 The advantage of session mode is that you do not pay the overhead of spinning up a Flink
 cluster for every submitted job. And users can convert the features to Pandas dataframe 
@@ -105,8 +109,8 @@ These are the extra configuration keys accepted when deployment_mode = "session"
 
 | key          | Required | default | type    | Description                                                                                                                                |
 |--------------|----------|---------|---------|--------------------------------------------------------------------------------------------------------------------------------------------|
-| rest.address | required | (none)  | String  | The ip or hostname where the JobManager runs.                                                                                              |
-| rest.port    | required | (none)  | Integer | The port where the JobManager runs.                                                                                                        |
+| master | required | (none)  | String  | The Flink JobManager URL to connect to.                                                                                              |
+
 ### Kubernetes Application Mode Configuration
 
 These are the extra configuration keys accepted when deployment_mode = "kubernetes-application":

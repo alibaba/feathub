@@ -86,7 +86,7 @@ class OnDemandFeatureView(FeatureView):
             if isinstance(feature, str) and len(feature.split(".")) != 2:
                 raise RuntimeError(
                     f"Feature '{feature}' is not in the format "
-                    "{table_name}.{feature_name} or {feature_name}."
+                    "{table_name}.{feature_name}."
                 )
             if not (
                 isinstance(feature, str)

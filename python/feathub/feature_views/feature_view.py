@@ -181,25 +181,26 @@ class FeatureView(TableDescriptor, ABC):
         return cast(TableDescriptor, self.source)
 
     def _get_keys(self) -> Optional[List[str]]:
-        if self.keep_source_fields and cast(TableDescriptor, self.source).keys is None:
-            return None
+        key_fields: List[str] = []
+
+        if (
+            self.keep_source_fields
+            and cast(TableDescriptor, self.source).keys is not None
+        ):
+            keys: Sequence[str] = cast(TableDescriptor, self.source).keys
+            if keys is not None:
+                key_fields.extend(keys)
 
         feature_with_keys = [
             f for f in self.get_resolved_features() if f.keys is not None
         ]
-        # Table's keys are unknown if no feature has keys specified.
-        if not self.keep_source_fields and not feature_with_keys:
-            return None
-
-        key_fields: List[str] = []
-        if self.keep_source_fields:
-            keys: Sequence[str] = cast(TableDescriptor, self.source).keys
-            if keys is not None:
-                key_fields.extend(keys)
         for feature in feature_with_keys:
             keys = feature.keys
             if keys is not None:
                 key_fields.extend(keys)
+
+        if not key_fields:
+            return None
 
         return list(OrderedDict.fromkeys(key_fields))
 
