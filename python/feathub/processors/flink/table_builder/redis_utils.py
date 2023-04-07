@@ -39,8 +39,6 @@ from feathub.processors.flink.table_builder.source_sink_utils_common import (
 from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
 
-# TODO: Add document denoting that users should not declare column names
-#  starting and ending with double underscores, which are used as FeatHub metadata.
 REDIS_SINK_KEY_FIELD_NAME = "__redis_sink_key__"
 
 

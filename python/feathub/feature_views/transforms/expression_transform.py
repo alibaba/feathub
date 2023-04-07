@@ -19,7 +19,7 @@ from feathub.feature_views.transforms.transformation import Transformation
 class ExpressionTransform(Transformation):
     """
     Derives feature values by applying FeatHub expression on one row of the parent table
-    at a time. FeatHub expression is a declarative lanaguage with built-in functions.
+    at a time. FeatHub expression is a declarative language with built-in functions.
     """
 
     def __init__(self, expr: str) -> None:

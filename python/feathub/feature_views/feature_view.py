@@ -66,11 +66,12 @@ class FeatureView(TableDescriptor, ABC):
                                 `timestamp_field` of the source TableDescriptor is used
                                 as the `timestamp_field` of the TableDescriptor
                                 represented by this FeatureView.
-        :param timestamp_format: The format of the timestamp field. This argument only
-                                 takes effect when the `timestamp_field` is not None.
-                                 Otherwise, the `timestamp_format` of the source
-                                 TableDescriptor is used as the `timestamp_format` of
-                                 the TableDescriptor represented by this FeatureView.
+        :param timestamp_format: The format of the timestamp field. See TableDescriptor
+                                 for valid format values. Only effective when the
+                                 `timestamp_field` is not None. Otherwise, the
+                                 `timestamp_format` of the source TableDescriptor is
+                                 used as the `timestamp_format` of the TableDescriptor
+                                 represented by this FeatureView.
         """
 
         self.source = source

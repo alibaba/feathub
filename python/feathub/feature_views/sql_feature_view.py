@@ -59,7 +59,9 @@ class SqlFeatureView(FeatureView):
         :param timestamp_field: Optional. If it is not None, it is the name of the field
                                 whose values show the time when the corresponding row
                                 is generated.
-        :param timestamp_format: The format of the timestamp field.
+        :param timestamp_format: The format of the timestamp field. See TableDescriptor
+                                 for valid format values. Only effective when the
+                                 `timestamp_field` is not None.
         :param is_bounded: Whether the output table of this SqlFeatureView is bounded.
         """
         TableDescriptor.__init__(

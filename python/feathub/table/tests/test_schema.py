@@ -33,10 +33,18 @@ class SchemaTest(unittest.TestCase):
             Schema(["a", "b", "c"], [types.Int64, types.Int32, types.Float32]), schema
         )
 
-    def test_schema_builder_raise_exception(self):
+    def test_schema_builder_duplicate_column_name(self):
         with self.assertRaises(FeathubException) as cm:
             Schema.new_builder().column("a", types.Int64).column(
                 "a", types.Int32
             ).build()
 
         self.assertIn("Column a already defined", cm.exception.args[0])
+
+    def test_schema_builder_prohibited_column_name(self):
+        with self.assertRaises(FeathubException) as cm:
+            Schema.new_builder().column("__event_time_attribute__", types.Int64).build()
+
+        self.assertIn(
+            "should not start or end with double underscores(__)", cm.exception.args[0]
+        )

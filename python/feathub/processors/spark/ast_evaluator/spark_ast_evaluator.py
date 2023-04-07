@@ -72,8 +72,6 @@ class SparkAstEvaluator(AbstractAstEvaluator):
     def eval_cast_node(self, ast: CastOp, variables: Optional[Dict]) -> Any:
         if ast.exception_on_failure:
             return f"CAST({self.eval(ast.child, variables)} AS {ast.type_name})"
-        # TODO: Add document explaining that TRY_CAST is not available in community
-        #  version of Spark, and code to check the availability of the UDFs.
         return f"TRY_CAST({self.eval(ast.child, variables)} AS {ast.type_name})"
 
     def eval_logical_op(self, ast: LogicalOp, variables: Optional[Dict]) -> Any:

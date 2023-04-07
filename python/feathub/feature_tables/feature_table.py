@@ -54,7 +54,9 @@ class FeatureTable(TableDescriptor, ABC):
         :param timestamp_field: Optional. If it is not None, it is the name of the field
                                 whose values show the time when the corresponding row
                                 is generated.
-        :param timestamp_format: The format of the timestamp field.
+        :param timestamp_format: The format of the timestamp field. See TableDescriptor
+                                 for valid format values. Only effective when the
+                                 `timestamp_field` is not None.
         :param schema: Optional. If schema is not None, the feature table automatically
                        derives feature for each field in the schema when reading from
                        the physical table. If the schema of is None, it uses the same

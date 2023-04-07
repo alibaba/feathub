@@ -2,4 +2,5 @@
 
 - [Basic Concepts](basic-concepts.md)
 - [FeatHub Expression Language](expression-language.md)
+- [Window Aggregations](window_aggregation.md)
 

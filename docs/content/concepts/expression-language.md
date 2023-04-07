@@ -57,7 +57,11 @@ Comparison functions take numeric values as inputs and outputs a boolean value.
 | Function             | Description                                                                               |
 |----------------------|-------------------------------------------------------------------------------------------|
 | CAST(x AS DTYPE)     | Returns a new value being casted to a the given DTYPE. Throws exception in case of error. |
-| TRY_CAST(x AS DTYPE) | Returns a new value being casted to a the given DTYPE. Returns NULL in case of error.     |
+| TRY_CAST(x AS DTYPE)<sup>1</sup>, | Returns a new value being casted to a the given DTYPE. Returns NULL in case of error.     |
+
+1. The availability of this function in SparkProcessor depends on the version of
+   the Spark cluster. This function might only be available in some commercial
+   distributions of Spark, instead of in the community versions.
 
 ### Data Types
 
