@@ -31,6 +31,21 @@ class TableDescriptor(Entity):
 
     A TableDescriptor is uniquely identified by its name in the feature registry. Its
     interpretation is agnostic to any processor type.
+
+    TableDescriptors use `timestamp_field` and `timestamp_format` to define the time
+    attribute of each row of feature value. Valid field values and formats are as
+    follows.
+
+    - If the format value is "epoch", the timestamp field should contain numeric values
+      representing unix timestamps in seconds.
+    - If the format value is "epoch_millis", The timestamp field should contain numeric
+      values representing unix timestamps in milliseconds.
+    - Otherwise, the format value should match the requirement of the C standard
+      (1989 version). For example, the default valid value is "%Y-%m-%d %H:%M:%S". The
+      timestamp field should contain string values in the specified format. See Python's
+      strftime() and strptime() Behavior for a brief list of and introduction to these
+      format patterns.
+      https://docs.python.org/3.7/library/datetime.html#strftime-strptime-behavior
     """
 
     def __init__(
@@ -48,13 +63,13 @@ class TableDescriptor(Entity):
         :param timestamp_field: Optional. If it is not None, it is the name of the field
                                 whose values show the time when the corresponding row
                                 is generated.
-        :param timestamp_format: The format of the timestamp field.
+        :param timestamp_format: The format of the timestamp field. Only effective when
+                                 `timestamp_field` is not None.
         """
         super().__init__()
         self.name = name
         self.keys = keys
         self.timestamp_field = timestamp_field
-        # TODO: Add document about supported timestamp format values.
         self.timestamp_format = timestamp_format
 
     def build(

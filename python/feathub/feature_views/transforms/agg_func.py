@@ -14,8 +14,6 @@
 
 from enum import Enum
 
-
-# TODO: Add docs about the supported AggFunc to README.
 from feathub.common.exceptions import FeathubException
 from feathub.common.types import DType, Float64, Int64, MapType
 

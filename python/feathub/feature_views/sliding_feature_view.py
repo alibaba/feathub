@@ -139,7 +139,9 @@ class SlidingFeatureView(FeatureView):
                                 millisecond included in the window. For example, a
                                 one-hour sliding window started at 00:00:00.000 has
                                 window end time of 00:59:59.999.
-        :param timestamp_format: The format of the timestamp field.
+        :param timestamp_format: The format of the timestamp field. See TableDescriptor
+                                 for valid format values. Only effective when the
+                                 `timestamp_field` is not None.
         :param filter_expr: Optional. If it is not None, it represents a FeatHub
                             expression which evaluates to a boolean value. The filter
                             expression is evaluated after other transformations in the

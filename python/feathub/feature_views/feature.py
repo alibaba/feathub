@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import Union, Optional, Dict, Sequence
 import json
 
+from feathub.common.exceptions import FeathubException
 from feathub.common.types import DType
 from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
@@ -41,7 +42,8 @@ class Feature:
     ):
         """
         :param name: The name that uniquely identifies this feature in the
-                     parent table.
+                     parent table. Must not start or end with double underscores(__)
+                     in order to avoid potential conflict with metadata columns.
         :param dtype: The data type of this feature's values.
         :param transform: The logic used to derive this feature's values. If it is a
                           string, it represents a FeatHub expression.
@@ -53,6 +55,11 @@ class Feature:
         :param input_features: The names of fields in the parent table used by
                               `transform` to derive this feature's values.
         """
+        if name.startswith("__") or name.endswith("__"):
+            raise FeathubException(
+                f"Feature name {name} should not start or end with double "
+                f"underscores(__)."
+            )
         self.name = name
         self.dtype = dtype
         if isinstance(transform, str):

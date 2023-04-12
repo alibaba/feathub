@@ -75,9 +75,22 @@ class Schema:
             self._columns: Dict[str, DType] = {}
 
         def column(self, column_name: str, dtype: DType) -> "Schema.Builder":
+            """
+            Declares a column that is appended to this schema.
+
+            :param column_name: The name of the column. Column names must not start
+                                or end with double underscores(__) in order to avoid
+                                potential conflict with metadata columns.
+            :param dtype: The data type of the column.
+            """
             if column_name in self._columns:
                 raise FeathubException(
                     f"Column {column_name} already defined with type {DType}."
+                )
+            if column_name.startswith("__") or column_name.endswith("__"):
+                raise FeathubException(
+                    f"Column name {column_name} should not start or end with double"
+                    f" underscores(__)."
                 )
             self._columns[column_name] = dtype
             return self

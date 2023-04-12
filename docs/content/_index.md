@@ -7,6 +7,7 @@ applications.
 - [Concepts](concepts/_index.md)
 	- [Basic Concepts](concepts/basic-concepts.md)
 	- [FeatHub Expression Language](concepts/expression-language.md)
+	- [Window Aggregations](concepts/window_aggregation.md)
 - [Get Started](get-started/_index.md)
 	- [Quickstarts](get-started/quickstarts/_index.md)
 		- [Flink Cli Mode Quickstart](get-started/quickstarts/flink-cli-mode.md)
