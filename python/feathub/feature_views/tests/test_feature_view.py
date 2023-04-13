@@ -78,7 +78,7 @@ class FeatureViewTest(unittest.TestCase):
         expected_feature_1 = Feature(
             name="feature_1",
             dtype=types.Float32,
-            transform="feature_1",
+            transform="`feature_1`",
         )
         self.assertEqual(
             expected_feature_1, built_feature_view.get_feature("feature_1")

@@ -242,9 +242,11 @@ Spark cluster.
 
 ### Examples
 
-| Name                                           | Description                                                  |
-| ---------------------------------------------- | ------------------------------------------------------------ |
-| [NYC Taxi Demo](./docs/examples/nyc_taxi.ipynb) | Quickstart notebook that demonstrates how to define, extract, transform and materialize features with NYC taxi-fare prediction sample data. |
+| Name                                                         | Description                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| [NYC Taxi Demo](./docs/examples/nyc_taxi.ipynb)              | Quickstart notebook that demonstrates how to define, extract, transform and materialize features with NYC taxi-fare prediction sample data. |
+| [Feature Embedding Demo](./docs/examples/feature_embedding.ipynb) | FeatHub UDF example showing how to define and use feature embedding with a pre-trained Transformer model and hotel review sample data. |
+| [Fraud Detection Demo](./docs/examples/fraud_detection.ipynb) | An example to demonstrate usage with multiple data sources such as user account and transaction data. |
 
 ## Developer Guide
 

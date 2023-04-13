@@ -121,6 +121,8 @@ def to_numpy_dtype(dtype: DType) -> Type:
         return np.float32
     elif dtype == Float64:
         return np.float64
+    elif isinstance(dtype, VectorType):
+        return np.object
     elif isinstance(dtype, MapType):
         return np.object
     elif dtype == Unknown:

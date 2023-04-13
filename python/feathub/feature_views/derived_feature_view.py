@@ -117,7 +117,7 @@ class DerivedFeatureView(FeatureView):
             feature = Feature(
                 name=source_feature.name,
                 dtype=source_feature.dtype,
-                transform=ExpressionTransform(source_feature.name),
+                transform=ExpressionTransform(f"`{source_feature.name}`"),
                 keys=source_feature.keys,
             )
             return feature

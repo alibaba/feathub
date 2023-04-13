@@ -30,7 +30,7 @@ def flatten_dict(dict_to_flatten: Dict) -> Dict:
         "processor": {
             "type": "flink",
             "flink": {
-                "rest.address": "localhost",
+                "master": "localhost",
             },
         },
         "online_store": {
@@ -43,7 +43,7 @@ def flatten_dict(dict_to_flatten: Dict) -> Dict:
 
     {
         "processor.type": "flink",
-        "processor.flink.rest.address": "localhost",
+        "processor.flink.master": "localhost",
         "online_store.types": ["memory"],
     }
     """

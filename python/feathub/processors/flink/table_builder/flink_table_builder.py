@@ -667,7 +667,10 @@ class FlinkTableBuilder:
         self, feature_view: FeatureView, source_fields: List[str]
     ) -> List[str]:
         output_fields = feature_view.get_output_fields(source_fields)
-        if EVENT_TIME_ATTRIBUTE_NAME not in output_fields:
+        if (
+            EVENT_TIME_ATTRIBUTE_NAME not in output_fields
+            and feature_view.timestamp_field is not None
+        ):
             output_fields.append(EVENT_TIME_ATTRIBUTE_NAME)
         return output_fields
 

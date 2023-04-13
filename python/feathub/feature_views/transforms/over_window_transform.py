@@ -57,7 +57,9 @@ class OverWindowTransform(Transformation):
         """
         super().__init__()
         self.expr = expr
-        self.agg_func = agg_func if isinstance(agg_func, AggFunc) else AggFunc(agg_func)
+        self.agg_func = (
+            agg_func if isinstance(agg_func, AggFunc) else AggFunc(agg_func.upper())
+        )
         self.group_by_keys = group_by_keys
         self.window_size = window_size
         self.filter_expr = filter_expr

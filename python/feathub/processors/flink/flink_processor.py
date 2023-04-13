@@ -15,6 +15,7 @@ import logging
 import os
 from datetime import timedelta, datetime
 from typing import Optional, Union, Dict
+from urllib.parse import urlparse
 
 import pandas as pd
 from pyflink.datastream import StreamExecutionEnvironment
@@ -34,8 +35,7 @@ from feathub.processors.flink.flink_deployment_mode import DeploymentMode
 from feathub.processors.flink.flink_processor_config import (
     FlinkProcessorConfig,
     DEPLOYMENT_MODE_CONFIG,
-    REST_ADDRESS_CONFIG,
-    REST_PORT_CONFIG,
+    MASTER_CONFIG,
     NATIVE_CONFIG_PREFIX,
 )
 from feathub.processors.flink.flink_table import FlinkTable
@@ -72,8 +72,7 @@ class FlinkProcessor(Processor):
                   then the Flink job config will have an entry "parallelism.default: 2".
 
     Extra config keys accepted when deployment_mode = "session":
-        rest.address: The ip or hostname where the JobManager runs. Required.
-        rest.port: The port where the JobManager runs. Required.
+        master: The Flink JobManager URL to connect to. Required.
 
     Extra config keys accepted when deployment_mode = "kubernetes-application":
         flink_home: The path to the Flink distribution. If not specified, it uses the
@@ -104,7 +103,10 @@ class FlinkProcessor(Processor):
         except ValueError:
             raise FeathubException("Unsupported deployment mode.")
 
-        if self.deployment_mode == DeploymentMode.CLI:
+        if self.deployment_mode == DeploymentMode.CLI or (
+            self.deployment_mode == DeploymentMode.SESSION
+            and self.config.get(MASTER_CONFIG) == "local"
+        ):
             self.flink_table_builder = FlinkTableBuilder(
                 self._get_table_env(), self.registry
             )
@@ -115,11 +117,22 @@ class FlinkProcessor(Processor):
                 FlinkSessionClusterJobSubmitter(self)
             )
         elif self.deployment_mode == DeploymentMode.SESSION:
-            jobmanager_rpc_address = self.config.get(REST_ADDRESS_CONFIG)
-            jobmanager_rpc_port = self.config.get(REST_PORT_CONFIG)
+            master = self.config.get(MASTER_CONFIG)
+            if master is None:
+                raise FeathubException(
+                    "master url containing host and port has to be set with session "
+                    "deployment mode."
+                )
+
+            parse_result = urlparse(master)
+            if not parse_result.scheme:
+                parse_result = urlparse("http://" + master)
+
+            jobmanager_rpc_address = parse_result.hostname
+            jobmanager_rpc_port = str(parse_result.port)
             if jobmanager_rpc_address is None or jobmanager_rpc_port is None:
                 raise FeathubException(
-                    "rest.address or rest.port has to be set with session "
+                    "master url containing host and port has to be set with session "
                     "deployment mode."
                 )
             self.flink_table_builder = FlinkTableBuilder(

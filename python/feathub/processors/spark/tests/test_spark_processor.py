@@ -104,3 +104,6 @@ class SparkProcessorITTest(
 
     def test_bounded_left_table_join_unbounded_right_table(self):
         pass
+
+    def test_over_window_transform_count_with_limit(self):
+        pass

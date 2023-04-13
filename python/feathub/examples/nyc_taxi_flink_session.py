@@ -27,8 +27,7 @@ def main() -> None:
             "processor": {
                 "type": "flink",
                 "flink": {
-                    "rest.address": "localhost",
-                    "rest.port": 8081,
+                    "master": "localhost:8081",
                 },
             },
             "online_store": {

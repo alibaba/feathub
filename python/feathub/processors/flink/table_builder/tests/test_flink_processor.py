@@ -111,8 +111,7 @@ class FlinkProcessorTest(unittest.TestCase):
     def test_default_deployment_mode(self):
         processor = FlinkProcessor(
             props={
-                "processor.flink.rest.address": "127.0.0.1",
-                "processor.flink.rest.port": 1234,
+                "processor.flink.master": "127.0.0.1:1234",
             },
             registry=self.registry,
         )
@@ -122,8 +121,7 @@ class FlinkProcessorTest(unittest.TestCase):
         with self.assertRaises(FeathubException):
             FlinkProcessor(
                 props={
-                    "processor.flink.rest.address": "127.0.0.1",
-                    "processor.flink.rest.port": 1234,
+                    "processor.flink.master": "127.0.0.1:1234",
                     "processor.flink.deployment_mode": "unsupported",
                 },
                 registry=self.registry,
@@ -136,8 +134,7 @@ class FlinkProcessorTest(unittest.TestCase):
     def test_get_table_with_session_mode(self):
         processor = FlinkProcessor(
             props={
-                "processor.flink.rest.address": "127.0.0.1",
-                "processor.flink.rest.port": 1234,
+                "processor.flink.master": "127.0.0.1:1234",
             },
             registry=self.registry,
         )
@@ -151,8 +148,7 @@ class FlinkProcessorTest(unittest.TestCase):
     def test_flink_processor_with_session_mode(self):
         processor = FlinkProcessor(
             props={
-                "processor.flink.rest.address": "127.0.0.1",
-                "processor.flink.rest.port": 1234,
+                "processor.flink.master": "127.0.0.1:1234",
             },
             registry=self.registry,
         )
@@ -165,8 +161,7 @@ class FlinkProcessorTest(unittest.TestCase):
     def test_materialize_with_session_mode(self):
         processor = FlinkProcessor(
             props={
-                "processor.flink.rest.address": "127.0.0.1",
-                "processor.flink.rest.port": 1234,
+                "processor.flink.master": "127.0.0.1:1234",
             },
             registry=self.registry,
         )
@@ -323,8 +318,7 @@ class FlinkProcessorTest(unittest.TestCase):
     def test_materialize_to_online_store_with_session_mode(self):
         processor = FlinkProcessor(
             props={
-                "processor.flink.rest.address": "127.0.0.1",
-                "processor.flink.rest.port": 1234,
+                "processor.flink.master": "127.0.0.1:1234",
             },
             registry=self.registry,
         )

@@ -31,8 +31,7 @@ class FlinkTableTest(unittest.TestCase):
         self.registry = LocalRegistry(props={})
         self.processor = FlinkProcessor(
             props={
-                "processor.flink.rest.address": "127.0.0.1",
-                "processor.flink.rest.port": 1234,
+                "processor.flink.master": "127.0.0.1:1234",
             },
             registry=self.registry,
         )
