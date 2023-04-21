@@ -12,10 +12,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from abc import ABC
+from typing import Dict, List
 
 import pandas as pd
+from pandas._testing import assert_frame_equal
 
-from feathub.common.types import String
+from feathub.common.types import String, MapType, VectorType
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
@@ -58,3 +60,42 @@ class PythonUDFTransformITTest(ABC, FeathubITTestBase):
         )
 
         self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_python_udf_with_multi_level_composite(self):
+        df_1 = self.input_data.copy()
+        source = self.create_file_source(df_1)
+
+        def make_composite_type_feature(row: pd.Series) -> Dict[str, List[str]]:
+            return {
+                "name_list": [row["name"], row["name"]],
+                "cost_list": [str(row["cost"])],
+            }
+
+        feature_view = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                Feature(
+                    name="composite_type_feature",
+                    dtype=MapType(String, VectorType(String)),
+                    transform=PythonUdfTransform(make_composite_type_feature),
+                    keys=["name"],
+                )
+            ],
+        )
+
+        expected_result_df = df_1
+        expected_result_df["composite_type_feature"] = expected_result_df.apply(
+            make_composite_type_feature, axis=1
+        )
+        expected_result_df.drop(["cost", "distance"], axis=1, inplace=True)
+        expected_result_df = expected_result_df.sort_values(
+            by=["name", "time"]
+        ).reset_index(drop=True)
+
+        table = self.client.get_features(features=feature_view)
+        result_df = (
+            table.to_pandas().sort_values(by=["name", "time"]).reset_index(drop=True)
+        )
+
+        assert_frame_equal(expected_result_df, result_df)
