@@ -9,6 +9,9 @@ applications.
 - [Supported Compute Engines](#supported-compute-engines)
 - [FeatHub SDK Highlights](#feathub-sdk-highlights)
 - [Get Started](#get-started)
+  * [Install FeatHub Nightly Build](#install-feathub-nightly-build)
+  * [Quickstart](#quickstart)
+  * [Examples](#examples)
 - [Developer Guide](#developer-guide)
 - [Roadmap](#roadmap)
 - [Contact Us](#contact-us)
@@ -225,7 +228,7 @@ Execute the following command to compute features defined in
 $ python python/feathub/examples/nyc_taxi.py
 ```
 
-#### Quickstart using Apache Flink cluster
+#### Quickstart using Flink Processor
 
 You can use the following quickstart guides to compute features in a Flink
 cluster with different deployment modes:
@@ -233,7 +236,7 @@ cluster with different deployment modes:
 - [Flink Processor Session Mode Quickstart](docs/content/get-started/quickstarts/flink-session-mode.md)
 - [Flink Processor Cli Mode Quickstart](docs/content/get-started/quickstarts/flink-cli-mode.md)
 
-#### Quickstart using Apache Spark cluster
+#### Quickstart using Spark Processor
 
 You can use the following quickstart guides to compute features in a standalone
 Spark cluster.
