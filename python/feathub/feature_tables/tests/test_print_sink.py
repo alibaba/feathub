@@ -28,3 +28,10 @@ class PrintSinkITTest(ABC, FeathubITTestBase):
             sink=sink,
             allow_overwrite=True,
         ).wait()
+
+    def test_print_sink_execute_insert(self):
+        source = self.create_file_source(self.input_data.copy())
+
+        sink = PrintSink()
+
+        self.client.get_features(source).execute_insert(sink=sink, allow_overwrite=True)
