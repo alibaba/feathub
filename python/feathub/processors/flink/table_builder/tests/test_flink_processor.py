@@ -69,6 +69,9 @@ from feathub.feature_views.transforms.tests.test_sliding_window_transform import
 )
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.processors.flink import flink_table
+from feathub.processors.flink.flink_class_loader_utils import (
+    get_flink_context_class_loader,
+)
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
 from feathub.processors.flink.flink_processor import FlinkProcessor
 from feathub.processors.flink.job_submitter.flink_job_submitter import (
@@ -174,6 +177,7 @@ class FlinkProcessorTest(unittest.TestCase):
         mock_table_builder = Mock(spec=FlinkTableBuilder)
         mock_table_builder.build.return_value = mock_table
         mock_table_builder.t_env = Mock()
+        mock_table_builder.class_loader = get_flink_context_class_loader()
         processor.flink_table_builder = mock_table_builder
         source = FileSystemSource("source", "/path", "csv", Schema([], []))
         sink = FileSystemSink("/path", "csv")

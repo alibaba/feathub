@@ -131,9 +131,9 @@ try:
         "scikit-learn",
         "ply>=3.11",
         "pandas>=1.1.5",
-        "numpy>=1.14.3,<1.20",
+        "numpy~=1.21.4",
         "kubernetes~=24.2",
-        "protobuf~=3.17.3",
+        "protobuf~=3.20.0",
         "python-dateutil~=2.8",
         "redis==4.3.0",
         "tzlocal~=4.2",
@@ -142,7 +142,7 @@ try:
 
     extras_require = {
         "flink": [
-            "apache-flink==1.15.2",
+            "apache-flink==1.16.1",
         ],
         "spark": [
             "pyspark==3.3.1",

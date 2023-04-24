@@ -20,6 +20,9 @@ from pyflink.table import (
     StreamTableEnvironment,
 )
 
+from feathub.processors.flink.flink_class_loader_utils import (
+    get_flink_context_class_loader,
+)
 from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
     FeathubJobDescriptor,
 )
@@ -58,6 +61,7 @@ def run_job(feathub_job_descriptor_path: str) -> None:
 
     flink_table_builder = FlinkTableBuilder(
         t_env=t_env,
+        class_loader=get_flink_context_class_loader(),
         registry=registry,
     )
 

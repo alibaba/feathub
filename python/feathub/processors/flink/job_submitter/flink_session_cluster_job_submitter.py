@@ -80,20 +80,21 @@ class FlinkSessionClusterJobSubmitter(FlinkJobSubmitter):
             )
             return FlinkSessionClusterJob(None, self._executor)
 
-        native_flink_table = self.flink_processor.flink_table_builder.build(
-            features=features,
-            keys=keys,
-            start_datetime=start_datetime,
-            end_datetime=end_datetime,
-        )
+        with self.flink_processor.flink_table_builder.class_loader:
+            native_flink_table = self.flink_processor.flink_table_builder.build(
+                features=features,
+                keys=keys,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+            )
 
-        table_result = insert_into_sink(
-            self.flink_processor.flink_table_builder.t_env,
-            native_flink_table,
-            features,
-            sink,
-        )
-        return FlinkSessionClusterJob(table_result, self._executor)
+            table_result = insert_into_sink(
+                self.flink_processor.flink_table_builder.t_env,
+                native_flink_table,
+                features,
+                sink,
+            )
+            return FlinkSessionClusterJob(table_result, self._executor)
 
 
 class FlinkSessionClusterJob(ProcessorJob):

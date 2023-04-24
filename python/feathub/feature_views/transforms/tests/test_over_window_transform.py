@@ -987,7 +987,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
 
         expected_df = df.copy()
         expected_df["cost_sum"] = pd.Series([100, 400, 400, 600, 500, 900]).astype(
-            "Float64"
+            "float64"
         )
         expected_df.drop(["cost", "distance"], axis=1, inplace=True)
         expected_df = expected_df.sort_values(by=["name", "time"]).reset_index(

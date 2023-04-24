@@ -14,7 +14,7 @@
 import logging
 import os
 from datetime import timedelta, datetime
-from typing import Optional, Union, Dict
+from typing import Optional, Union, Dict, Tuple
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -34,6 +34,10 @@ from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.sql_feature_view import SqlFeatureView
 from feathub.feature_views.transforms.join_transform import JoinTransform
+from feathub.processors.flink.flink_class_loader_utils import (
+    ClassLoader,
+    get_flink_context_class_loader,
+)
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
 from feathub.processors.flink.flink_processor_config import (
     FlinkProcessorConfig,
@@ -111,8 +115,9 @@ class FlinkProcessor(Processor):
             self.deployment_mode == DeploymentMode.SESSION
             and self.config.get(MASTER_CONFIG) == "local"
         ):
+            t_env, class_loader = self._get_table_env()
             self.flink_table_builder = FlinkTableBuilder(
-                self._get_table_env(), self.registry
+                t_env, class_loader, self.registry
             )
 
             # The type of flink_job_submitter is set explicitly to the base class
@@ -139,8 +144,12 @@ class FlinkProcessor(Processor):
                     "master url containing host and port has to be set with session "
                     "deployment mode."
                 )
+            t_env, class_loader = self._get_table_env(
+                jobmanager_rpc_address, jobmanager_rpc_port
+            )
             self.flink_table_builder = FlinkTableBuilder(
-                self._get_table_env(jobmanager_rpc_address, jobmanager_rpc_port),
+                t_env,
+                class_loader,
                 self.registry,
             )
             self.flink_job_submitter = FlinkSessionClusterJobSubmitter(self)
@@ -152,8 +161,9 @@ class FlinkProcessor(Processor):
                 FlinkKubernetesApplicationClusterJobSubmitter,
             )
 
+            t_env, class_loader = self._get_table_env()
             self.flink_table_builder = FlinkTableBuilder(
-                self._get_table_env(), self.registry
+                t_env, class_loader, self.registry
             )
             self.flink_job_submitter = FlinkKubernetesApplicationClusterJobSubmitter(
                 processor_config=self.config,
@@ -218,49 +228,57 @@ class FlinkProcessor(Processor):
         self,
         jobmanager_rpc_address: Optional[str] = None,
         jobmanager_rpc_port: Optional[str] = None,
-    ) -> StreamTableEnvironment:
+    ) -> Tuple[StreamTableEnvironment, ClassLoader]:
+
         if jobmanager_rpc_address is not None and jobmanager_rpc_port is not None:
             # PyFlink 1.15 do not support initialize StreamExecutionEnvironment with
-            # config. Currently, we work around by setting the environment. We should
-            # initialize the StreamExecutionEnvironment with config after PyFlink 1.16.
+            # config. Currently, we work around by setting the environment. We
+            # should initialize the StreamExecutionEnvironment with config after
+            # PyFlink 1.16.
             os.environ.setdefault(
                 "SUBMIT_ARGS",
                 f"remote -m {jobmanager_rpc_address}:{jobmanager_rpc_port}",
             )
 
-        native_flink_config = Configuration()
-        native_flink_config.set_string(
-            "table.local-time-zone", self.config.get(TIMEZONE_CONFIG)
-        )
+        class_loader = get_flink_context_class_loader()
+        with class_loader:
+            native_flink_config = Configuration()
+            native_flink_config.set_string(
+                "table.local-time-zone", self.config.get(TIMEZONE_CONFIG)
+            )
 
-        prefix_len = len(NATIVE_CONFIG_PREFIX)
-        for k, v in self.config.original_props_with_prefix(
-            NATIVE_CONFIG_PREFIX, False
-        ).items():
-            if (
-                k in NATIVE_CONFIG_PROCESSOR_CONFIG_MAP
-                and NATIVE_CONFIG_PROCESSOR_CONFIG_MAP[k] in self.config.config_values
-                and v
-                != self.config.config_values[NATIVE_CONFIG_PROCESSOR_CONFIG_MAP[k]]
-            ):
-                raise FeathubConfigurationException(
-                    f"Native config: {k} is conflict with processor config: "
-                    f"{NATIVE_CONFIG_PROCESSOR_CONFIG_MAP[k]}."
-                )
-            native_flink_config.set_string(k[prefix_len:], v)
+            prefix_len = len(NATIVE_CONFIG_PREFIX)
+            for k, v in self.config.original_props_with_prefix(
+                NATIVE_CONFIG_PREFIX, False
+            ).items():
+                if (
+                    k in NATIVE_CONFIG_PROCESSOR_CONFIG_MAP
+                    and NATIVE_CONFIG_PROCESSOR_CONFIG_MAP[k]
+                    in self.config.config_values
+                    and v
+                    != self.config.config_values[NATIVE_CONFIG_PROCESSOR_CONFIG_MAP[k]]
+                ):
+                    raise FeathubConfigurationException(
+                        f"Native config: {k} is conflict with processor config: "
+                        f"{NATIVE_CONFIG_PROCESSOR_CONFIG_MAP[k]}."
+                    )
+                native_flink_config.set_string(k[prefix_len:], v)
 
-        env = StreamExecutionEnvironment.get_execution_environment()
-        table_env = StreamTableEnvironment.create(
-            env,
-            EnvironmentSettings.new_instance()
-            .with_configuration(native_flink_config)
-            .build(),
-        )
+            env = StreamExecutionEnvironment.get_execution_environment()
+            table_env = StreamTableEnvironment.create(
+                env,
+                EnvironmentSettings.new_instance()
+                .with_configuration(native_flink_config)
+                .build(),
+            )
 
-        if jobmanager_rpc_address is not None and jobmanager_rpc_port is not None:
-            os.environ.pop("SUBMIT_ARGS")
+            if jobmanager_rpc_address is not None and jobmanager_rpc_port is not None:
+                os.environ.pop("SUBMIT_ARGS")
 
-        return table_env
+            return (
+                table_env,
+                get_flink_context_class_loader(),
+            )
 
     def _resolve_table_descriptor(
         self, features: Union[str, TableDescriptor]
