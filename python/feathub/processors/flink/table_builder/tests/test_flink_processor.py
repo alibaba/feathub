@@ -473,12 +473,6 @@ class FlinkProcessorITTest(
                 features=source, sink=sink, allow_overwrite=True
             )
 
-    def test_over_window_transform_first_last_value_with_window_size(self):
-        pass
-
-    def test_over_window_transform_first_last_value_with_limit(self):
-        pass
-
     def test_random_field_max_past(self):
         pass
 
