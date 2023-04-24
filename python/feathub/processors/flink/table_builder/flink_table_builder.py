@@ -44,6 +44,9 @@ from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
 from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
+from feathub.processors.flink.flink_class_loader_utils import (
+    ClassLoader,
+)
 from feathub.processors.flink.flink_types_utils import to_flink_type, to_flink_schema
 from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
@@ -87,6 +90,7 @@ class FlinkTableBuilder:
     def __init__(
         self,
         t_env: StreamTableEnvironment,
+        class_loader: ClassLoader,
         registry: Registry,
     ):
         """
@@ -97,6 +101,16 @@ class FlinkTableBuilder:
         :param registry: The FeatHub registry.
         """
         self.t_env = t_env
+        # TODO: PyFlink 1.16 and 1.17 have problem working with multiple
+        #  StreamTableEnvironment. Creating a StreamTableEnvironment will overwrite
+        #  the context class loader that belongs to the previous
+        #  StreamTableEnvironment, which can cause class loading problem to the
+        #  previous table environment. Therefore, we need to keep track of the
+        #  classloader of each table environment. And set the context class loader
+        #  accordingly when running operation on the table environment.
+        #  This can be remove once https://issues.apache.org/jira/browse/FLINK-31943
+        #  is resolved.
+        self.class_loader = class_loader
         self.registry = registry
 
         # Mapping from the name of TableDescriptor to the TableDescriptor and the built
@@ -140,6 +154,16 @@ class FlinkTableBuilder:
                              we assume this field has the maximum possible value.
         :return: The native Flink table that represents the given features.
         """
+        with self.class_loader:
+            return self._build(features, keys, start_datetime, end_datetime)
+
+    def _build(
+        self,
+        features: TableDescriptor,
+        keys: Union[pd.DataFrame, TableDescriptor, None] = None,
+        start_datetime: Optional[datetime] = None,
+        end_datetime: Optional[datetime] = None,
+    ) -> NativeFlinkTable:
         if isinstance(features, FeatureView) and features.is_unresolved():
             raise FeathubException(
                 "Trying to convert an unresolved FeatureView to native Flink table."
@@ -159,7 +183,7 @@ class FlinkTableBuilder:
             table = self._range_table_by_time(table, start_datetime, end_datetime)
 
         if EVENT_TIME_ATTRIBUTE_NAME in table.get_schema().get_field_names():
-            table = table.drop_columns(EVENT_TIME_ATTRIBUTE_NAME)
+            table = table.drop_columns(native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME))
 
         self._built_tables.clear()
 

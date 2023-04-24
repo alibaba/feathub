@@ -90,9 +90,9 @@ class MapType(DType):
 
 
 def from_numpy_dtype(dtype: Type) -> DType:
-    if dtype == np.str:
+    if dtype == str:
         return String
-    elif dtype == np.bool:
+    elif dtype == bool:
         return Bool
     elif dtype == np.int32:
         return Int32
@@ -102,7 +102,7 @@ def from_numpy_dtype(dtype: Type) -> DType:
         return Float32
     elif dtype == np.float64:
         return Float64
-    elif dtype == np.object:
+    elif dtype == object:
         return Unknown
 
     raise FeathubTypeException(f"Unsupported numpy type {dtype}.")
@@ -110,9 +110,9 @@ def from_numpy_dtype(dtype: Type) -> DType:
 
 def to_numpy_dtype(dtype: DType) -> Type:
     if dtype == String:
-        return np.str
+        return str
     elif dtype == Bool:
-        return np.bool
+        return bool
     elif dtype == Int32:
         return np.int32
     elif dtype == Int64:
@@ -122,11 +122,11 @@ def to_numpy_dtype(dtype: DType) -> Type:
     elif dtype == Float64:
         return np.float64
     elif isinstance(dtype, VectorType):
-        return np.object
+        return object
     elif isinstance(dtype, MapType):
-        return np.object
+        return object
     elif dtype == Unknown:
-        return np.object
+        return object
 
     raise FeathubTypeException(f"Converting {dtype} to numpy type is not supported.")
 

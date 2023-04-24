@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Sequence, Any
+from typing import Sequence, Any, Callable, Dict
 
 import numpy as np
 import pandas as pd
@@ -25,7 +25,7 @@ def _value_counts(inputs: Sequence[Any]) -> Any:
     return dict(pd.Series(inputs).value_counts())
 
 
-AGG_FUNCTIONS = {
+AGG_FUNCTIONS: Dict[AggFunc, Callable[[Sequence[Any]], Any]] = {
     AggFunc.AVG: np.mean,
     AggFunc.SUM: np.sum,
     AggFunc.MAX: lambda l: None if len(l) <= 0 else np.max(l),
