@@ -52,10 +52,6 @@ jobs:
           python -m pip install ./python
           python -m pip install ./python[flink]
           python -m pip install ./python[spark]
-          
-          # Re-install black here because its pip dependency conflicts with
-          # apache-flink 1.15.2.
-          python -m pip install black==22.3.0
       - name: Test example notebooks
         run: |
           # notebooks should not contain outputs

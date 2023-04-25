@@ -1,4 +1,4 @@
-FROM flink:1.15.2
+FROM flink:1.16.1
 
 
 # install python3: it has updated Python to 3.9 in Debian 11 and so install Python 3.7 from source

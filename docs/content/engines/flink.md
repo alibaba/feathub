@@ -6,7 +6,7 @@ and the configuration keys accepted by each mode.
 
 ## Supported Versions
 
-- Flink 1.15
+- Flink 1.16
 
 ## Deployment Mode
 The Flink processor runs the Flink job in one of the following deployment modes:
