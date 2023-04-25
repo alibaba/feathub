@@ -116,7 +116,7 @@ See [Basic Concepts](docs/content/concepts/basic-concepts.md) for more details a
 ## Supported Compute Engines
 
 FeatHub supports the following compute engines to execute feature ETL pipeline:
-- [Apache Flink 1.15](docs/content/engines/flink.md)
+- [Apache Flink 1.16](docs/content/engines/flink.md)
 - [Aapche Spark 3.3](docs/content/engines/spark.md)
 - Local processor, which is implemented using the Pandas library and computes features in the given Python process.
 

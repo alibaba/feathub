@@ -13,14 +13,14 @@ result.
 
 ## Install Flink
 
-Download a stable release of Flink 1.15.2, then extract the archive:
+Download a stable release of Flink 1.16.1, then extract the archive:
 
 ```bash
-$ curl -LO https://archive.apache.org/dist/flink/flink-1.15.2/flink-1.15.2-bin-scala_2.12.tgz
-$ tar -xzf flink-1.15.2-bin-scala_2.12.tgz
+$ curl -LO https://archive.apache.org/dist/flink/flink-1.16.1/flink-1.16.1-bin-scala_2.12.tgz
+$ tar -xzf flink-1.16.1-bin-scala_2.12.tgz
 ```
 
-You can refer to the [local installation](https://nightlies.apache.org/flink/flink-docs-release-1.15//docs/try-flink/local_installation/) 
+You can refer to the [local installation](https://nightlies.apache.org/flink/flink-docs-release-1.16/docs/try-flink/local_installation/) 
 instruction for more detailed step.
 
 ## Deploy a Standalone Flink cluster
@@ -29,7 +29,7 @@ You can deploy a standalone Flink cluster in your local environment with the fol
 command.
 
 ```bash
-$ ./flink-1.15.2/bin/start-cluster.sh
+$ ./flink-1.16.1/bin/start-cluster.sh
 ```
 
 You should be able to navigate to the web UI at [localhost:8081](http://localhost:8081)
@@ -68,7 +68,7 @@ Now you can submit the FeatHub job to the standalone Flink cluster with the foll
 command:
 
 ```bash
-$ ./flink-1.15.2/bin/flink run --python python/feathub/examples/streaming_average_flink_cli.py \
+$ ./flink-1.16.1/bin/flink run --python python/feathub/examples/streaming_average_flink_cli.py \
     --pyFiles tools/cli-deps/deps.zip
 ```
 
