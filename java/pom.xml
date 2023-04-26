@@ -28,6 +28,7 @@
         <module>feathub-dist</module>
         <module>feathub-udf</module>
         <module>feathub-connectors</module>
+        <module>feathub-test-proto</module>
     </modules>
 
     <properties>

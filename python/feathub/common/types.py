@@ -92,6 +92,8 @@ class MapType(DType):
 def from_numpy_dtype(dtype: Type) -> DType:
     if dtype == str:
         return String
+    elif dtype == bytes:
+        return Bytes
     elif dtype == bool:
         return Bool
     elif dtype == np.int32:
@@ -111,6 +113,8 @@ def from_numpy_dtype(dtype: Type) -> DType:
 def to_numpy_dtype(dtype: DType) -> Type:
     if dtype == String:
         return str
+    elif dtype == Bytes:
+        return bytes
     elif dtype == Bool:
         return bool
     elif dtype == Int32:

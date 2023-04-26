@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package org.feathub.proto;
+option java_package = "org.feathub.proto";
+option java_multiple_files = true;
+
+message FileSystemTestMessage {
+  // TODO: We have to add a dummy field with type int64 at the beginning,
+  //  otherwise exception will be thrown.
+  //  https://issues.apache.org/jira/browse/FLINK-31944
+  int64 dummy = 1;
+  string name = 2;
+  int64 cost = 3;
+  int64 distance = 4;
+  string time = 5;
+}
+
+message AllTypesTest {
+  // TODO: We have to add a dummy field with type int64 at the beginning,
+  //  otherwise exception will be thrown.
+  //  https://issues.apache.org/jira/browse/FLINK-31944
+  int64 dummy = 1;
+  bytes bytes_v = 2;
+  string string_v = 3;
+  int32 int32_v = 4;
+  int64 int64_v = 5;
+  float float32_v = 6;
+  double float64_v = 7;
+  bool bool_v = 8;
+  repeated int32 vector_v = 9;
+
+  // TODO: Flink protobuf format has problem with map datatype
+  // https://issues.apache.org/jira/browse/FLINK-32008
+}
+
+message KafkaTestMessage {
+  int64 id = 1;
+  int64 val = 2;
+  string ts = 3;
+}

@@ -132,3 +132,10 @@ class LocalProcessorITTest(
     # TODO: Enable this test after local processor support datagen source.
     def test_bounded_left_table_join_unbounded_right_table(self):
         pass
+
+    # TODO: Support protobuf format for LocalProcessor FileSystem connector.
+    def test_local_file_system_protobuf_source_sink(self):
+        pass
+
+    def test_protobuf_all_types(self):
+        pass

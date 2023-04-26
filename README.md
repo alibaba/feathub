@@ -304,7 +304,7 @@ $ python -m pip install "./python[spark]"
 ### Run Tests
 
 ```bash
-$ mvn test -f ./java
+$ mvn clean package -f ./java
 $ pytest --tb=line -W ignore::DeprecationWarning ./python
 ```
 

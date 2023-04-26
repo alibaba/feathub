@@ -142,7 +142,10 @@ class FlinkTable(Table):
                 )
             feature = feature.get_bounded_view()
 
-        return flink_table_to_pandas(self._get_flink_table(feature))
+        with self.flink_processor.flink_table_builder.class_loader:
+            return flink_table_to_pandas(
+                self._get_flink_table(feature),
+            )
 
     def execute_insert(
         self,

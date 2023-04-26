@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from datetime import timedelta
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.table.schema import Schema
@@ -31,6 +31,7 @@ class FileSystemSource(FeatureTable):
         timestamp_field: Optional[str] = None,
         timestamp_format: str = "epoch",
         max_out_of_orderness: timedelta = timedelta(0),
+        data_format_properties: Optional[Dict[str, Any]] = None,
     ):
         """
         :param name: The name that uniquely identifies this source in a registry.
@@ -51,6 +52,7 @@ class FileSystemSource(FeatureTable):
         :param max_out_of_orderness: The maximum amount of time a record is allowed to
                                      be late. Default is 0 second, meaning the records
                                      should be ordered by `timestamp_field`.
+        :param data_format_properties: The properties of the data format.
         """
         super().__init__(
             name=name,
@@ -63,6 +65,7 @@ class FileSystemSource(FeatureTable):
             schema=schema,
             timestamp_field=timestamp_field,
             timestamp_format=timestamp_format,
+            data_format_properties=data_format_properties,
         )
         self.path = path
         self.schema = schema
@@ -80,4 +83,5 @@ class FileSystemSource(FeatureTable):
             "timestamp_format": self.timestamp_format,
             "max_out_of_orderness_ms": self.max_out_of_orderness
             / timedelta(milliseconds=1),
+            "data_format_properties": self.data_format_properties,
         }

@@ -338,6 +338,7 @@ class FlinkProcessorTest(unittest.TestCase):
         )
         mock_table: Table = Mock(spec=Table)
         mock_table_builder = Mock(spec=FlinkTableBuilder)
+        mock_table_builder.class_loader = get_flink_context_class_loader()
         mock_table_builder.build.return_value = mock_table
         processor.flink_table_builder = mock_table_builder
         source = FileSystemSource(

@@ -13,7 +13,7 @@
 #  limitations under the License.
 from copy import deepcopy
 from datetime import timedelta, datetime
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_tables.feature_table import FeatureTable
@@ -42,6 +42,8 @@ class KafkaSource(FeatureTable):
         startup_datetime: Optional[datetime] = None,
         partition_discovery_interval: timedelta = timedelta(minutes=5),
         is_bounded: bool = False,
+        key_data_format_properties: Optional[Dict[str, Any]] = None,
+        value_data_format_properties: Optional[Dict[str, Any]] = None,
     ):
         """
         :param name: The name that uniquely identifies this source in a registry.
@@ -91,6 +93,10 @@ class KafkaSource(FeatureTable):
         :param is_bounded: Whether the KafkaSource should be bounded. If the KafkaSource
                            is bounded, it stops at the latest offsets of the partitions
                            when the KafkaSource starts to run.
+        :param key_data_format_properties: Optional. The properties of the format for
+                                           Kafka message key.
+        :param value_data_format_properties: Optional. The properties of the format for
+                                             Kafka message value.
         """
         super().__init__(
             name=name,
@@ -104,7 +110,13 @@ class KafkaSource(FeatureTable):
         self.bootstrap_server = bootstrap_server
         self.topic = topic
         self.key_format = key_format
+        self.key_data_format_properties = (
+            {} if key_data_format_properties is None else key_data_format_properties
+        )
         self.value_format = value_format
+        self.value_data_format_properties = (
+            {} if value_data_format_properties is None else value_data_format_properties
+        )
         self.consumer_group = consumer_group
         self.consumer_properties = (
             {} if consumer_properties is None else consumer_properties
@@ -153,4 +165,6 @@ class KafkaSource(FeatureTable):
             "partition_discovery_interval_ms": self.partition_discovery_interval
             / timedelta(milliseconds=1),
             "is_bounded": self.is_bounded(),
+            "key_data_format_properties": self.key_data_format_properties,
+            "value_data_format_properties": self.value_data_format_properties,
         }

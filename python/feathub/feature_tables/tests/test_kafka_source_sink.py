@@ -14,14 +14,20 @@
 import unittest
 from abc import ABC
 from datetime import datetime
+from typing import Tuple, Dict, Any, Optional
 
 import pandas as pd
 from testcontainers.kafka import KafkaContainer
 
 from feathub.common import types
 from feathub.common.types import Int64
+from feathub.feature_tables.format_config import (
+    PROTOBUF_JAR_PATH_CONFIG,
+    PROTOBUF_CLASS_NAME_CONFIG,
+)
 from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sources.kafka_source import KafkaSource
+from feathub.feature_tables.tests.utils import get_protobuf_jar_path
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.table.schema import Schema
 from feathub.tests.feathub_it_test_base import FeathubITTestBase
@@ -65,7 +71,24 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
         super().tearDownClass()
         cls.kafka_container.stop()
 
-    def test_kafka_source_sink(self):
+    def test_kafka_source_sink_json(self):
+        self._test_kafka_source_sink("json")
+
+    def test_kafka_source_sink_csv(self):
+        self._test_kafka_source_sink("csv")
+
+    def test_kafka_source_sink_protobuf(self):
+        self._test_kafka_source_sink(
+            "protobuf",
+            {
+                PROTOBUF_JAR_PATH_CONFIG: get_protobuf_jar_path(),
+                PROTOBUF_CLASS_NAME_CONFIG: "org.feathub.proto.KafkaTestMessage",
+            },
+        )
+
+    def _test_kafka_source_sink(
+        self, data_format: str, data_format_properties: Optional[Dict[str, Any]] = None
+    ):
         input_data = pd.DataFrame(
             [
                 [1, 1, datetime(2022, 1, 1, 0, 0, 0).strftime("%Y-%m-%d %H:%M:%S")],
@@ -74,7 +97,6 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
             ],
             columns=["id", "val", "ts"],
         )
-
         schema = (
             Schema.new_builder()
             .column("id", types.Int64)
@@ -82,16 +104,32 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
             .column("ts", types.String)
             .build()
         )
-
-        topic_name, start_time = self._produce_data_to_kafka(input_data, schema)
-
+        topic_name, start_time = self._produce_data_to_kafka(
+            input_data, schema, data_format, data_format_properties
+        )
         # Consume data with kafka source
+        result_df = self.consume_data_from_kafka(
+            schema, start_time, topic_name, data_format, data_format_properties
+        )
+        expected_result_df = (
+            input_data.copy().sort_values(by=["id"]).reset_index(drop=True)
+        )
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    def consume_data_from_kafka(
+        self,
+        schema: Schema,
+        start_time: datetime,
+        topic_name: str,
+        data_format: str,
+        data_format_properties: Dict[str, Any] = None,
+    ) -> pd.DataFrame:
         source = KafkaSource(
             "kafka_source",
             bootstrap_server=self.kafka_container.get_bootstrap_server(),
             topic=topic_name,
-            key_format="json",
-            value_format="json",
+            key_format=data_format,
+            value_format=data_format,
             schema=schema,
             consumer_group="test-group",
             keys=["id"],
@@ -99,19 +137,16 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
             timestamp_format="%Y-%m-%d %H:%M:%S",
             startup_mode="timestamp",
             startup_datetime=start_time,
+            key_data_format_properties=data_format_properties,
+            value_data_format_properties=data_format_properties,
         )
-
         result_df = (
             self.client.get_features(source)
             .to_pandas(True)
             .sort_values(by=["id"])
             .reset_index(drop=True)
         )
-
-        expected_result_df = (
-            input_data.copy().sort_values(by=["id"]).reset_index(drop=True)
-        )
-        self.assertTrue(expected_result_df.equals(result_df))
+        return result_df
 
     def test_bounded_kafka_source(self):
         input_data = pd.DataFrame(
@@ -131,7 +166,7 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
             .build()
         )
 
-        topic_name, start_time = self._produce_data_to_kafka(input_data, schema)
+        topic_name, start_time = self._produce_data_to_kafka(input_data, schema, "json")
 
         # Consume data with kafka source
         source = KafkaSource(
@@ -166,7 +201,13 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
         )
         self.assertTrue(expected_result_df.equals(result_df))
 
-    def _produce_data_to_kafka(self, input_data: pd.DataFrame, schema: Schema):
+    def _produce_data_to_kafka(
+        self,
+        input_data: pd.DataFrame,
+        schema: Schema,
+        data_format: str,
+        data_format_properties: Optional[Dict[str, Any]] = None,
+    ) -> Tuple[str, datetime]:
         source = self.create_file_source(
             input_data,
             keys=["id"],
@@ -180,8 +221,10 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
         sink = KafkaSink(
             bootstrap_server=self.kafka_container.get_bootstrap_server(),
             topic=topic_name,
-            key_format="json",
-            value_format="json",
+            key_format=data_format,
+            value_format=data_format,
+            key_data_format_properties=data_format_properties,
+            value_data_format_properties=data_format_properties,
         )
 
         start_time = datetime.now()

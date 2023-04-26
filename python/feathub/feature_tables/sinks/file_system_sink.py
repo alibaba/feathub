@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Dict
+from typing import Dict, Optional, Any
 
 from feathub.feature_tables.sinks.sink import Sink
 
@@ -19,16 +19,23 @@ from feathub.feature_tables.sinks.sink import Sink
 class FileSystemSink(Sink):
     """A Sink which writes data to files."""
 
-    def __init__(self, path: str, data_format: str) -> None:
+    def __init__(
+        self,
+        path: str,
+        data_format: str,
+        data_format_properties: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """
         :param path: The path to directory of files to write to.
         :param data_format: The format of the data that are written to the file.
+        :param data_format_properties: The properties of the data format.
         """
         super().__init__(
             name="",
             system_name="filesystem",
             table_uri={"path": path},
             data_format=data_format,
+            data_format_properties=data_format_properties,
         )
         self.path = path
 
@@ -37,4 +44,5 @@ class FileSystemSink(Sink):
             "type": "FileSystemSink",
             "path": self.path,
             "data_format": self.data_format,
+            "data_format_properties": self.data_format_properties,
         }

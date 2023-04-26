@@ -116,6 +116,8 @@ class KafkaSourceSinkTest(unittest.TestCase):
                 "key.format": "json",
                 "key.fields": "id1;id2",
                 "value.fields-include": "EXCEPT_KEY",
+                "key.json.ignore-parse-errors": "True",
+                "value.json.ignore-parse-errors": "True",
             }
             self.assertEquals(
                 expected_options, dict(flink_table_descriptor.get_options())
@@ -148,6 +150,8 @@ class KafkaSourceSinkTest(unittest.TestCase):
                 "key.format": "json",
                 "key.fields": "id1;id2",
                 "value.fields-include": "EXCEPT_KEY",
+                "key.json.ignore-parse-errors": "True",
+                "value.json.ignore-parse-errors": "True",
             }
             self.assertEquals(
                 expected_options, dict(flink_table_descriptor.get_options())
@@ -179,6 +183,8 @@ class KafkaSourceSinkTest(unittest.TestCase):
                 "key.format": "json",
                 "key.fields": "id",
                 "value.fields-include": "EXCEPT_KEY",
+                "key.json.ignore-parse-errors": "True",
+                "value.json.ignore-parse-errors": "True",
             }
             self.assertEquals(
                 expected_options, dict(flink_table_descriptor.get_options())

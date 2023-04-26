@@ -33,6 +33,10 @@ from feathub.feature_tables.sources.kafka_source import KafkaSource
 from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_env
 from feathub.processors.flink.flink_types_utils import to_flink_schema
+from feathub.processors.flink.table_builder.format_utils import (
+    load_format,
+    get_flink_format_config,
+)
 from feathub.processors.flink.table_builder.source_sink_utils_common import (
     define_watermark,
     get_schema_from_table,
@@ -112,7 +116,24 @@ def get_table_from_kafka_source(
         )
         .schema(flink_schema)
     )
+
+    load_format(
+        t_env, kafka_source.value_format, kafka_source.value_data_format_properties
+    )
+    flink_value_format_config = get_flink_format_config(
+        kafka_source.value_format, kafka_source.value_data_format_properties
+    )
+    for k, v in flink_value_format_config.items():
+        descriptor_builder.option(f"value.{k}", v)
     if kafka_source.key_format is not None and len(keys) > 0:
+        load_format(
+            t_env, kafka_source.key_format, kafka_source.key_data_format_properties
+        )
+        flink_key_format_config = get_flink_format_config(
+            kafka_source.key_format, kafka_source.key_data_format_properties
+        )
+        for k, v in flink_key_format_config.items():
+            descriptor_builder.option(f"key.{k}", v)
         descriptor_builder.option("key.format", kafka_source.key_format)
         descriptor_builder.option("key.fields", ";".join(keys))
         descriptor_builder.option("value.fields-include", "EXCEPT_KEY")
@@ -130,12 +151,6 @@ def get_table_from_kafka_source(
 
     for k, v in kafka_source.consumer_properties.items():
         descriptor_builder.option(f"properties.{k}", v)
-
-    # Set ignore-parse-errors to set null in case of csv parse error
-    if kafka_source.value_format == "csv":
-        descriptor_builder.option("value.csv.ignore-parse-errors", "true")
-    if kafka_source.key_format == "csv":
-        descriptor_builder.option("key.csv.ignore-parse-errors", "true")
 
     table = t_env.from_descriptor(descriptor_builder.build())
 
@@ -187,7 +202,19 @@ def insert_into_kafka_sink(
         .option("topic", topic)
     )
 
+    load_format(t_env, sink.value_format, sink.value_format_properties)
+    flink_value_format_config = get_flink_format_config(
+        sink.value_format, sink.value_format_properties
+    )
+    for k, v in flink_value_format_config.items():
+        kafka_sink_descriptor_builder.option(f"value.{k}", v)
     if sink.key_format is not None and len(keys) > 0:
+        load_format(t_env, sink.key_format, sink.key_format_properties)
+        flink_key_format_config = get_flink_format_config(
+            sink.key_format, sink.key_format_properties
+        )
+        for k, v in flink_key_format_config.items():
+            kafka_sink_descriptor_builder.option(f"key.{k}", v)
         kafka_sink_descriptor_builder.option("value.fields-include", "EXCEPT_KEY")
         kafka_sink_descriptor_builder.option("key.format", sink.key_format)
         kafka_sink_descriptor_builder.option("key.fields", ";".join(keys))

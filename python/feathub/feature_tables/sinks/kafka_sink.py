@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 from feathub.feature_tables.sinks.sink import Sink
 
@@ -24,6 +24,8 @@ class KafkaSink(Sink):
         key_format: Optional[str],
         value_format: str,
         producer_properties: Optional[Dict[str, str]] = None,
+        key_data_format_properties: Optional[Dict[str, Any]] = None,
+        value_data_format_properties: Optional[Dict[str, Any]] = None,
     ):
         """
         :param bootstrap_server: Comma separated list of Kafka brokers.
@@ -38,6 +40,10 @@ class KafkaSink(Sink):
                              etc.
         :param producer_properties: Optional. If it is not None, it contains the extra
                                     kafka producer properties.
+        :param key_data_format_properties: Optional. The properties of the format for
+                                           Kafka message key.
+        :param value_data_format_properties: Optional. The properties of the format for
+                                             Kafka message value.
         """
         super().__init__(
             name="",
@@ -47,7 +53,13 @@ class KafkaSink(Sink):
         self.bootstrap_server = bootstrap_server
         self.topic = topic
         self.key_format = key_format
+        self.key_format_properties = (
+            {} if key_data_format_properties is None else key_data_format_properties
+        )
         self.value_format = value_format
+        self.value_format_properties = (
+            {} if value_data_format_properties is None else value_data_format_properties
+        )
         self.producer_properties = (
             {} if producer_properties is None else producer_properties
         )
@@ -60,4 +72,6 @@ class KafkaSink(Sink):
             "key_format": self.key_format,
             "value_format": self.value_format,
             "producer_properties": self.producer_properties,
+            "key_data_format_properties": self.key_format_properties,
+            "value_data_format_properties": self.value_format_properties,
         }

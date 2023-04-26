@@ -32,6 +32,8 @@
     </properties>
 
     <dependencies>
+
+        <!-- Flink connectors -->
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-sql-connector-kafka</artifactId>
@@ -70,6 +72,13 @@
                     <artifactId>json</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+
+        <!-- Flink format -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-sql-protobuf</artifactId>
+            <version>${flink.version}</version>
         </dependency>
 
         <dependency>

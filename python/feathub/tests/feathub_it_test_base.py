@@ -25,6 +25,7 @@ from testcontainers.mysql import MySqlContainer
 from feathub.common import types
 from feathub.common.exceptions import FeathubException
 from feathub.feathub_client import FeathubClient
+from feathub.feature_tables.format_config import DataFormat
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.registries.local_registry import LocalRegistry
@@ -118,11 +119,18 @@ class FeathubITTestBase(unittest.TestCase):
         timestamp_field: Optional[str] = "time",
         timestamp_format: str = "%Y-%m-%d %H:%M:%S",
         name: str = None,
+        data_format: str = "csv",
     ) -> FileSystemSource:
         path = tempfile.NamedTemporaryFile(dir=self.temp_dir, suffix=".csv").name
         if schema is None:
             schema = self._create_input_schema()
-        df.to_csv(path, index=False, header=False)
+
+        if data_format == DataFormat.CSV:
+            df.to_csv(path, index=False, header=False)
+        elif data_format == DataFormat.JSON:
+            df.to_json(path, orient="records", lines=True)
+        else:
+            raise FeathubException(f"Unsupported format: {data_format}.")
 
         if name is None:
             name = self.generate_random_name("source")
@@ -130,7 +138,7 @@ class FeathubITTestBase(unittest.TestCase):
         return FileSystemSource(
             name=name,
             path=path,
-            data_format="csv",
+            data_format=data_format,
             schema=schema,
             keys=keys,
             timestamp_field=timestamp_field,

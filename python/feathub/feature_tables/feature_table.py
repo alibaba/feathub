@@ -37,6 +37,7 @@ class FeatureTable(TableDescriptor, ABC):
         timestamp_field: Optional[str] = None,
         timestamp_format: str = "epoch",
         schema: Optional[Schema] = None,
+        data_format_properties: Optional[Dict[str, Any]] = None,
     ):
         """
         :param name: The name that uniquely identifies this feature table in a registry.
@@ -64,6 +65,7 @@ class FeatureTable(TableDescriptor, ABC):
                        Otherwise, the subclass should overwrite the get_feature method
                        to derive the feature according to the schema of the underlying
                        system.
+        :param data_format_properties: The properties of the data format.
         """
         super().__init__(
             name=name,
@@ -72,6 +74,9 @@ class FeatureTable(TableDescriptor, ABC):
             timestamp_format=timestamp_format,
         )
         self.data_format = data_format
+        self.data_format_properties = (
+            {} if data_format_properties is None else data_format_properties
+        )
         self.system_name = system_name
         self.table_uri = table_uri
         self.schema = schema

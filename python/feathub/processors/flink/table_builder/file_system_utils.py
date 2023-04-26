@@ -20,9 +20,14 @@ from pyflink.table import (
 )
 
 from feathub.common.exceptions import FeathubException
+from feathub.feature_tables.format_config import DataFormat
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.processors.flink.flink_types_utils import to_flink_schema
+from feathub.processors.flink.table_builder.format_utils import (
+    load_format,
+    get_flink_format_config,
+)
 from feathub.processors.flink.table_builder.source_sink_utils_common import (
     get_schema_from_table,
     define_watermark,
@@ -58,26 +63,38 @@ def get_table_from_file_source(
         .schema(flink_schema)
     )
 
-    if file_source.data_format == "csv":
-        # Set ignore-parse-errors to set null in case of csv parse error
-        descriptor_builder.option("csv.ignore-parse-errors", "true")
+    load_format(t_env, file_source.data_format, file_source.data_format_properties)
+    flink_format_config = get_flink_format_config(
+        file_source.data_format, file_source.data_format_properties
+    )
+    for k, v in flink_format_config.items():
+        descriptor_builder.option(k, v)
 
     return t_env.from_descriptor(descriptor_builder.build())
 
 
-def insert_into_file_sink(table: NativeFlinkTable, sink: FileSystemSink) -> TableResult:
+def insert_into_file_sink(
+    t_env: StreamTableEnvironment, table: NativeFlinkTable, sink: FileSystemSink
+) -> TableResult:
     path = sink.path
-
     # TODO: Remove this check after FLINK-28513 is resolved.
-    if sink.data_format == "csv" and path.startswith("s3://"):
+    if sink.data_format == DataFormat.CSV and path.startswith("s3://"):
         raise FeathubException(
             "Cannot sink files in CSV format to s3 due to FLINK-28513."
         )
 
-    return table.execute_insert(
+    descriptor_builder = (
         NativeFlinkTableDescriptor.for_connector("filesystem")
         .schema(get_schema_from_table(table))
         .format(sink.data_format)
         .option("path", path)
-        .build()
     )
+
+    load_format(t_env, sink.data_format, sink.data_format_properties)
+    flink_format_config = get_flink_format_config(
+        sink.data_format, sink.data_format_properties
+    )
+    for k, v in flink_format_config.items():
+        descriptor_builder.option(k, v)
+
+    return table.execute_insert(descriptor_builder.build())
