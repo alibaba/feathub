@@ -18,6 +18,7 @@ applications.
 	- [Apache Spark](engines/spark.md)
 - [Connectors](connectors/_index.md)
   - [Overview](connectors/overview.md) 
+  - [Formats](connectors/formats/_index.md)
   - [FileSystem](connectors/filesystem.md)
   - [MySql](connectors/mysql.md)
   - [Kafka](connectors/kafka.md)

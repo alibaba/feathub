@@ -21,6 +21,12 @@ been tested and supported by each processor.
 
 1. Supported via Spark's local mode.
 
+## Supported format
+
+- Local: CSV, JSON
+- Flink: CSV, JSON, Protobuf
+- Spark: CSV, JSON
+
 ## Examples
 
 Here are the examples of using `FileSystemSource` and `FileSystemSink`:

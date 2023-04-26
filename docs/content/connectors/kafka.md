@@ -7,6 +7,10 @@ materialize feature view to a Kafka topic.
 
 - Flink: Streaming Scan, Streaming Append
 
+## Supported format
+
+- Flink: CSV, JSON, Protobuf
+
 ## Examples
 
 Here are the examples of using `KafkaSource` and `KafkaSink`:

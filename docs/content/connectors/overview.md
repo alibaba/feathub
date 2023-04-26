@@ -46,3 +46,14 @@ where "Y" means supported, "Y/N" means partially supported, "N" means unsupporte
 | Connector\Modes             | Batch Scan | Streaming Scan | Streaming CDC | Lookup          | Batch Append | Streaming Append | Streaming Upsert |
 |-----------------------------|------------|----------------|---------------|-----------------|--------------|------------------|------------------|
 | [FileSystem](filesystem.md) | Y          | N              | N             | N               | Y            | N                | N                |
+
+
+## Data Format
+
+Data format define how information is encoded in an external storage. A data format is
+typically used for a storage system that doesn't have schema for its data, e.g. 
+FileSystem, Kafka, etc. Feature currently supports the following formats.
+
+- [CSV](formats/csv.md)
+- [JSON](formats/json.md)
+- [Protobuf](formats/protobuf.md)
