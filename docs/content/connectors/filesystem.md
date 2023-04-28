@@ -15,9 +15,11 @@ Various processors support different types of file systems, including popular on
 as local, HDFS, Amazon S3, and Aliyun OSS. Below are the file system types that have 
 been tested and supported by each processor.
 
-- Local: local
+- Local: local, HDFS<sup>1</sup>
 - Flink: local, HDFS, Amazon S3, Aliyun OSS
 - Spark: local, HDFS
+
+1. Supported via Spark's local mode.
 
 ## Examples
 

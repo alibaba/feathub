@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from typing import (
     Dict,
@@ -20,6 +21,7 @@ from typing import (
     Any,
     Sequence,
 )
+from urllib.parse import urlparse
 
 import pandas as pd
 from dateutil.tz import tz
@@ -30,8 +32,11 @@ from feathub.common.exceptions import FeathubException, FeathubTransformationExc
 from feathub.common.types import to_numpy_dtype
 from feathub.dsl.expr_parser import ExprParser
 from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sinks.black_hole_sink import BlackHoleSink
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
+from feathub.feature_tables.sinks.print_sink import PrintSink
+from feathub.feature_tables.sources.datagen_source import DataGenSource
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
@@ -77,6 +82,27 @@ from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
 
 
+def _is_spark_supported_source(source: FeatureTable) -> bool:
+    return isinstance(source, (FileSystemSource, DataGenSource))
+
+
+def _is_spark_supported_sink(sink: FeatureTable) -> bool:
+    return isinstance(
+        sink,
+        (
+            FileSystemSink,
+            PrintSink,
+            BlackHoleSink,
+            MemoryStoreSink,
+        ),
+    )
+
+
+def _is_local_file_or_dir(url: str) -> bool:
+    url_parsed = urlparse(url)
+    return url_parsed.scheme in ("file", "")
+
+
 class LocalProcessor(Processor):
     """
     A LocalProcessor uses CPUs on the local machine to compute features and uses Pandas
@@ -92,11 +118,14 @@ class LocalProcessor(Processor):
         self.props = props
         self.registry = registry
 
-        config = LocalProcessorConfig(props)
-        self.timezone = tz.gettz(config.get(TIMEZONE_CONFIG))
+        self.config = LocalProcessorConfig(props)
+        self.timezone = tz.gettz(self.config.get(TIMEZONE_CONFIG))
 
         self.parser = ExprParser()
         self.ast_evaluator = LocalAstEvaluator(tz=self.timezone)
+
+        self.spark_session: Optional[Any] = None
+        self.executor = ThreadPoolExecutor()
 
     def get_table(
         self,
@@ -108,7 +137,8 @@ class LocalProcessor(Processor):
         features = self._resolve_table_descriptor(features)
         df = self._get_table(features).df
         if keys is not None:
-            keys = self._get_table(keys).df
+            if not isinstance(keys, pd.DataFrame):
+                keys = self._get_table(keys).df
             if not set(keys.columns).issubset(set(df.columns)):
                 raise FeathubException(
                     f"Not all given key {keys.columns} in the table fields "
@@ -141,6 +171,8 @@ class LocalProcessor(Processor):
             df = df.drop(columns=[EVENT_TIME_ATTRIBUTE_NAME])
 
         return LocalTable(
+            processor=self,
+            features=features,
             df=df.reset_index(drop=True),
             timestamp_field=features.timestamp_field,
             timestamp_format=features.timestamp_format,
@@ -166,6 +198,21 @@ class LocalProcessor(Processor):
             end_datetime=end_datetime,
         ).to_pandas()
 
+        return self.materialize_dataframe(
+            features=features,
+            features_df=features_df,
+            sink=sink,
+            allow_overwrite=allow_overwrite,
+        )
+
+    def materialize_dataframe(
+        self,
+        features: TableDescriptor,
+        features_df: pd.DataFrame,
+        sink: FeatureTable,
+        allow_overwrite: bool = False,
+    ) -> LocalJob:
+
         # TODO: handle allow_overwrite.
         if isinstance(sink, MemoryStoreSink):
             if features.keys is None:
@@ -178,26 +225,37 @@ class LocalProcessor(Processor):
                 timestamp_field=features.timestamp_field,
                 timestamp_format=features.timestamp_format,
             )
-        elif isinstance(sink, FileSystemSink):
+        elif isinstance(sink, FileSystemSink) and _is_local_file_or_dir(sink.path):
             insert_into_file_sink(features_df, sink)
             return LocalJob()
+        elif _is_spark_supported_sink(sink):
+            return self._materialize_dataframe_using_spark(
+                df=features_df,
+                features=features,
+                sink=sink,
+                allow_overwrite=allow_overwrite,
+            )
 
         raise RuntimeError(f"Unsupported sink: {sink}.")
 
-    def _get_table(self, features: Union[pd.DataFrame, TableDescriptor]) -> LocalTable:
-        if isinstance(features, pd.DataFrame):
-            return LocalTable(
-                df=features,
-                timestamp_field=None,
-                timestamp_format="unknown",
+    def _get_table(self, features: Union[str, TableDescriptor]) -> LocalTable:
+        if isinstance(features, str):
+            raise FeathubException(
+                f"Cannot get LocalTable from unresolved features {features}."
             )
 
-        if isinstance(features, FileSystemSource):
+        if isinstance(features, FileSystemSource) and _is_local_file_or_dir(
+            features.path
+        ):
             return self._get_table_from_file_source(features)
         elif isinstance(features, DerivedFeatureView):
             return self._get_table_from_derived_feature_view(features)
         elif isinstance(features, SlidingFeatureView):
             return self._get_table_from_sliding_feature_view(features)
+        elif isinstance(features, FeatureTable) and _is_spark_supported_source(
+            features
+        ):
+            return self._get_table_using_spark(features)
 
         raise FeathubException(
             f"Unsupported type '{type(features).__name__}' for '{features}'."
@@ -226,10 +284,67 @@ class LocalProcessor(Processor):
     def _get_table_from_file_source(self, source: FileSystemSource) -> LocalTable:
         df = get_dataframe_from_file_source(source)
         return LocalTable(
+            processor=self,
+            features=source,
             df=df,
             timestamp_field=source.timestamp_field,
             timestamp_format=source.timestamp_format,
         )
+
+    def _get_table_using_spark(self, source: FeatureTable) -> LocalTable:
+        try:
+            self._init_spark_session_local_mode()
+        except ImportError:
+            raise FeathubException(
+                f"Please install Feathub with Spark to use {source} "
+                f"in LocalProcessor."
+            )
+
+        from feathub.processors.spark.dataframe_builder import (
+            source_sink_utils as spark_source_sink_utils,
+        )
+
+        spark_dataframe = spark_source_sink_utils.get_dataframe_from_source(
+            spark_session=self.spark_session,
+            source=source,
+        )
+        df = spark_dataframe.toPandas()
+        return LocalTable(
+            processor=self,
+            features=source,
+            df=df,
+            timestamp_field=source.timestamp_field,
+            timestamp_format=source.timestamp_format,
+        )
+
+    def _materialize_dataframe_using_spark(
+        self,
+        df: pd.DataFrame,
+        features: TableDescriptor,
+        sink: FeatureTable,
+        allow_overwrite: bool = False,
+    ) -> LocalJob:
+        try:
+            self._init_spark_session_local_mode()
+        except ImportError:
+            raise FeathubException(
+                f"Please install Feathub with Spark to use {sink} "
+                f"in LocalProcessor."
+            )
+
+        from feathub.processors.spark.dataframe_builder import (
+            source_sink_utils as spark_source_sink_utils,
+        )
+
+        spark_dataframe = self.spark_session.createDataFrame(df)
+        spark_source_sink_utils.insert_into_sink(
+            executor=self.executor,
+            dataframe=spark_dataframe,
+            features_desc=features,
+            sink=sink,
+            allow_overwrite=allow_overwrite,
+        ).result()
+        return LocalJob()
 
     def _evaluate_expression_transform(
         self, df: pd.DataFrame, transform: ExpressionTransform
@@ -310,6 +425,8 @@ class LocalProcessor(Processor):
         output_fields = feature_view.get_output_fields(source_fields)
 
         return LocalTable(
+            processor=self,
+            features=feature_view,
             df=source_df[output_fields],
             timestamp_field=feature_view.timestamp_field,
             timestamp_format=feature_view.timestamp_format,
@@ -590,6 +707,8 @@ class LocalProcessor(Processor):
         output_fields = feature_view.get_output_fields(source_fields)
 
         return LocalTable(
+            processor=self,
+            features=feature_view,
             df=agg_df[output_fields],
             timestamp_field=feature_view.timestamp_field,
             timestamp_format=feature_view.timestamp_format,
@@ -608,3 +727,16 @@ class LocalProcessor(Processor):
     def _filter_dataframe(self, df: pd.DataFrame, filter_expr: str) -> pd.DataFrame:
         filter_ast = self.parser.parse(filter_expr)
         return df[df.apply(lambda r: self.ast_evaluator.eval(filter_ast, r), axis=1)]
+
+    def _init_spark_session_local_mode(self) -> None:
+        if self.spark_session is not None:
+            return
+
+        from pyspark.sql import SparkSession
+
+        spark_session_builder = SparkSession.builder
+        spark_session_builder = spark_session_builder.master("local[*]")
+        spark_session_builder = spark_session_builder.config(
+            "spark.sql.session.timeZone", self.config.get(TIMEZONE_CONFIG)
+        )
+        self.spark_session = spark_session_builder.getOrCreate()

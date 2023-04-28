@@ -121,7 +121,11 @@ See [Basic Concepts](docs/content/concepts/basic-concepts.md) for more details a
 FeatHub supports the following compute engines to execute feature ETL pipeline:
 - [Apache Flink 1.16](docs/content/engines/flink.md)
 - [Aapche Spark 3.3](docs/content/engines/spark.md)
-- Local processor, which is implemented using the Pandas library and computes features in the given Python process.
+- Local processor, which is implemented using the Pandas library and computes
+  features in the given Python process. Additionally, if the
+  feathub-nightly[spark] is installed, the Local processor can utilize Spark's
+  local mode for accessing storages (e.g. HDFS) that it otherwise did not
+  support.
 
 
 ## FeatHub SDK Highlights
@@ -213,7 +217,8 @@ $ python -m pip install --upgrade feathub-nightly
 # Run the following command if you plan to use Apache Flink cluster
 $ python -m pip install --upgrade "feathub-nightly[flink]"
 
-# Run the following command if you plan to use Apache Spark cluster
+# Run the following command if you plan to use Apache Spark cluster, or to use
+# Spark-supported storage in a local process. 
 $ python -m pip install --upgrade "feathub-nightly[spark]"
 ```
 

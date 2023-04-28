@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import typing
 from datetime import timedelta
 from typing import Optional
 
@@ -22,6 +22,10 @@ from feathub.feature_tables.feature_table import FeatureTable
 from feathub.processors.processor_job import ProcessorJob
 from feathub.table.schema import Schema
 from feathub.table.table import Table
+from feathub.table.table_descriptor import TableDescriptor
+
+if typing.TYPE_CHECKING:
+    from feathub.processors.local.local_processor import LocalProcessor
 
 
 class LocalTable(Table):
@@ -32,6 +36,8 @@ class LocalTable(Table):
 
     def __init__(
         self,
+        processor: "LocalProcessor",
+        features: TableDescriptor,
         df: pd.DataFrame,
         timestamp_field: Optional[str],
         timestamp_format: str,
@@ -47,6 +53,8 @@ class LocalTable(Table):
             timestamp_field=timestamp_field,
             timestamp_format=timestamp_format,
         )
+        self.processor = processor
+        self.features = features
         self.df = df
 
     def get_schema(self) -> Schema:
@@ -66,4 +74,11 @@ class LocalTable(Table):
         ttl: Optional[timedelta] = None,
         allow_overwrite: bool = False,
     ) -> ProcessorJob:
-        pass
+        if ttl is not None or not allow_overwrite:
+            raise RuntimeError("Unsupported operation.")
+        return self.processor.materialize_dataframe(
+            features=self.features,
+            features_df=self.df,
+            sink=sink,
+            allow_overwrite=allow_overwrite,
+        )
