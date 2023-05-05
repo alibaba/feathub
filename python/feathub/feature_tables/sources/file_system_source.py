@@ -55,7 +55,7 @@ class FileSystemSource(FeatureTable):
         super().__init__(
             name=name,
             system_name="filesystem",
-            properties={
+            table_uri={
                 "path": path,
             },
             data_format=data_format,

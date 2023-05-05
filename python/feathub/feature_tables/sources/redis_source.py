@@ -56,7 +56,7 @@ class RedisSource(FeatureTable):
         super().__init__(
             name=name,
             system_name="redis",
-            properties={
+            table_uri={
                 "host": host,
                 "port": port,
                 "username": username,

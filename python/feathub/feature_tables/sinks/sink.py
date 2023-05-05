@@ -28,14 +28,14 @@ class Sink(FeatureTable, ABC):
         self,
         name: str,
         system_name: str,
-        properties: Dict[str, Any],
+        table_uri: Dict[str, Any],
         data_format: Optional[str] = None,
     ):
         """
         :param name: The name that uniquely identifies this feature table in a registry.
         :param system_name: Uniquely identifies the underlying system, e.g. filesystem,
                             kafka, etc.
-        :param properties: It contains the properties specific to the underlying system
+        :param table_uri: It contains the properties specific to the underlying system
                            that are used to uniquely identify the physical table.
         :param data_format: Optional. If it is not None, it specifies the format of the
                             data, e.g. csv, json, parquet, etc. This is typically
@@ -45,7 +45,7 @@ class Sink(FeatureTable, ABC):
         super().__init__(
             name=name,
             system_name=system_name,
-            properties=properties,
+            table_uri=table_uri,
             data_format=data_format,
         )
 

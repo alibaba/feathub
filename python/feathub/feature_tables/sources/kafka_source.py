@@ -95,8 +95,7 @@ class KafkaSource(FeatureTable):
         super().__init__(
             name=name,
             system_name="kafka",
-            properties={"bootstrap_server": bootstrap_server, "topic": topic},
-            data_format=value_format,
+            table_uri={"bootstrap_server": bootstrap_server, "topic": topic},
             keys=keys,
             timestamp_field=timestamp_field,
             timestamp_format=timestamp_format,

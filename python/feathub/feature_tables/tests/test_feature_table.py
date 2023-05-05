@@ -31,7 +31,7 @@ class MockFeatureTable(FeatureTable):
         super().__init__(
             name=name,
             system_name="mock",
-            properties={},
+            table_uri={},
             schema=schema,
             keys=keys,
             timestamp_field=timestamp_field,

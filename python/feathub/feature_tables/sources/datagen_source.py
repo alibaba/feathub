@@ -141,7 +141,7 @@ class DataGenSource(FeatureTable):
         super().__init__(
             name=name,
             system_name="datagen",
-            properties={},
+            table_uri={},
             keys=keys,
             timestamp_field=timestamp_field,
             timestamp_format=timestamp_format,

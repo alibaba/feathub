@@ -28,7 +28,7 @@ class MemoryStoreSink(Sink):
         super().__init__(
             name="",
             system_name="memory",
-            properties={"table_name": table_name},
+            table_uri={"table_name": table_name},
         )
         self.table_name = table_name
 

@@ -39,7 +39,7 @@ class MemoryStoreSource(FeatureTable):
         super().__init__(
             name=name,
             system_name="memory",
-            properties={"table_name": table_name},
+            table_uri={"table_name": table_name},
             keys=keys,
             timestamp_field=None,
             timestamp_format="epoch",

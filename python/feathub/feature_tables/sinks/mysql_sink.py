@@ -43,7 +43,7 @@ class MySQLSink(Sink):
         super().__init__(
             name="",
             system_name="mysql",
-            properties={
+            table_uri={
                 "host": host,
                 "port": port,
                 "database": database,

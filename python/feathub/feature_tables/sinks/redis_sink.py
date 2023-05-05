@@ -40,7 +40,7 @@ class RedisSink(Sink):
         super().__init__(
             name="",
             system_name="redis",
-            properties={
+            table_uri={
                 "namespace": namespace,
                 "host": host,
                 "port": port,

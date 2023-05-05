@@ -22,7 +22,7 @@ class PrintSink(Sink):
     """
 
     def __init__(self) -> None:
-        super().__init__(name="", system_name="print", properties={})
+        super().__init__(name="", system_name="print", table_uri={})
 
     def to_json(self) -> Dict:
         return {"type": "PrintSink"}

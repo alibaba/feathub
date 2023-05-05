@@ -42,8 +42,7 @@ class KafkaSink(Sink):
         super().__init__(
             name="",
             system_name="kafka",
-            properties={"bootstrap_server": bootstrap_server, "topic": topic},
-            data_format=value_format,
+            table_uri={"bootstrap_server": bootstrap_server, "topic": topic},
         )
         self.bootstrap_server = bootstrap_server
         self.topic = topic

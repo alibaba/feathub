@@ -24,7 +24,7 @@ class BlackHoleSink(Sink):
     """
 
     def __init__(self) -> None:
-        super().__init__(name="", system_name="blackhole", properties={})
+        super().__init__(name="", system_name="blackhole", table_uri={})
 
     def to_json(self) -> Dict:
         return {"type": "BlackHoleSink"}

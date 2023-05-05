@@ -27,7 +27,7 @@ class FileSystemSink(Sink):
         super().__init__(
             name="",
             system_name="filesystem",
-            properties={"path": path},
+            table_uri={"path": path},
             data_format=data_format,
         )
         self.path = path

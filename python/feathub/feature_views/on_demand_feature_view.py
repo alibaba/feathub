@@ -44,7 +44,7 @@ class OnDemandFeatureView(FeatureView):
             super().__init__(
                 name="_ONLINE_REQUEST",
                 system_name="online_request",
-                properties={},
+                table_uri={},
                 keys=None,
                 timestamp_field=None,
                 timestamp_format="epoch",
