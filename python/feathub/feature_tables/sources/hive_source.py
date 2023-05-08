@@ -11,17 +11,38 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Dict, List, Optional
+import hashlib
+import os.path
+import random
+import string
+from typing import Optional, Dict, List
 
+from feathub.common.utils import is_local_file_or_dir
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.table.schema import Schema
 
 
-# TODO: Support using MySQLSource as source other than OnDemandFeatureView.
-class MySQLSource(FeatureTable):
+def get_hive_catalog_identifier(hive_catalog_conf_dir: str) -> str:
     """
-    A source which reads data from MySQL. Currently, MySQLSource can only be use as
-    source of OnDemandFeatureView to get online feature from MySQL.
+    Return an identifier for the hive catalog configuration. Configurations
+    with the same identifier refer to the same Hive catalog.
+    """
+    if is_local_file_or_dir(hive_catalog_conf_dir):
+        hive_catalog_conf_file = os.path.join(hive_catalog_conf_dir, "hive-site.xml")
+        hash_md5 = hashlib.md5()
+        with open(hive_catalog_conf_file, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+        return hash_md5.hexdigest()
+    else:
+        return "".join(
+            random.choice(string.ascii_letters + string.digits) for _ in range(32)
+        )
+
+
+class HiveSource(FeatureTable):
+    """
+    A source that reads data from Hive.
     """
 
     def __init__(
@@ -29,11 +50,8 @@ class MySQLSource(FeatureTable):
         name: str,
         database: str,
         table: str,
+        hive_catalog_conf_dir: str,
         schema: Schema,
-        host: str,
-        username: str,
-        password: str,
-        port: int = 3306,
         keys: Optional[List[str]] = None,
         timestamp_field: Optional[str] = None,
         timestamp_format: str = "epoch",
@@ -41,13 +59,15 @@ class MySQLSource(FeatureTable):
     ):
         """
         :param name: The name that uniquely identifies this source in a registry.
-        :param database: Database name to write to.
-        :param table: Table name of the table to write to.
+        :param database: The database to read from.
+        :param table: Table name of the table to read from.
         :param schema: The schema of the table.
-        :param host: IP address or hostname of the MySQL server.
-        :param username: Name of the user to connect to the MySQL server.
-        :param password: The password of the user.
-        :param port: The port of the MySQL server.
+        :param hive_catalog_conf_dir: URI to your Hive conf dir containing
+                                      hive-site.xml. The configuration would be used
+                                      to create the Hive Catalog. The URI needs to be
+                                      supported by Hadoop FileSystem. If the URI is
+                                      relative, i.e. without a scheme, local file
+                                      system is assumed.
         :param keys: Optional. The names of fields in this feature view that are
                      necessary to interpret a row of this table. If it is not None, it
                      must be a superset of keys of any feature in this table.
@@ -61,41 +81,37 @@ class MySQLSource(FeatureTable):
                                          processor. The available configurations are
                                          different for different processors.
         """
-        super().__init__(
+        super(HiveSource, self).__init__(
             name=name,
-            system_name="mysql",
+            system_name="hive",
             table_uri={
-                "host": host,
-                "port": port,
-                "database": database,
                 "table": table,
+                "hive_catalog_identifier": get_hive_catalog_identifier(
+                    hive_catalog_conf_dir
+                ),
+                "database": database,
             },
             keys=keys,
+            schema=schema,
             timestamp_field=timestamp_field,
             timestamp_format=timestamp_format,
-            schema=schema,
         )
-
-        self.host = host
-        self.port = port
-        self.database = database
+        self.name = name
         self.table = table
-        self.username = username
-        self.password = password
+        self.schema = schema
+        self.hive_catalog_conf_dir = hive_catalog_conf_dir
+        self.database = database
         self.processor_specific_props = processor_specific_props
 
     def to_json(self) -> Dict:
         return {
-            "type": "MySQLSource",
+            "type": "HiveSource",
             "name": self.name,
             "database": self.database,
             "table": self.table,
-            "schema": self.schema,
-            "host": self.host,
-            "username": self.username,
-            "password": self.password,
-            "port": self.port,
+            "schema": None if self.schema is None else self.schema.to_json(),
             "keys": self.keys,
+            "hive_catalog_conf_dir": self.hive_catalog_conf_dir,
             "timestamp_field": self.timestamp_field,
             "timestamp_format": self.timestamp_format,
             "processor_specific_props": self.processor_specific_props,

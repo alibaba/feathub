@@ -21,7 +21,6 @@ from typing import (
     Any,
     Sequence,
 )
-from urllib.parse import urlparse
 
 import pandas as pd
 from dateutil.tz import tz
@@ -96,11 +95,6 @@ def _is_spark_supported_sink(sink: FeatureTable) -> bool:
             MemoryStoreSink,
         ),
     )
-
-
-def _is_local_file_or_dir(url: str) -> bool:
-    url_parsed = urlparse(url)
-    return url_parsed.scheme in ("file", "")
 
 
 class LocalProcessor(Processor):
@@ -225,7 +219,7 @@ class LocalProcessor(Processor):
                 timestamp_field=features.timestamp_field,
                 timestamp_format=features.timestamp_format,
             )
-        elif isinstance(sink, FileSystemSink) and _is_local_file_or_dir(sink.path):
+        elif isinstance(sink, FileSystemSink) and utils.is_local_file_or_dir(sink.path):
             insert_into_file_sink(features_df, sink)
             return LocalJob()
         elif _is_spark_supported_sink(sink):
@@ -244,7 +238,7 @@ class LocalProcessor(Processor):
                 f"Cannot get LocalTable from unresolved features {features}."
             )
 
-        if isinstance(features, FileSystemSource) and _is_local_file_or_dir(
+        if isinstance(features, FileSystemSource) and utils.is_local_file_or_dir(
             features.path
         ):
             return self._get_table_from_file_source(features)

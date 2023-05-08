@@ -40,14 +40,15 @@ from feathub.processors.flink.flink_types_utils import (
     to_feathub_schema,
     to_feathub_type,
     to_flink_type,
+    to_flink_sql_type,
 )
 from feathub.table.schema import Schema
 
 
 class FlinkTypeUtilsTest(unittest.TestCase):
-    def test_schema_conversion(self):
-        env = StreamExecutionEnvironment.get_execution_environment()
-        t_env = StreamTableEnvironment.create(env)
+    def setUp(self) -> None:
+        self.env = StreamExecutionEnvironment.get_execution_environment()
+        self.t_env = StreamTableEnvironment.create(self.env)
         field_names = [
             "bytes",
             "string",
@@ -70,14 +71,28 @@ class FlinkTypeUtilsTest(unittest.TestCase):
             Int32Vector,
             MapType(String, Int64),
         ]
-        schema = Schema(field_names, field_types)
+        self.schema = Schema(field_names, field_types)
 
-        flink_schema = to_flink_schema(schema)
-        table = t_env.from_descriptor(
+    def test_schema_conversion(self):
+        flink_schema = to_flink_schema(self.schema)
+        table = self.t_env.from_descriptor(
             TableDescriptor.for_connector("datagen").schema(flink_schema).build()
         )
 
-        self.assertEqual(schema, to_feathub_schema(table.get_schema()))
+        self.assertEqual(self.schema, to_feathub_schema(table.get_schema()))
+
+    def test_sql_type(self):
+        field_name_type = []
+        for field_name, field_type in zip(
+            self.schema.field_names, self.schema.field_types
+        ):
+            field_name_type.append(f"`{field_name}` {to_flink_sql_type(field_type)}")
+        schema_sql = ", ".join(field_name_type)
+        self.t_env.execute_sql(
+            f"CREATE TABLE test_table ({schema_sql}) WITH ('connector' = 'datagen');"
+        ).wait()
+        table = self.t_env.from_path("test_table")
+        self.assertEqual(self.schema, to_feathub_schema(table.get_schema()))
 
     def test_unsupported_flink_type_throw_exception(self):
         tiny_int_type = DataTypes.TINYINT()

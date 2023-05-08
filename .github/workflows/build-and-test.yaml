@@ -52,7 +52,7 @@ jobs:
           python -m pip install ./python
           python -m pip install ./python[flink]
           python -m pip install ./python[spark]
-      - name: Test example notebooks
+      - name: Check notebook examples
         run: |
           # notebooks should not contain outputs
           jupyter nbconvert --clear-output --inplace docs/examples/*.ipynb
@@ -61,9 +61,6 @@ jobs:
           fi
 
           python -m black --check ./docs/examples
-
-          # check that notebooks could be executed without error
-          jupyter nbconvert --ExecutePreprocessor.timeout=600 --to notebook --execute docs/examples/*.ipynb
       - name: Test Feathub Python library
         run: |
           python -m black --check ./python

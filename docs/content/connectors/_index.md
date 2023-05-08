@@ -6,3 +6,4 @@
 - [MySql](mysql.md)
 - [Kafka](kafka.md)
 - [Redis](redis.md)
+- [Hive](hive.md)
