@@ -16,9 +16,10 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.7'
-      - name: Install Python Setup Tools
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
+          python -m pip install jupyter
       - name: Set up JDK 8
         uses: actions/setup-java@v3
         with:
