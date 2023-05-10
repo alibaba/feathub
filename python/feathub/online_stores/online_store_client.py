@@ -64,6 +64,7 @@ class OnlineStoreClient(ABC):
                 schema=source.schema,
                 host=source.host,
                 port=source.port,
+                mode=source.mode,
                 username=source.username,
                 password=source.password,
                 db_num=source.db_num,

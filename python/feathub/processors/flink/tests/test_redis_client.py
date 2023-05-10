@@ -13,6 +13,7 @@
 #  limitations under the License.
 import os
 import unittest
+from abc import abstractmethod
 from datetime import datetime
 
 import numpy as np
@@ -24,8 +25,9 @@ from testcontainers.redis import RedisContainer
 
 from feathub.common import types
 from feathub.feathub_client import FeathubClient
-from feathub.feature_tables.sinks.redis_sink import RedisSink
+from feathub.feature_tables.sinks.redis_sink import RedisSink, RedisMode
 from feathub.feature_tables.sources.redis_source import RedisSource
+from feathub.feature_tables.tests.test_redis_source_sink import RedisClusterContainer
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
 from feathub.processors.flink.table_builder.source_sink_utils import insert_into_sink
 from feathub.processors.flink.table_builder.tests.mock_table_descriptor import (
@@ -38,22 +40,17 @@ from feathub.table.table_descriptor import TableDescriptor
 # TODO: Restructure these test cases in a way similar to ProcessorTestBase.
 # TODO: move this class to python/feathub/online_stores/tests folder after
 #  the resource leak problem of other flink processor's tests is fixed.
-class RedisClientTest(unittest.TestCase):
-    redis_container: RedisContainer = None
+class RedisClientTestBase(unittest.TestCase):
+    # By setting this attribute to false, it prevents pytest from discovering
+    # this class as a test when searching up from its child classes.
+    __test__ = False
 
     def __init__(self, method_name: str):
         super().__init__(method_name)
 
     @classmethod
-    def setUpClass(cls) -> None:
-        super().setUpClass()
-        cls.redis_container = RedisContainer()
-        cls.redis_container.start()
-
-    @classmethod
     def tearDownClass(cls) -> None:
         super().tearDownClass()
-        cls.redis_container.stop()
         # TODO: replace the cleanup below with flink configuration after
         #  pyflink dependency upgrades to 1.16.0 or higher. Related
         #  ticket: FLINK-27297
@@ -64,14 +61,18 @@ class RedisClientTest(unittest.TestCase):
         if "PYFLINK_GATEWAY_DISABLED" in os.environ:
             os.environ.pop("PYFLINK_GATEWAY_DISABLED")
 
+    @abstractmethod
+    def get_port(self):
+        pass
+
+    @abstractmethod
+    def get_mode(self):
+        pass
+
     def setUp(self) -> None:
         super().setUp()
-        self.host = RedisClientTest.redis_container.get_container_host_ip()
-        if self.host == "localhost":
-            self.host = "127.0.0.1"
-        self.port = RedisClientTest.redis_container.get_exposed_port(
-            RedisClientTest.redis_container.port_to_expose
-        )
+        self.host = "127.0.0.1"
+        self.port = self.get_port()
 
         self.env = StreamExecutionEnvironment.get_execution_environment()
         self.t_env = StreamTableEnvironment.create(self.env)
@@ -103,6 +104,7 @@ class RedisClientTest(unittest.TestCase):
             name="table_name_1",
             host=self.host,
             port=int(self.port),
+            mode=self.get_mode(),
             schema=self.schema,
             keys=["id"],
             timestamp_field="ts",
@@ -128,6 +130,7 @@ class RedisClientTest(unittest.TestCase):
             name="table_name_1",
             host=self.host,
             port=int(self.port),
+            mode=self.get_mode(),
             schema=self.schema,
             keys=["id"],
             timestamp_field="ts",
@@ -171,6 +174,7 @@ class RedisClientTest(unittest.TestCase):
         )
 
         sink = RedisSink(
+            mode=self.get_mode(),
             host=self.host,
             port=int(self.port),
         )
@@ -181,3 +185,57 @@ class RedisClientTest(unittest.TestCase):
 
         insert_into_sink(t_env, table, descriptor, sink).wait(30000)
         return row_data
+
+
+class RedisClientTest(RedisClientTestBase):
+    __test__ = True
+
+    redis_container: RedisContainer = None
+
+    def __init__(self, method_name: str):
+        super().__init__(method_name)
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        cls.redis_container = RedisContainer()
+        cls.redis_container.start()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        super().tearDownClass()
+        cls.redis_container.stop()
+
+    def get_port(self):
+        return RedisClientTest.redis_container.get_exposed_port(
+            RedisClientTest.redis_container.port_to_expose
+        )
+
+    def get_mode(self):
+        return RedisMode.STANDALONE
+
+
+class RedisClientClusterModeTest(RedisClientTestBase):
+    __test__ = True
+
+    redis_container: RedisClusterContainer = None
+
+    def __init__(self, method_name: str):
+        super().__init__(method_name)
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        cls.redis_container = RedisClusterContainer()
+        cls.redis_container.start()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        super().tearDownClass()
+        cls.redis_container.stop()
+
+    def get_port(self):
+        return 7000
+
+    def get_mode(self):
+        return RedisMode.CLUSTER

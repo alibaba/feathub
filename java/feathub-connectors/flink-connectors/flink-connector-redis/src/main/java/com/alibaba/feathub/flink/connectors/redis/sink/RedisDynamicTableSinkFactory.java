@@ -30,6 +30,7 @@ import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.K
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.NAMESPACE;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.PASSWORD;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.PORT;
+import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.REDIS_MODE;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.TIMESTAMP_FIELD;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.USERNAME;
 
@@ -63,6 +64,7 @@ public class RedisDynamicTableSinkFactory implements DynamicTableSinkFactory {
     @Override
     public Set<ConfigOption<?>> optionalOptions() {
         Set<ConfigOption<?>> options = new HashSet<>();
+        options.add(REDIS_MODE);
         options.add(USERNAME);
         options.add(PASSWORD);
         options.add(TIMESTAMP_FIELD);

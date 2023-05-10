@@ -1,7 +1,8 @@
 # Redis
 
 FeatHub provides `RedisSource` to read data from a Redis database and
-`RedisSink` to materialize feature view to a Redis database. Currently,
+`RedisSink` to materialize feature view to a Redis database. The Redis service
+should be deployed in standalone, master-slave, or cluster mode. Currently,
 `RedisSource` can only be used as an online store source.
 
 ## Supported Processors and Usages

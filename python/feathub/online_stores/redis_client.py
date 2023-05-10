@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Optional, List
+from typing import Optional, List, Union
 
 import pandas as pd
 import redis
@@ -19,6 +19,7 @@ import redis
 from feathub.common.utils import (
     deserialize_object_with_protobuf,
 )
+from feathub.feature_tables.sinks.redis_sink import RedisMode
 from feathub.online_stores.online_store_client import OnlineStoreClient
 from feathub.processors.flink.table_builder.redis_utils import serialize_and_join_keys
 from feathub.table.schema import Schema
@@ -34,6 +35,7 @@ class RedisClient(OnlineStoreClient):
         schema: Schema,
         host: str,
         port: int = 6379,
+        mode: RedisMode = RedisMode.STANDALONE,
         username: str = None,
         password: str = None,
         db_num: int = 0,
@@ -58,14 +60,25 @@ class RedisClient(OnlineStoreClient):
                 4, byteorder="big"
             )
 
-        self.redis_client = redis.Redis(
-            host=host,
-            port=port,
-            username=username,
-            password=password,
-            decode_responses=False,
-        )
-        self.redis_client.select(db_num)
+        if mode == RedisMode.CLUSTER:
+            self.redis_client: Union[
+                redis.Redis, redis.RedisCluster
+            ] = redis.RedisCluster(
+                host=host,
+                port=port,
+                username=username,
+                password=password,
+                decode_responses=False,
+            )
+        else:
+            self.redis_client = redis.Redis(
+                host=host,
+                port=port,
+                username=username,
+                password=password,
+                db=db_num,
+                decode_responses=False,
+            )
 
     def get(
         self, input_data: pd.DataFrame, feature_names: Optional[List[str]] = None
