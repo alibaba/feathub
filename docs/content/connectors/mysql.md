@@ -6,6 +6,7 @@ an online store source.
 
 ## Supported Processors and Modes
 
+<!-- TODO: Add description for supported versions -->
 - Flink: Lookup<sup>1</sup>, Streaming Append, Streaming Upsert
 
 1. Only supported in OnDemandFeatureView currently.

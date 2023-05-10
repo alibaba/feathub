@@ -14,61 +14,57 @@
 from typing import Dict, Optional
 
 from feathub.feature_tables.sinks.sink import Sink
+from feathub.feature_tables.sources.hive_source import get_hive_catalog_identifier
 
 
-class MySQLSink(Sink):
-    """A Sink that writes data to a MySQL table."""
+# TODO: Support SQL grammars like `INSERT OVERWRITE` and `PARTITION` in
+#  Feathub connectors.
+class HiveSink(Sink):
+    """
+    A sink that write data to Hive.
+    """
 
     def __init__(
         self,
         database: str,
         table: str,
-        host: str,
-        username: str,
-        password: str,
-        port: int = 3306,
+        hive_catalog_conf_dir: str,
         processor_specific_props: Optional[Dict[str, str]] = None,
     ):
         """
-        :param database: Database name to write to.
+        :param database: The database to write to.
         :param table: Table name of the table to write to.
-        :param host: IP address or hostname of the MySQL server.
-        :param username: Name of the user to connect to the MySQL server.
-        :param password: The password of the user.
-        :param port: The port of the MySQL server.
+        :param hive_catalog_conf_dir: URI to your Hive conf dir containing
+                                      hive-site.xml. The configuration would be used
+                                      to create the Hive Catalog. The URI needs to be
+                                      supported by Hadoop FileSystem. If the URI is
+                                      relative, i.e. without a scheme, local file
+                                      system is assumed.
         :param processor_specific_props: Extra properties to be passthrough to the
                                          processor. The available configurations are
                                          different for different processors.
         """
         super().__init__(
             name="",
-            system_name="mysql",
+            system_name="hive",
             table_uri={
-                "host": host,
-                "port": port,
+                "hive_catalog_identifier": get_hive_catalog_identifier(
+                    hive_catalog_conf_dir
+                ),
                 "database": database,
-                "table": table,
             },
         )
-
-        self.host = host
-        self.port = port
         self.database = database
         self.table = table
-        self.username = username
-        self.password = password
-        self.processor_specific_props = (
-            {} if processor_specific_props is None else processor_specific_props
-        )
+        self.hive_catalog_conf_dir = hive_catalog_conf_dir
+        self.processor_specific_props = processor_specific_props
 
     def to_json(self) -> Dict:
         return {
-            "type": "MySQLSink",
+            "type": "HiveSink",
+            "name": self.name,
             "database": self.database,
             "table": self.table,
-            "host": self.host,
-            "username": self.username,
-            "password": self.password,
-            "port": self.port,
+            "hive_catalog_conf_dir": self.hive_catalog_conf_dir,
             "processor_specific_props": self.processor_specific_props,
         }

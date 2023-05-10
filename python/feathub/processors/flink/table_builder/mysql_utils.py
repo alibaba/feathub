@@ -44,7 +44,7 @@ def insert_into_mysql_sink(
         .option("password", sink.password)
     )
 
-    for key, value in sink.extra_config.items():
+    for key, value in sink.processor_specific_props.items():
         table_descriptor_builder.option(key, value)
 
     schema_builder = NativeFlinkSchema.new_builder()

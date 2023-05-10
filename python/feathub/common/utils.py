@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from datetime import datetime, timezone, tzinfo
 from string import Template
 from typing import Union, Any, Optional, cast
+from urllib.parse import urlparse
 
 from feathub.common import types
 from feathub.common.exceptions import FeathubException
@@ -187,3 +187,11 @@ def get_table_schema(table: TableDescriptor) -> Schema:
     for f in table.get_output_features():
         schema_builder.column(f.name, f.dtype)
     return schema_builder.build()
+
+
+def is_local_file_or_dir(url: str) -> bool:
+    """
+    Check whether a url represents a local file or directory.
+    """
+    url_parsed = urlparse(url)
+    return url_parsed.scheme in ("file", "")

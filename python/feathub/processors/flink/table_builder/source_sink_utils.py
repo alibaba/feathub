@@ -22,12 +22,14 @@ from feathub.common.exceptions import FeathubException
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_tables.sinks.black_hole_sink import BlackHoleSink
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
+from feathub.feature_tables.sinks.hive_sink import HiveSink
 from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sinks.mysql_sink import MySQLSink
 from feathub.feature_tables.sinks.print_sink import PrintSink
 from feathub.feature_tables.sinks.redis_sink import RedisSink
 from feathub.feature_tables.sources.datagen_source import DataGenSource
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
+from feathub.feature_tables.sources.hive_source import HiveSource
 from feathub.feature_tables.sources.kafka_source import KafkaSource
 from feathub.processors.flink.table_builder.black_hole_utils import (
     insert_into_black_hole_sink,
@@ -38,6 +40,10 @@ from feathub.processors.flink.table_builder.datagen_utils import (
 from feathub.processors.flink.table_builder.file_system_utils import (
     get_table_from_file_source,
     insert_into_file_sink,
+)
+from feathub.processors.flink.table_builder.hive_utils import (
+    get_table_from_hive_source,
+    insert_into_hive_sink,
 )
 from feathub.processors.flink.table_builder.kafka_utils import (
     get_table_from_kafka_source,
@@ -66,6 +72,8 @@ def get_table_from_source(
         return get_table_from_file_source(t_env, source)
     elif isinstance(source, KafkaSource):
         return get_table_from_kafka_source(t_env, source, source.keys)
+    elif isinstance(source, HiveSource):
+        return get_table_from_hive_source(t_env, source)
     elif isinstance(source, DataGenSource):
         return get_table_from_data_gen_source(t_env, source)
     else:
@@ -89,6 +97,8 @@ def insert_into_sink(
         return insert_into_print_sink(features_table)
     elif isinstance(sink, RedisSink):
         return insert_into_redis_sink(t_env, features_table, features_desc, sink)
+    elif isinstance(sink, HiveSink):
+        return insert_into_hive_sink(t_env, features_table, features_desc, sink)
     elif isinstance(sink, MySQLSink):
         return insert_into_mysql_sink(t_env, features_table, sink, features_desc.keys)
     elif isinstance(sink, BlackHoleSink):

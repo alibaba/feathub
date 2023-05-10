@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Dict, Type
+from typing import Dict, Type, Union
 
 from pyflink.table import DataTypes, Schema as NativeFlinkSchema, TableSchema
 from pyflink.table.types import (
@@ -19,6 +19,7 @@ from pyflink.table.types import (
     AtomicType,
     ArrayType,
     MapType as NativeFlinkMapType,
+    VarCharType,
 )
 
 from feathub.common.exceptions import FeathubTypeException
@@ -89,6 +90,32 @@ def to_flink_type(feathub_type: DType) -> DataType:
     raise FeathubTypeException(
         f"Type {feathub_type} is not supported by FlinkProcessor."
     )
+
+
+def to_flink_sql_type(input_type: Union[DType, DataType]) -> str:
+    """
+    Convert FeatHub DType or Flink DataType to Flink SQL data type.
+
+    :param input_type: The FeatHub Dtype or Flink DataType
+    :return: The Flink SQL data type.
+    """
+    if isinstance(input_type, DType):
+        flink_type = to_flink_type(input_type)
+    else:
+        flink_type = input_type
+
+    if isinstance(flink_type, VarCharType):
+        if flink_type.length == DataTypes.STRING().length:
+            return "STRING"
+        return f"VARCHAR({flink_type.length})"
+    elif isinstance(flink_type, ArrayType):
+        return f"ARRAY<{to_flink_sql_type(flink_type.element_type)}>"
+    elif isinstance(flink_type, NativeFlinkMapType):
+        return (
+            f"MAP<{to_flink_sql_type(flink_type.key_type)}, "
+            f"{to_flink_sql_type(flink_type.value_type)}>"
+        )
+    return str(flink_type)
 
 
 def to_feathub_type(flink_type: DataType) -> DType:

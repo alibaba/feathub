@@ -31,6 +31,8 @@ jobs:
       - name: Run Examples
         shell: 'script -q -e -c "bash {0}"'
         run: bash tools/ci/run-examples.sh
+      - name: Run Notebook Examples
+        run: jupyter nbconvert --ExecutePreprocessor.timeout=600 --to notebook --execute docs/examples/*.ipynb
       - name: Debug with tmate
         if: ${{ failure() && inputs.debug_enabled }}
         uses: mxschmitt/action-tmate@v3
