@@ -24,14 +24,52 @@ class PythonUdfTransform(Transformation):
     time.
     """
 
-    def __init__(self, udf: Callable[[pd.Series], Any]) -> None:
+    # TODO: Validate the type of default value with feature type.
+    def __init__(
+        self,
+        udf: Callable[[pd.Series], Any],
+        fail_on_exception: bool = True,
+        value_on_exception: Any = None,
+    ) -> None:
         """
         :param udf: The udf that will be invoked for each row. The input
                           of the udf is a Pandas Series object that represent the
                           row.
+        :param fail_on_exception: Whether to fail the job in case of an exception is
+                                  raised by the udf. If this is false, the
+                                  `value_on_exception` is used in case of exception.
+        :param value_on_exception: If `fail_on_exception` is set to false, this is the
+                              default value of the result when an exception is raised.
         """
         super().__init__()
-        self.udf = udf
+        self.original_udf = udf
+        self.fail_on_exception = fail_on_exception
+        self.value_on_exception = value_on_exception
+
+    @property
+    def udf(self) -> Callable[[pd.Series], Any]:
+        if self.fail_on_exception:
+            return self.original_udf
+
+        return self._wrap_udf_with_value_on_exception(
+            self.original_udf, self.value_on_exception
+        )
+
+    @staticmethod
+    def _wrap_udf_with_value_on_exception(
+        udf: Callable[[pd.Series], Any], default_value: Any
+    ) -> Callable[[pd.Series], Any]:
+        def wrapper(s: pd.Series) -> Any:
+            try:
+                return udf(s)
+            except Exception:
+                return default_value
+
+        return wrapper
 
     def to_json(self) -> Dict:
-        return {"type": "PythonTransform"}
+        return {
+            "type": "PythonUdfTransform",
+            "fail_on_exception": self.fail_on_exception,
+            "value_on_exception": self.value_on_exception,
+        }
