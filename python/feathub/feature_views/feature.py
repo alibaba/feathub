@@ -39,6 +39,8 @@ class Feature:
         dtype: Optional[DType] = None,
         keys: Optional[Sequence[str]] = None,
         input_features: Sequence[Feature] = (),
+        description: str = "",
+        extra_props: Optional[Dict[str, str]] = None,
     ):
         """
         :param name: The name that uniquely identifies this feature in the
@@ -54,6 +56,9 @@ class Feature:
                      the `transform` or the parent table's keys.
         :param input_features: The names of fields in the parent table used by
                               `transform` to derive this feature's values.
+        :param description: The description of the feature.
+        :param extra_props: The extra properties of the feature that are defined by
+                            user.
         """
         if name.startswith("__") or name.endswith("__"):
             raise FeathubException(
@@ -81,6 +86,8 @@ class Feature:
             keys = sorted(keys)
         self.keys = keys
         self.input_features = input_features
+        self.description = description
+        self.extra_props = {} if extra_props is None else extra_props
 
     def to_json(self) -> Dict:
         return {
@@ -89,6 +96,8 @@ class Feature:
             "transform": self.transform.to_json(),
             "keys": self.keys,
             "input_features": [feature.to_json() for feature in self.input_features],
+            "description": self.description,
+            "extra_props": self.extra_props,
         }
 
     # TODO: add from_json()
