@@ -19,8 +19,8 @@ package com.alibaba.feathub.flink.connectors.redis.sink;
 import org.apache.flink.util.StringUtils;
 
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.Pipeline;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,6 +30,8 @@ import java.util.Map;
 public class JedisMasterClient implements JedisClient {
     private final Jedis jedis;
 
+    private final Pipeline pipeline;
+
     public JedisMasterClient(String host, int port, String username, String password, int dbNum) {
         jedis = new Jedis(host, port);
         if (!StringUtils.isNullOrWhitespaceOnly(username)) {
@@ -38,25 +40,37 @@ public class JedisMasterClient implements JedisClient {
             jedis.auth(password);
         }
         jedis.select(dbNum);
+        pipeline = jedis.pipelined();
     }
 
     @Override
-    public long hset(byte[] key, Map<byte[], byte[]> hash) {
-        return this.jedis.hset(key, hash);
+    public void del(String key) {
+        pipeline.del(key);
     }
 
     @Override
-    public byte[] scriptLoad(byte[] script) {
-        return this.jedis.scriptLoad(script);
+    public void hmset(String key, Map<String, String> hash) {
+        pipeline.hmset(key, hash);
     }
 
     @Override
-    public Object evalsha(byte[] sha1, List<byte[]> keys, List<byte[]> args) {
-        return this.jedis.evalsha(sha1, keys, args);
+    public void rpush(String key, String... string) {
+        pipeline.rpush(key, string);
+    }
+
+    @Override
+    public void set(String key, String value) {
+        pipeline.set(key, value);
+    }
+
+    @Override
+    public void flush() {
+        pipeline.sync();
     }
 
     @Override
     public void close() {
+        pipeline.close();
         jedis.close();
     }
 }

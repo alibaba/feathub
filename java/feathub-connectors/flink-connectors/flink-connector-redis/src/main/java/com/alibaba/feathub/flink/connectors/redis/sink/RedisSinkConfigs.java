@@ -68,26 +68,14 @@ public class RedisSinkConfigs {
                                     + "records with the same key into Redis without "
                                     + "overwriting each other.");
 
-    static final ConfigOption<String> KEY_FIELD =
-            ConfigOptions.key("keyField")
+    static final ConfigOption<String> KEY_FIELDS =
+            ConfigOptions.key("keyFields")
                     .stringType()
                     .noDefaultValue()
                     .withDescription(
-                            "The name of the key field in the input table. "
+                            "A comma-separated list of the key field names in the input table. "
                                     + "Values in this field would be concatenated with the "
                                     + "namespace and used as keys in Redis storage");
-
-    static final ConfigOption<String> TIMESTAMP_FIELD =
-            ConfigOptions.key("timestampField")
-                    .stringType()
-                    .noDefaultValue()
-                    .withDescription(
-                            "The name of the timestamp field in the input table. "
-                                    + "The values in this field must be Long values representing "
-                                    + "the milliseconds from epoch. If two records with the same "
-                                    + "key and namespace but different timestamp are written out "
-                                    + "through this sink, the record with larger timestamp value "
-                                    + "will finally be persisted to Redis.");
 
     enum RedisMode {
         STANDALONE,

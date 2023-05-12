@@ -34,11 +34,8 @@ import redis.clients.jedis.Jedis;
 import redis.embedded.RedisCluster;
 import redis.embedded.util.JedisUtil;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -101,7 +98,7 @@ public class RedisSentinelClusterITCase extends AbstractTestBase {
                         .option("port", port)
                         .option("dbNum", "0")
                         .option("namespace", "test_namespace")
-                        .option("keyField", "f0")
+                        .option("keyFields", "f0")
                         .build();
 
         tEnv.createTemporaryTable("redis_sink", descriptor);
@@ -111,17 +108,7 @@ public class RedisSentinelClusterITCase extends AbstractTestBase {
         assertThat(jedis.keys("*")).hasSize(NUM_ELEMENTS);
 
         for (int i = 1; i <= NUM_ELEMENTS; i++) {
-            Map<byte[], byte[]> originalResult =
-                    jedis.hgetAll(("test_namespace:" + i).getBytes(StandardCharsets.UTF_8));
-            Map<String, String> convertedResult = new HashMap<>();
-            for (Map.Entry<byte[], byte[]> entry : originalResult.entrySet()) {
-                convertedResult.put(
-                        new String(entry.getKey(), StandardCharsets.UTF_8),
-                        new String(entry.getValue(), StandardCharsets.UTF_8));
-            }
-            assertThat(convertedResult)
-                    .containsOnlyKeys(new String(ByteBuffer.allocate(4).putInt(1).array()))
-                    .containsValue(String.valueOf(i));
+            assertThat(jedis.get("test_namespace:" + i + ":f1")).isEqualTo(Integer.toString(i));
         }
 
         for (String key : jedis.keys("*")) {

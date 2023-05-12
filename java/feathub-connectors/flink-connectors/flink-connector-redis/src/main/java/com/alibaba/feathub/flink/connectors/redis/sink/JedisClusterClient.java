@@ -16,70 +16,56 @@
 
 package com.alibaba.feathub.flink.connectors.redis.sink;
 
-import org.apache.flink.util.Preconditions;
-
-import org.apache.commons.collections.BidiMap;
-import org.apache.commons.collections.bidimap.DualHashBidiMap;
+import redis.clients.jedis.ClusterPipeline;
+import redis.clients.jedis.DefaultJedisClientConfig;
 import redis.clients.jedis.HostAndPort;
-import redis.clients.jedis.JedisCluster;
-import redis.clients.jedis.exceptions.JedisNoScriptException;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 /**
  * A subclass of {@link JedisClient} that connects to a Redis cluster. Used for Redis Cluster mode.
  */
 public class JedisClusterClient implements JedisClient {
-    private static final byte[] SAMPLE_KEY = "SAMPLE_KEY".getBytes();
-
-    private final JedisCluster cluster;
-
-    private final BidiMap scriptShaMap;
+    private final ClusterPipeline pipeline;
 
     public JedisClusterClient(String host, int port, String username, String password) {
-        this.cluster =
-                new JedisCluster(
-                        Collections.singleton(new HostAndPort(host, port)), username, password);
-        this.scriptShaMap = new DualHashBidiMap();
+        this.pipeline =
+                new ClusterPipeline(
+                        Collections.singleton(new HostAndPort(host, port)),
+                        DefaultJedisClientConfig.builder()
+                                .user(username)
+                                .password(password)
+                                .build());
     }
 
     @Override
-    public long hset(byte[] key, Map<byte[], byte[]> hash) {
-        return this.cluster.hset(key, hash);
+    public void del(String key) {
+        pipeline.del(key);
     }
 
     @Override
-    public byte[] scriptLoad(byte[] script) {
-        if (scriptShaMap.containsValue(script)) {
-            return (byte[]) scriptShaMap.getKey(script);
-        }
-        // Loads the script on an arbitrary cluster node and cache it locally
-        // because Redis does not support loading script on all nodes in one time.
-        byte[] sha = this.cluster.scriptLoad(script, SAMPLE_KEY);
-        scriptShaMap.put(sha, script);
-        return sha;
+    public void hmset(String key, Map<String, String> hash) {
+        pipeline.hmset(key, hash);
     }
 
     @Override
-    public Object evalsha(byte[] sha1, List<byte[]> keys, List<byte[]> args) {
-        try {
-            return this.cluster.evalsha(sha1, keys, args);
-        } catch (JedisNoScriptException e) {
-            // Load the cached script onto the relevant cluster node dynamically.
-            byte[] script = (byte[]) scriptShaMap.get(sha1);
-            for (byte[] key : keys) {
-                byte[] sha = this.cluster.scriptLoad(script, key);
-                Preconditions.checkState(Arrays.equals(sha1, sha));
-            }
-            return this.cluster.evalsha(sha1, keys, args);
-        }
+    public void rpush(String key, String... string) {
+        pipeline.rpush(key, string);
+    }
+
+    @Override
+    public void set(String key, String value) {
+        pipeline.set(key, value);
+    }
+
+    @Override
+    public void flush() {
+        pipeline.sync();
     }
 
     @Override
     public void close() {
-        this.cluster.close();
+        pipeline.close();
     }
 }
