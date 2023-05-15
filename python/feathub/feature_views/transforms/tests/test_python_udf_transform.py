@@ -99,3 +99,45 @@ class PythonUDFTransformITTest(ABC, FeathubITTestBase):
         )
 
         assert_frame_equal(expected_result_df, result_df)
+
+    def test_python_udf_with_default_value(self):
+        df_1 = self.input_data.copy()
+        source = self.create_file_source(df_1)
+
+        def raise_on_alex(row: pd.Series) -> str:
+            if row["name"] == "Alex":
+                raise RuntimeError()
+            return row["name"]
+
+        feature_view = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                Feature(
+                    name="new_name",
+                    dtype=String,
+                    transform=PythonUdfTransform(
+                        raise_on_alex,
+                        fail_on_exception=False,
+                        value_on_exception="Bad Name",
+                    ),
+                    keys=["name"],
+                )
+            ],
+        )
+
+        expected_result_df = df_1
+        expected_result_df["new_name"] = pd.Series(
+            ["Bad Name", "Emma", "Bad Name", "Emma", "Jack", "Bad Name"]
+        )
+        expected_result_df.drop(["cost", "distance"], axis=1, inplace=True)
+        expected_result_df = expected_result_df.sort_values(
+            by=["name", "time"]
+        ).reset_index(drop=True)
+
+        table = self.client.get_features(features=feature_view)
+        result_df = (
+            table.to_pandas().sort_values(by=["name", "time"]).reset_index(drop=True)
+        )
+
+        self.assertTrue(expected_result_df.equals(result_df))
