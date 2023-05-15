@@ -35,12 +35,12 @@ from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_
 def load_format(
     t_env: StreamTableEnvironment,
     data_format: str,
-    data_format_properties: Dict[str, Any],
+    data_format_props: Dict[str, Any],
 ) -> None:
     if data_format == DataFormat.JSON or data_format == DataFormat.CSV:
         return
     elif data_format == DataFormat.PROTOBUF:
-        config = ProtobufConfig(data_format_properties)
+        config = ProtobufConfig(data_format_props)
         protobuf_jar_path = config.get(PROTOBUF_JAR_PATH_CONFIG)
         _load_protobuf_format_jar(t_env, protobuf_jar_path)
         return
@@ -49,16 +49,16 @@ def load_format(
 
 
 def get_flink_format_config(
-    data_format: str, data_format_properties: Dict[str, Any]
+    data_format: str, data_format_props: Dict[str, Any]
 ) -> Dict[str, str]:
     if data_format == DataFormat.JSON:
-        config: BaseConfig = JsonConfig(data_format_properties)
+        config: BaseConfig = JsonConfig(data_format_props)
         return {"json.ignore-parse-errors": str(config.get(IGNORE_PARSE_ERRORS_CONFIG))}
     elif data_format == DataFormat.CSV:
-        config = CsvConfig(data_format_properties)
+        config = CsvConfig(data_format_props)
         return {"csv.ignore-parse-errors": str(config.get(IGNORE_PARSE_ERRORS_CONFIG))}
     elif data_format == DataFormat.PROTOBUF:
-        config = ProtobufConfig(data_format_properties)
+        config = ProtobufConfig(data_format_props)
         return {
             "protobuf.message-class-name": config.get(PROTOBUF_CLASS_NAME_CONFIG),
             "protobuf.ignore-parse-errors": str(config.get(IGNORE_PARSE_ERRORS_CONFIG)),

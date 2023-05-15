@@ -30,7 +30,7 @@ class Sink(FeatureTable, ABC):
         system_name: str,
         table_uri: Dict[str, Any],
         data_format: Optional[str] = None,
-        data_format_properties: Optional[Dict[str, Any]] = None,
+        data_format_props: Optional[Dict[str, Any]] = None,
     ):
         """
         :param name: The name that uniquely identifies this feature table in a registry.
@@ -42,14 +42,14 @@ class Sink(FeatureTable, ABC):
                             data, e.g. csv, json, parquet, etc. This is typically
                             used by storage that does not require schema, e.g.
                             filesystem, kafka, etc.
-        :param data_format_properties: The properties of the data format.
+        :param data_format_props: The properties of the data format.
         """
         super().__init__(
             name=name,
             system_name=system_name,
             table_uri=table_uri,
             data_format=data_format,
-            data_format_properties=data_format_properties,
+            data_format_props=data_format_props,
         )
 
     def is_bounded(self) -> bool:

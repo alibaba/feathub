@@ -124,7 +124,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 name="features",
                 source=source,
                 features=[f_total_cost],
-                props=props.value,
+                extra_props=props.value,
             )
 
             result_df = (
@@ -218,7 +218,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 name="features",
                 source=source,
                 features=[f_total_cost],
-                props=props.value,
+                extra_props=props.value,
             )
             expected_result_df = expected_result_df.sort_values(
                 by=["name", "window_time"]
@@ -322,7 +322,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 name="features",
                 source=source,
                 features=[f_name_name, f_total_cost],
-                props=props.value,
+                extra_props=props.value,
             )
             expected_result_df = expected_result_df.sort_values(
                 by=["name_name", "window_time"]
@@ -705,7 +705,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                         ),
                     ),
                 ],
-                props=props.value,
+                extra_props=props.value,
             )
 
             expected_result_df = expected_result_df.astype(
@@ -1120,7 +1120,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                         keys=["name"],
                     ),
                 ],
-                props=props.value,
+                extra_props=props.value,
             )
 
             expected_result_df = expected_result_df.sort_values(
@@ -1231,7 +1231,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                         ),
                     ),
                 ],
-                props=props.value,
+                extra_props=props.value,
             )
 
             joined_feature = DerivedFeatureView(
@@ -1393,7 +1393,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                         ),
                     ),
                 ],
-                props=props.value,
+                extra_props=props.value,
             )
 
             expected_result_df = expected_result_df.sort_values(
@@ -1553,7 +1553,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 ],
                 timestamp_field="sliding_window_timestamp",
                 timestamp_format="%Y-%m-%d %H:%M:%S.%f",
-                props=props.value,
+                extra_props=props.value,
             )
 
             expected_result_df = expected_result_df.sort_values(
@@ -1846,7 +1846,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 name="features",
                 source=source,
                 features=[f_lower_name, f_total_cost, f_total_cost_sqrt],
-                props=props.value,
+                extra_props=props.value,
             )
 
             expected_result_df = expected_result_df.sort_values(
@@ -2255,7 +2255,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 name="features",
                 source=source,
                 features=[f_total_cost],
-                props=props.value,
+                extra_props=props.value,
             )
 
             result_df = (

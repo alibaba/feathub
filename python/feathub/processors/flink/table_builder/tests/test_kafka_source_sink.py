@@ -72,7 +72,7 @@ class KafkaSourceSinkTest(unittest.TestCase):
             keys=["id1", "id2"],
             timestamp_field="ts",
             timestamp_format="epoch",
-            consumer_properties={"consumer.key": "value"},
+            consumer_props={"consumer.key": "value"},
             startup_mode="timestamp",
             startup_datetime=datetime(
                 year=2022,
@@ -163,7 +163,7 @@ class KafkaSourceSinkTest(unittest.TestCase):
             topic="test-topic",
             key_format="json",
             value_format="json",
-            producer_properties={"producer.key": "value"},
+            producer_props={"producer.key": "value"},
         )
 
         table = self.t_env.from_elements([(1,)])
