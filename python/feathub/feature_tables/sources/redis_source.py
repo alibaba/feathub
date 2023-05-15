@@ -11,10 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import List, Optional, Dict
+from enum import Enum
+from typing import List, Optional, Dict, Union
 
+from feathub.common.exceptions import FeathubException
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.table.schema import Schema
+
+
+class RedisMode(Enum):
+    """
+    Supported Redis deployment modes.
+    """
+
+    STANDALONE = "standalone"
+    MASTER_SLAVE = "master_slave"
+    CLUSTER = "cluster"
 
 
 class RedisSource(FeatureTable):
@@ -30,6 +42,7 @@ class RedisSource(FeatureTable):
         keys: List[str],
         host: str,
         port: int = 6379,
+        mode: Union[RedisMode, str] = RedisMode.STANDALONE,
         username: str = None,
         password: str = None,
         db_num: int = 0,
@@ -43,9 +56,11 @@ class RedisSource(FeatureTable):
                      to locate a row of this table.
         :param host: The host of the Redis instance to connect.
         :param port: The port of the Redis instance to connect.
+        :param mode: The deployment mode or the name of the mode of the redis service.
         :param username: The username used by the Redis authorization process.
         :param password: The password used by the Redis authorization process.
-        :param db_num: The No. of the Redis database to connect.
+        :param db_num: The No. of the Redis database to connect. Not supported in
+                       Cluster mode.
         :param namespace: The namespace where the feature values reside in Redis. It
                           must be equal to the namespace of the corresponding RedisSink
                           when the features were written to Redis.
@@ -59,8 +74,6 @@ class RedisSource(FeatureTable):
             table_uri={
                 "host": host,
                 "port": port,
-                "username": username,
-                "password": password,
                 "db_num": db_num,
                 "namespace": namespace,
             },
@@ -71,10 +84,16 @@ class RedisSource(FeatureTable):
         self.host = host
         self.schema = schema
         self.port = port
+        self.mode = mode if isinstance(mode, RedisMode) else RedisMode(mode)
         self.username = username
         self.password = password
         self.db_num = db_num
         self.namespace = namespace
+
+        if mode == RedisMode.CLUSTER and db_num != 0:
+            raise FeathubException(
+                "Selecting database is not supported in Cluster mode."
+            )
 
     def to_json(self) -> Dict:
         return {
@@ -84,6 +103,7 @@ class RedisSource(FeatureTable):
             "keys": self.keys,
             "host": self.host,
             "port": self.port,
+            "mode": self.mode.name,
             "username": self.username,
             "password": self.password,
             "db_num": self.db_num,

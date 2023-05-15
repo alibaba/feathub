@@ -42,7 +42,8 @@ from feathub.feature_tables.tests.test_kafka_source_sink import (
 from feathub.feature_tables.tests.test_mysql_source_sink import MySQLSourceSinkITTest
 from feathub.feature_tables.tests.test_print_sink import PrintSinkITTest
 from feathub.feature_tables.tests.test_redis_source_sink import (
-    RedisSourceSinkITTest,
+    RedisSourceSinkStandaloneModeITTest,
+    RedisSourceSinkClusterModeITTest,
 )
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
@@ -408,7 +409,8 @@ class FlinkProcessorITTest(
     OverWindowTransformITTest,
     PrintSinkITTest,
     PythonUDFTransformITTest,
-    RedisSourceSinkITTest,
+    RedisSourceSinkStandaloneModeITTest,
+    RedisSourceSinkClusterModeITTest,
     SlidingWindowTransformITTest,
     SlidingFeatureViewITTest,
     BlackHoleSinkITTest,

@@ -63,6 +63,7 @@ def insert_into_redis_sink(
     redis_sink_descriptor_builder = (
         NativeFlinkTableDescriptor.for_connector("redis")
         .schema(get_schema_from_table(features_table))
+        .option("mode", sink.mode.name)
         .option("host", sink.host)
         .option("port", str(sink.port))
         .option("dbNum", str(sink.db_num))
@@ -94,6 +95,7 @@ def _get_redis_connector_jars() -> list:
         "flink-connector-redis-*.jar",
         "jedis-*.jar",
         "gson-*.jar",
+        "commons-pool2-*.jar",
     ]
     jars = []
     for x in jar_patterns:

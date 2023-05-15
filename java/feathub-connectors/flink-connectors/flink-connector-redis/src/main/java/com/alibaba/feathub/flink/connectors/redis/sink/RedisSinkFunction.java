@@ -24,8 +24,6 @@ import org.apache.flink.table.data.RowData;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.StringUtils;
 
-import redis.clients.jedis.Jedis;
-
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -38,14 +36,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.DB_NUM;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.HOST;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.KEY_FIELD;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.NAMESPACE;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.PASSWORD;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.PORT;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.TIMESTAMP_FIELD;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.USERNAME;
 
 /**
  * A {@link org.apache.flink.streaming.api.functions.sink.SinkFunction} that writes to a Redis
@@ -56,11 +49,7 @@ import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.U
  */
 public class RedisSinkFunction extends RichSinkFunction<RowData> {
 
-    private final String host;
-    private final int port;
-    private final String username;
-    private final String password;
-    private final int dbNum;
+    private final ReadableConfig config;
 
     private final byte[] keyPrefix;
     private final int keyFieldIndex;
@@ -72,14 +61,10 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
     private transient ByteBuffer indexBuffer;
     private transient ByteBuffer timestampBuffer;
 
-    private transient Jedis jedis;
+    private transient JedisClient client;
 
     public RedisSinkFunction(ReadableConfig config, ResolvedSchema schema) {
-        this.host = config.get(HOST);
-        this.port = config.get(PORT);
-        this.username = config.get(USERNAME);
-        this.password = config.get(PASSWORD);
-        this.dbNum = config.get(DB_NUM);
+        this.config = config;
 
         this.keyPrefix = getKeyPrefix(config.get(NAMESPACE));
         this.keyFieldIndex = getKeyFieldIndex(config, schema);
@@ -97,15 +82,10 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
         this.indexBuffer = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN);
         this.timestampBuffer = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN);
 
-        jedis = new Jedis(host, port);
-        if (!StringUtils.isNullOrWhitespaceOnly(username)) {
-            jedis.auth(username, password);
-        } else if (!StringUtils.isNullOrWhitespaceOnly(password)) {
-            jedis.auth(password);
-        }
-        jedis.select(dbNum);
+        client = JedisClient.create(this.config);
+
         if (timestampFieldIndex >= 0) {
-            evalScriptSHA = jedis.scriptLoad(this.evalScript);
+            evalScriptSHA = client.scriptLoad(this.evalScript);
         }
     }
 
@@ -134,7 +114,7 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
         }
 
         if (timestampFieldIndex < 0) {
-            this.jedis.hset(key, value);
+            this.client.hset(key, value);
         } else {
             timestampBuffer.putLong(0, data.getLong(timestampFieldIndex));
 
@@ -146,7 +126,7 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
                 arguments.add(entry.getValue());
             }
 
-            this.jedis.evalsha(this.evalScriptSHA, Collections.emptyList(), arguments);
+            this.client.evalsha(this.evalScriptSHA, Collections.singletonList(key), arguments);
         }
     }
 
@@ -154,7 +134,7 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
     public void close() {
         // TODO: Remove the registered script from Redis when Redis supports removing a certain
         //  script.
-        jedis.close();
+        client.close();
     }
 
     private static byte[] getKeyPrefix(String namespace) {
