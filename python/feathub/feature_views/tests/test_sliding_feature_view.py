@@ -420,7 +420,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
                 features=[
                     feature,
                 ],
-                props={
+                extra_props={
                     ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: False,
                     SKIP_SAME_WINDOW_OUTPUT_CONFIG: True,
                 },
@@ -446,7 +446,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
             features=[
                 feature,
             ],
-            props={
+            extra_props={
                 ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: False,
                 SKIP_SAME_WINDOW_OUTPUT_CONFIG: False,
             },
@@ -510,7 +510,7 @@ class SlidingFeatureViewITTest(ABC, FeathubITTestBase):
             source=source,
             features=[f_total_cost],
             filter_expr="total_cost > 600",
-            props={
+            extra_props={
                 ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: True,
                 SKIP_SAME_WINDOW_OUTPUT_CONFIG: True,
             },

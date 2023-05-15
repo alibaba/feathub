@@ -23,19 +23,19 @@ class FileSystemSink(Sink):
         self,
         path: str,
         data_format: str,
-        data_format_properties: Optional[Dict[str, Any]] = None,
+        data_format_props: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         :param path: The path to directory of files to write to.
         :param data_format: The format of the data that are written to the file.
-        :param data_format_properties: The properties of the data format.
+        :param data_format_props: The properties of the data format.
         """
         super().__init__(
             name="",
             system_name="filesystem",
             table_uri={"path": path},
             data_format=data_format,
-            data_format_properties=data_format_properties,
+            data_format_props=data_format_props,
         )
         self.path = path
 
@@ -44,5 +44,5 @@ class FileSystemSink(Sink):
             "type": "FileSystemSink",
             "path": self.path,
             "data_format": self.data_format,
-            "data_format_properties": self.data_format_properties,
+            "data_format_props": self.data_format_props,
         }

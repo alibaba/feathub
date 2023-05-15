@@ -206,7 +206,7 @@ class FlinkSqlFeatureViewITTest(ABC, FeathubITTestBase):
             name="features",
             source=features,
             features=[f_total_cost],
-            props={
+            extra_props={
                 ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: True,
                 SKIP_SAME_WINDOW_OUTPUT_CONFIG: True,
             },

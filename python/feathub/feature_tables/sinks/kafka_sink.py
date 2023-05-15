@@ -23,9 +23,9 @@ class KafkaSink(Sink):
         topic: str,
         key_format: Optional[str],
         value_format: str,
-        producer_properties: Optional[Dict[str, str]] = None,
-        key_data_format_properties: Optional[Dict[str, Any]] = None,
-        value_data_format_properties: Optional[Dict[str, Any]] = None,
+        producer_props: Optional[Dict[str, str]] = None,
+        key_data_format_props: Optional[Dict[str, Any]] = None,
+        value_data_format_props: Optional[Dict[str, Any]] = None,
     ):
         """
         :param bootstrap_server: Comma separated list of Kafka brokers.
@@ -38,11 +38,11 @@ class KafkaSink(Sink):
         :param value_format: The format used to serialize the upstream table to the
                              value part of the output Kafka messages, e.g. csv, json,
                              etc.
-        :param producer_properties: Optional. If it is not None, it contains the extra
+        :param producer_props: Optional. If it is not None, it contains the extra
                                     kafka producer properties.
-        :param key_data_format_properties: Optional. The properties of the format for
+        :param key_data_format_props: Optional. The properties of the format for
                                            Kafka message key.
-        :param value_data_format_properties: Optional. The properties of the format for
+        :param value_data_format_props: Optional. The properties of the format for
                                              Kafka message value.
         """
         super().__init__(
@@ -53,16 +53,14 @@ class KafkaSink(Sink):
         self.bootstrap_server = bootstrap_server
         self.topic = topic
         self.key_format = key_format
-        self.key_format_properties = (
-            {} if key_data_format_properties is None else key_data_format_properties
+        self.key_format_props = (
+            {} if key_data_format_props is None else key_data_format_props
         )
         self.value_format = value_format
-        self.value_format_properties = (
-            {} if value_data_format_properties is None else value_data_format_properties
+        self.value_format_props = (
+            {} if value_data_format_props is None else value_data_format_props
         )
-        self.producer_properties = (
-            {} if producer_properties is None else producer_properties
-        )
+        self.producer_props = {} if producer_props is None else producer_props
 
     def to_json(self) -> Dict:
         return {
@@ -71,7 +69,7 @@ class KafkaSink(Sink):
             "topic": self.topic,
             "key_format": self.key_format,
             "value_format": self.value_format,
-            "producer_properties": self.producer_properties,
-            "key_data_format_properties": self.key_format_properties,
-            "value_data_format_properties": self.value_format_properties,
+            "producer_props": self.producer_props,
+            "key_data_format_props": self.key_format_props,
+            "value_data_format_props": self.value_format_props,
         }

@@ -63,9 +63,9 @@ def get_table_from_file_source(
         .schema(flink_schema)
     )
 
-    load_format(t_env, file_source.data_format, file_source.data_format_properties)
+    load_format(t_env, file_source.data_format, file_source.data_format_props)
     flink_format_config = get_flink_format_config(
-        file_source.data_format, file_source.data_format_properties
+        file_source.data_format, file_source.data_format_props
     )
     for k, v in flink_format_config.items():
         descriptor_builder.option(k, v)
@@ -90,9 +90,9 @@ def insert_into_file_sink(
         .option("path", path)
     )
 
-    load_format(t_env, sink.data_format, sink.data_format_properties)
+    load_format(t_env, sink.data_format, sink.data_format_props)
     flink_format_config = get_flink_format_config(
-        sink.data_format, sink.data_format_properties
+        sink.data_format, sink.data_format_props
     )
     for k, v in flink_format_config.items():
         descriptor_builder.option(k, v)

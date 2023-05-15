@@ -36,14 +36,14 @@ class KafkaSource(FeatureTable):
         keys: Optional[List[str]] = None,
         timestamp_field: Optional[str] = None,
         timestamp_format: str = "epoch",
-        consumer_properties: Optional[Dict[str, str]] = None,
+        consumer_props: Optional[Dict[str, str]] = None,
         max_out_of_orderness: timedelta = timedelta(0),
         startup_mode: str = "group-offsets",
         startup_datetime: Optional[datetime] = None,
         partition_discovery_interval: timedelta = timedelta(minutes=5),
         is_bounded: bool = False,
-        key_data_format_properties: Optional[Dict[str, Any]] = None,
-        value_data_format_properties: Optional[Dict[str, Any]] = None,
+        key_data_format_props: Optional[Dict[str, Any]] = None,
+        value_data_format_props: Optional[Dict[str, Any]] = None,
     ):
         """
         :param name: The name that uniquely identifies this source in a registry.
@@ -67,7 +67,7 @@ class KafkaSource(FeatureTable):
         :param timestamp_format: The format of the timestamp field. See TableDescriptor
                                  for valid format values. Only effective when the
                                  `timestamp_field` is not None.
-        :param consumer_properties: Optional. If it is not None, it contains the extra
+        :param consumer_props: Optional. If it is not None, it contains the extra
                                     kafka consumer properties.
         :param max_out_of_orderness: The maximum amount of time a record is allowed to
                                      be late. Default is 0 second, meaning the records
@@ -93,9 +93,9 @@ class KafkaSource(FeatureTable):
         :param is_bounded: Whether the KafkaSource should be bounded. If the KafkaSource
                            is bounded, it stops at the latest offsets of the partitions
                            when the KafkaSource starts to run.
-        :param key_data_format_properties: Optional. The properties of the format for
+        :param key_data_format_props: Optional. The properties of the format for
                                            Kafka message key.
-        :param value_data_format_properties: Optional. The properties of the format for
+        :param value_data_format_props: Optional. The properties of the format for
                                              Kafka message value.
         """
         super().__init__(
@@ -110,17 +110,15 @@ class KafkaSource(FeatureTable):
         self.bootstrap_server = bootstrap_server
         self.topic = topic
         self.key_format = key_format
-        self.key_data_format_properties = (
-            {} if key_data_format_properties is None else key_data_format_properties
+        self.key_data_format_props = (
+            {} if key_data_format_props is None else key_data_format_props
         )
         self.value_format = value_format
-        self.value_data_format_properties = (
-            {} if value_data_format_properties is None else value_data_format_properties
+        self.value_data_format_props = (
+            {} if value_data_format_props is None else value_data_format_props
         )
         self.consumer_group = consumer_group
-        self.consumer_properties = (
-            {} if consumer_properties is None else consumer_properties
-        )
+        self.consumer_props = {} if consumer_props is None else consumer_props
         self.max_out_of_orderness = max_out_of_orderness
         self.startup_mode = startup_mode
         self.startup_datetime = startup_datetime
@@ -155,7 +153,7 @@ class KafkaSource(FeatureTable):
             "keys": self.keys,
             "timestamp_field": self.timestamp_field,
             "timestamp_format": self.timestamp_format,
-            "consumer_properties": self.consumer_properties,
+            "consumer_props": self.consumer_props,
             "max_out_of_orderness_ms": self.max_out_of_orderness
             / timedelta(milliseconds=1),
             "startup_mode": self.startup_mode,
@@ -165,6 +163,6 @@ class KafkaSource(FeatureTable):
             "partition_discovery_interval_ms": self.partition_discovery_interval
             / timedelta(milliseconds=1),
             "is_bounded": self.is_bounded(),
-            "key_data_format_properties": self.key_data_format_properties,
-            "value_data_format_properties": self.value_data_format_properties,
+            "key_data_format_props": self.key_data_format_props,
+            "value_data_format_props": self.value_data_format_props,
         }

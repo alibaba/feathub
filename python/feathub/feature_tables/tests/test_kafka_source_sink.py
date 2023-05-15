@@ -87,7 +87,7 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
         )
 
     def _test_kafka_source_sink(
-        self, data_format: str, data_format_properties: Optional[Dict[str, Any]] = None
+        self, data_format: str, data_format_props: Optional[Dict[str, Any]] = None
     ):
         input_data = pd.DataFrame(
             [
@@ -105,11 +105,11 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
             .build()
         )
         topic_name, start_time = self._produce_data_to_kafka(
-            input_data, schema, data_format, data_format_properties
+            input_data, schema, data_format, data_format_props
         )
         # Consume data with kafka source
         result_df = self.consume_data_from_kafka(
-            schema, start_time, topic_name, data_format, data_format_properties
+            schema, start_time, topic_name, data_format, data_format_props
         )
         expected_result_df = (
             input_data.copy().sort_values(by=["id"]).reset_index(drop=True)
@@ -122,7 +122,7 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
         start_time: datetime,
         topic_name: str,
         data_format: str,
-        data_format_properties: Dict[str, Any] = None,
+        data_format_props: Dict[str, Any] = None,
     ) -> pd.DataFrame:
         source = KafkaSource(
             "kafka_source",
@@ -137,8 +137,8 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
             timestamp_format="%Y-%m-%d %H:%M:%S",
             startup_mode="timestamp",
             startup_datetime=start_time,
-            key_data_format_properties=data_format_properties,
-            value_data_format_properties=data_format_properties,
+            key_data_format_props=data_format_props,
+            value_data_format_props=data_format_props,
         )
         result_df = (
             self.client.get_features(source)
@@ -206,7 +206,7 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
         input_data: pd.DataFrame,
         schema: Schema,
         data_format: str,
-        data_format_properties: Optional[Dict[str, Any]] = None,
+        data_format_props: Optional[Dict[str, Any]] = None,
     ) -> Tuple[str, datetime]:
         source = self.create_file_source(
             input_data,
@@ -223,8 +223,8 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
             topic=topic_name,
             key_format=data_format,
             value_format=data_format,
-            key_data_format_properties=data_format_properties,
-            value_data_format_properties=data_format_properties,
+            key_data_format_props=data_format_props,
+            value_data_format_props=data_format_props,
         )
 
         start_time = datetime.now()

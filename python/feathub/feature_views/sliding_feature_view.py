@@ -121,7 +121,7 @@ class SlidingFeatureView(FeatureView):
         timestamp_field: str = "window_time",
         timestamp_format: str = "epoch_millis",
         filter_expr: Optional[str] = None,
-        props: Optional[Dict] = None,
+        extra_props: Optional[Dict] = None,
     ):
         """
         :param name: The unique identifier of this feature view in the registry.
@@ -154,8 +154,8 @@ class SlidingFeatureView(FeatureView):
                             expression is evaluated after other transformations in the
                             feature view, and only those rows which evaluate to True
                             will be outputted by the feature view.
-        :param props: Optional. It is not None, it is the properties of the
-                      SlidingFeatureView.
+        :param extra_props: Optional. It is not None, it is the extra properties of the
+                            SlidingFeatureView.
         """
         window_time_feature = self._get_window_time_feature(
             timestamp_field, timestamp_format
@@ -173,8 +173,8 @@ class SlidingFeatureView(FeatureView):
 
         self.config = (
             SlidingFeatureViewConfig({})
-            if props is None
-            else SlidingFeatureViewConfig(props)
+            if extra_props is None
+            else SlidingFeatureViewConfig(extra_props)
         )
         if not self.config.get(ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG) and self.config.get(
             SKIP_SAME_WINDOW_OUTPUT_CONFIG
@@ -260,7 +260,7 @@ class SlidingFeatureView(FeatureView):
             timestamp_field=self.timestamp_field,
             timestamp_format=self.timestamp_format,
             filter_expr=self.filter_expr,
-            props={**props, **self.config.original_props},
+            extra_props={**props, **self.config.original_props},
         )
         return feature_view
 
@@ -278,6 +278,7 @@ class SlidingFeatureView(FeatureView):
             "timestamp_field": self.timestamp_field,
             "timestamp_format": self.timestamp_format,
             "filter_expr": self.filter_expr,
+            "extra_props": self.config.original_props,
         }
 
     def _validate(self, source: TableDescriptor, features: Sequence[Feature]) -> None:

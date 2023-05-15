@@ -117,20 +117,16 @@ def get_table_from_kafka_source(
         .schema(flink_schema)
     )
 
-    load_format(
-        t_env, kafka_source.value_format, kafka_source.value_data_format_properties
-    )
+    load_format(t_env, kafka_source.value_format, kafka_source.value_data_format_props)
     flink_value_format_config = get_flink_format_config(
-        kafka_source.value_format, kafka_source.value_data_format_properties
+        kafka_source.value_format, kafka_source.value_data_format_props
     )
     for k, v in flink_value_format_config.items():
         descriptor_builder.option(f"value.{k}", v)
     if kafka_source.key_format is not None and len(keys) > 0:
-        load_format(
-            t_env, kafka_source.key_format, kafka_source.key_data_format_properties
-        )
+        load_format(t_env, kafka_source.key_format, kafka_source.key_data_format_props)
         flink_key_format_config = get_flink_format_config(
-            kafka_source.key_format, kafka_source.key_data_format_properties
+            kafka_source.key_format, kafka_source.key_data_format_props
         )
         for k, v in flink_key_format_config.items():
             descriptor_builder.option(f"key.{k}", v)
@@ -149,7 +145,7 @@ def get_table_from_kafka_source(
             str(int(kafka_source.startup_datetime.timestamp() * 1000)),
         )
 
-    for k, v in kafka_source.consumer_properties.items():
+    for k, v in kafka_source.consumer_props.items():
         descriptor_builder.option(f"properties.{k}", v)
 
     table = t_env.from_descriptor(descriptor_builder.build())
@@ -202,16 +198,16 @@ def insert_into_kafka_sink(
         .option("topic", topic)
     )
 
-    load_format(t_env, sink.value_format, sink.value_format_properties)
+    load_format(t_env, sink.value_format, sink.value_format_props)
     flink_value_format_config = get_flink_format_config(
-        sink.value_format, sink.value_format_properties
+        sink.value_format, sink.value_format_props
     )
     for k, v in flink_value_format_config.items():
         kafka_sink_descriptor_builder.option(f"value.{k}", v)
     if sink.key_format is not None and len(keys) > 0:
-        load_format(t_env, sink.key_format, sink.key_format_properties)
+        load_format(t_env, sink.key_format, sink.key_format_props)
         flink_key_format_config = get_flink_format_config(
-            sink.key_format, sink.key_format_properties
+            sink.key_format, sink.key_format_props
         )
         for k, v in flink_key_format_config.items():
             kafka_sink_descriptor_builder.option(f"key.{k}", v)
@@ -219,7 +215,7 @@ def insert_into_kafka_sink(
         kafka_sink_descriptor_builder.option("key.format", sink.key_format)
         kafka_sink_descriptor_builder.option("key.fields", ";".join(keys))
 
-    for k, v in sink.producer_properties.items():
+    for k, v in sink.producer_props.items():
         kafka_sink_descriptor_builder.option(f"properties.{k}", v)
 
     return table.execute_insert(kafka_sink_descriptor_builder.build())

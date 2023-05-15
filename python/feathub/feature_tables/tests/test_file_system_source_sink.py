@@ -124,7 +124,7 @@ class FileSystemSourceSinkITTest(ABC, FeathubITTestBase):
             path=path,
             data_format="protobuf",
             schema=table.get_schema(),
-            data_format_properties={
+            data_format_props={
                 PROTOBUF_JAR_PATH_CONFIG: get_protobuf_jar_path(),
                 PROTOBUF_CLASS_NAME_CONFIG: "org.feathub.proto.AllTypesTest",
                 IGNORE_PARSE_ERRORS_CONFIG: False,
@@ -163,11 +163,11 @@ class FileSystemSourceSinkITTest(ABC, FeathubITTestBase):
         self,
         path: str,
         data_format: str,
-        data_format_properties: Optional[Dict[str, Any]] = None,
+        data_format_props: Optional[Dict[str, Any]] = None,
     ):
         source = self.create_file_source(self.input_data)
 
-        sink = FileSystemSink(path, data_format, data_format_properties)
+        sink = FileSystemSink(path, data_format, data_format_props)
 
         self.client.materialize_features(
             features=source,
@@ -180,7 +180,7 @@ class FileSystemSourceSinkITTest(ABC, FeathubITTestBase):
             path=path,
             data_format=data_format,
             schema=source.schema,
-            data_format_properties=data_format_properties,
+            data_format_props=data_format_props,
         )
 
         df = self.client.get_features(source).to_pandas()
