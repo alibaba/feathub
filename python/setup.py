@@ -12,13 +12,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import os
-import subprocess
 import sys
 from datetime import datetime
-from shutil import rmtree, copytree, which
+from shutil import rmtree, copytree
 
 from setuptools import setup, find_packages
-from setuptools.command.build import build
 
 
 def remove_if_exists(file_path):
@@ -29,30 +27,6 @@ def remove_if_exists(file_path):
             assert os.path.isdir(file_path)
             rmtree(file_path)
 
-
-class BuildCommand(build):
-    def run(self):
-        self.run_command("generate_py_protobufs")
-        return super().run()
-
-
-# check protoc command and version
-if not which("protoc"):
-    print(
-        "Command 'protoc' not found. Please make sure protoc 3.17 "
-        "is installed in the local environment."
-    )
-    sys.exit(-1)
-
-protoc_version = subprocess.check_output(
-    ["protoc", "--version"], stderr=subprocess.STDOUT
-)
-if not protoc_version.startswith(b"libprotoc 3.17"):
-    print(
-        f"protoc '{protoc_version}' is installed in the local environment, "
-        f"while FeatHub has only been verified with protoc 3.17.x."
-    )
-    sys.exit(-1)
 
 # clear setup cache directories
 remove_if_exists("build")
@@ -133,7 +107,6 @@ try:
         "pandas>=1.1.5",
         "numpy~=1.21.4",
         "kubernetes~=24.2",
-        "protobuf~=3.20.0",
         "python-dateutil~=2.8",
         "redis==4.3.0",
         "tzlocal~=4.2",
@@ -159,16 +132,6 @@ try:
         include_package_data=True,
         package_dir=PACKAGE_DIR,
         package_data=PACKAGE_DATA,
-        setup_requires=["protobuf_distutils"],
-        cmdclass={
-            "build": BuildCommand,
-        },
-        options={
-            "generate_py_protobufs": {
-                "source_dir": os.path.join(this_directory, "feathub/common/protobuf"),
-                "output_dir": os.path.join(this_directory, "feathub/common/protobuf"),
-            },
-        },
         license="https://www.apache.org/licenses/LICENSE-2.0",
         author="FeatHub Authors",
         python_requires=">=3.6",

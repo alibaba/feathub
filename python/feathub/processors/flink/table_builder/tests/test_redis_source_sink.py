@@ -65,7 +65,7 @@ class RedisSourceSinkTest(unittest.TestCase):
                 "port": "6379",
                 "password": "123456",
                 "dbNum": "3",
-                "keyField": "__redis_sink_key__",
+                "keyFields": "id",
             }
             self.assertEquals(
                 expected_options, dict(flink_table_descriptor.get_options())

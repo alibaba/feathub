@@ -31,7 +31,6 @@ import org.junit.Before;
 import org.junit.Test;
 import redis.clients.jedis.Jedis;
 
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -77,48 +76,12 @@ public class RedisSinkITCase extends RedisITCaseBase {
         table.executeInsert("redis_sink").await(30, TimeUnit.SECONDS);
     }
 
-    private void verifyOutputResultWithoutTimestamp() {
+    private void verifyOutputResult() {
         assertThat(jedis.keys("*")).hasSize(NUM_ELEMENTS);
 
         for (int i = 1; i <= NUM_ELEMENTS; i++) {
-            Map<byte[], byte[]> originalResult = jedis.hgetAll(("test_namespace:" + i).getBytes());
-            Map<String, String> convertedResult = new HashMap<>();
-            for (Map.Entry<byte[], byte[]> entry : originalResult.entrySet()) {
-                convertedResult.put(new String(entry.getKey()), new String(entry.getValue()));
-            }
-            assertThat(convertedResult)
-                    .containsOnlyKeys(new String(getIndexBytes(1)))
-                    .containsValue(String.valueOf(i));
+            assertThat(jedis.get("test_namespace:" + i + ":f1")).isEqualTo(Integer.toString(i));
         }
-    }
-
-    private void verifyOutputResultWithTimestamp() {
-        assertThat(jedis.keys("*")).hasSize(5);
-
-        for (int i = 0; i < 5; i++) {
-            Map<byte[], byte[]> originalResult = jedis.hgetAll(("test_namespace:" + i).getBytes());
-            Map<String, String> convertedResult = new HashMap<>();
-            for (Map.Entry<byte[], byte[]> entry : originalResult.entrySet()) {
-                if (new String(entry.getKey()).equals("__timestamp__")) {
-                    // Timestamp field
-                    convertedResult.put(
-                            new String(entry.getKey()),
-                            String.valueOf(
-                                    ByteBuffer.allocate(8).put(entry.getValue()).getLong(0)));
-                } else {
-                    convertedResult.put(new String(entry.getKey()), new String(entry.getValue()));
-                }
-            }
-
-            assertThat(convertedResult)
-                    .containsOnlyKeys("__timestamp__", new String(getIndexBytes(2)))
-                    .containsEntry("__timestamp__", String.valueOf((NUM_ELEMENTS - i) * 1000))
-                    .containsEntry(new String(getIndexBytes(2)), String.valueOf(i));
-        }
-    }
-
-    private static byte[] getIndexBytes(int value) {
-        return ByteBuffer.allocate(4).putInt(value).array();
     }
 
     @Test
@@ -135,11 +98,11 @@ public class RedisSinkITCase extends RedisITCaseBase {
         configs.put("host", REDIS_HOST);
         configs.put("port", redisPort.getPort());
         configs.put("namespace", "test_namespace");
-        configs.put("keyField", "f0");
+        configs.put("keyFields", "f0");
         configs.put("dbNum", 0);
 
         buildAndExecute(stream, configs);
-        verifyOutputResultWithoutTimestamp();
+        verifyOutputResult();
     }
 
     @Test
@@ -157,42 +120,14 @@ public class RedisSinkITCase extends RedisITCaseBase {
         configs.put("host", REDIS_HOST);
         configs.put("port", redisPort.getPort());
         configs.put("namespace", "test_namespace");
-        configs.put("keyField", "f0");
+        configs.put("keyFields", "f0");
         configs.put("dbNum", dbNum);
 
         buildAndExecute(stream, configs);
 
         assertThat(jedis.keys("*")).isEmpty();
         jedis.select(dbNum);
-        verifyOutputResultWithoutTimestamp();
-    }
-
-    @Test
-    public void testPreserveRecordsWithLargerTimestamp() throws Exception {
-        DataStream<Row> stream =
-                env.fromSequence(0, NUM_ELEMENTS - 1)
-                        .map(
-                                x ->
-                                        Row.of(
-                                                String.valueOf(x % 5).getBytes(),
-                                                (NUM_ELEMENTS - x) * 1000,
-                                                x.toString().getBytes()),
-                                new RowTypeInfo(
-                                        Types.PRIMITIVE_ARRAY(Types.BYTE),
-                                        Types.LONG,
-                                        Types.PRIMITIVE_ARRAY(Types.BYTE)))
-                        .setParallelism(1);
-
-        Map<String, Object> configs = new HashMap<>();
-        configs.put("host", REDIS_HOST);
-        configs.put("port", redisPort.getPort());
-        configs.put("namespace", "test_namespace");
-        configs.put("keyField", "f0");
-        configs.put("timestampField", "f1");
-        configs.put("dbNum", 0);
-
-        buildAndExecute(stream, configs);
-        verifyOutputResultWithTimestamp();
+        verifyOutputResult();
     }
 
     @Test
@@ -203,13 +138,12 @@ public class RedisSinkITCase extends RedisITCaseBase {
         configs.put("host", REDIS_HOST);
         configs.put("port", redisPort.getPort());
         configs.put("namespace", "test_namespace");
-        configs.put("keyField", "f0");
+        configs.put("keyFields", "f0");
         configs.put("dbNum", 0);
 
         assertThatThrownBy(() -> buildAndExecute(stream, configs))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage(
-                        "It is not allowed to treat all columns in the input table as key field or timestamp field.");
+                .hasMessage("There should be at least one value field.");
     }
 
     @After

@@ -26,12 +26,11 @@ import java.util.Set;
 
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.DB_NUM;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.HOST;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.KEY_FIELD;
+import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.KEY_FIELDS;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.NAMESPACE;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.PASSWORD;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.PORT;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.REDIS_MODE;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.TIMESTAMP_FIELD;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.USERNAME;
 
 /** {@link DynamicTableSinkFactory} for {@link RedisDynamicTableSink}. */
@@ -57,7 +56,7 @@ public class RedisDynamicTableSinkFactory implements DynamicTableSinkFactory {
         options.add(PORT);
         options.add(DB_NUM);
         options.add(NAMESPACE);
-        options.add(KEY_FIELD);
+        options.add(KEY_FIELDS);
         return options;
     }
 
@@ -67,7 +66,6 @@ public class RedisDynamicTableSinkFactory implements DynamicTableSinkFactory {
         options.add(REDIS_MODE);
         options.add(USERNAME);
         options.add(PASSWORD);
-        options.add(TIMESTAMP_FIELD);
         return options;
     }
 }

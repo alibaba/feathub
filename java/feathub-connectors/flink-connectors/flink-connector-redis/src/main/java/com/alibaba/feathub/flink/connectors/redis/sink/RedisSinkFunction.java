@@ -18,27 +18,41 @@ package com.alibaba.feathub.flink.connectors.redis.sink;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.ReadableConfig;
+import org.apache.flink.runtime.state.FunctionInitializationContext;
+import org.apache.flink.runtime.state.FunctionSnapshotContext;
+import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.apache.flink.table.catalog.ResolvedSchema;
+import org.apache.flink.table.data.ArrayData;
+import org.apache.flink.table.data.MapData;
 import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.types.AtomicDataType;
+import org.apache.flink.table.types.CollectionDataType;
+import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.KeyValueDataType;
+import org.apache.flink.table.types.logical.BigIntType;
+import org.apache.flink.table.types.logical.BooleanType;
+import org.apache.flink.table.types.logical.DoubleType;
+import org.apache.flink.table.types.logical.FloatType;
+import org.apache.flink.table.types.logical.IntType;
+import org.apache.flink.table.types.logical.LogicalType;
+import org.apache.flink.table.types.logical.TimestampType;
+import org.apache.flink.table.types.logical.VarBinaryType;
+import org.apache.flink.table.types.logical.VarCharType;
 import org.apache.flink.util.Preconditions;
-import org.apache.flink.util.StringUtils;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessingException;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.apache.commons.lang3.ArrayUtils;
+
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.KEY_FIELD;
+import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.KEY_FIELDS;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.NAMESPACE;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.TIMESTAMP_FIELD;
 
 /**
  * A {@link org.apache.flink.streaming.api.functions.sink.SinkFunction} that writes to a Redis
@@ -47,87 +61,92 @@ import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.T
  * <p>The timestamp field, if specified, must contain Long values representing milliseconds from
  * epoch, and the other fields must contain byte arrays representing serialized key or data.
  */
-public class RedisSinkFunction extends RichSinkFunction<RowData> {
+public class RedisSinkFunction extends RichSinkFunction<RowData> implements CheckpointedFunction {
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    // The delimiter to separate layers of Redis key.
+    private static final String REDIS_KEY_DELIMITER = ":";
+
+    // The delimiter to conjunct row key values.
+    private static final String ROW_KEY_DELIMITER = "-";
 
     private final ReadableConfig config;
+    private final String namespace;
+    private final int[] keyFieldIndices;
+    private final int[] valueFieldIndices;
 
-    private final byte[] keyPrefix;
-    private final int keyFieldIndex;
-    private final int timestampFieldIndex;
-
-    private final byte[] evalScript;
-    private byte[] evalScriptSHA;
-
-    private transient ByteBuffer indexBuffer;
-    private transient ByteBuffer timestampBuffer;
+    private final DataType[] fieldTypes;
+    private final String[] fieldNames;
 
     private transient JedisClient client;
 
     public RedisSinkFunction(ReadableConfig config, ResolvedSchema schema) {
         this.config = config;
 
-        this.keyPrefix = getKeyPrefix(config.get(NAMESPACE));
-        this.keyFieldIndex = getKeyFieldIndex(config, schema);
-        this.timestampFieldIndex = getTimestampFieldIndex(config, schema);
+        this.fieldTypes = schema.getColumnDataTypes().toArray(new DataType[0]);
+        this.fieldNames = schema.getColumnNames().toArray(new String[0]);
+        this.namespace = config.get(NAMESPACE);
+        this.keyFieldIndices = getKeyFieldIndices(config, schema);
+        this.valueFieldIndices = getValueFieldIndices(schema, keyFieldIndices);
 
-        this.evalScript = getEvalScript(timestampFieldIndex);
+        Preconditions.checkArgument(
+                namespace.matches("^[A-Za-z0-9][A-Za-z0-9_]*$"),
+                "Namespace %s should only contain letters, numbers and underscore, "
+                        + "and should not start with underscore.");
 
-        validateConfigAndSchema(config, schema, keyFieldIndex, timestampFieldIndex);
+        Preconditions.checkArgument(
+                keyFieldIndices.length > 0, "There should be at least one key field.");
+
+        Preconditions.checkArgument(
+                valueFieldIndices.length > 0, "There should be at least one value field.");
     }
 
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
 
-        this.indexBuffer = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN);
-        this.timestampBuffer = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN);
-
         client = JedisClient.create(this.config);
+    }
 
-        if (timestampFieldIndex >= 0) {
-            evalScriptSHA = client.scriptLoad(this.evalScript);
+    @Override
+    public void invoke(RowData data, Context context) throws JsonProcessingException {
+        List<String> keyValues = new ArrayList<>();
+        for (int i : keyFieldIndices) {
+            keyValues.add(getString(data, i, fieldTypes[i]));
+        }
+        String keyPrefix =
+                namespace + REDIS_KEY_DELIMITER + String.join(ROW_KEY_DELIMITER, keyValues);
+
+        for (int i : valueFieldIndices) {
+            String key = keyPrefix + REDIS_KEY_DELIMITER + fieldNames[i];
+            DataType dataType = fieldTypes[i];
+            if (dataType instanceof KeyValueDataType) {
+                client.del(key);
+                client.hmset(key, getMap(data.getMap(i), (KeyValueDataType) dataType));
+            } else if (dataType instanceof CollectionDataType) {
+                client.del(key);
+                client.rpush(
+                        key,
+                        getList(data.getArray(i), (CollectionDataType) dataType)
+                                .toArray(new String[0]));
+            } else {
+                client.set(key, getString(data, i, dataType));
+            }
         }
     }
 
     @Override
-    public void invoke(RowData data, Context context) {
-        byte[] originalKey = data.getBinary(keyFieldIndex);
-        byte[] key = new byte[keyPrefix.length + originalKey.length];
-        System.arraycopy(keyPrefix, 0, key, 0, keyPrefix.length);
-        System.arraycopy(originalKey, 0, key, keyPrefix.length, originalKey.length);
+    public void snapshotState(FunctionSnapshotContext functionSnapshotContext) {
+        client.flush();
+    }
 
-        Map<byte[], byte[]> value = new HashMap<>();
-        int arity = data.getArity();
-        for (int i = 0; i < arity; i++) {
-            if (timestampFieldIndex == i) {
-                // timestamp values have specific serialization strategy
-                continue;
-            }
+    @Override
+    public void initializeState(FunctionInitializationContext functionInitializationContext) {}
 
-            if (keyFieldIndex == i) {
-                // don't store key values
-                continue;
-            }
-
-            indexBuffer.putInt(0, i);
-            value.put(indexBuffer.array(), data.getBinary(i));
-        }
-
-        if (timestampFieldIndex < 0) {
-            this.client.hset(key, value);
-        } else {
-            timestampBuffer.putLong(0, data.getLong(timestampFieldIndex));
-
-            List<byte[]> arguments = new ArrayList<>();
-            arguments.add(key);
-            arguments.add(timestampBuffer.array());
-            for (Map.Entry<byte[], byte[]> entry : value.entrySet()) {
-                arguments.add(entry.getKey());
-                arguments.add(entry.getValue());
-            }
-
-            this.client.evalsha(this.evalScriptSHA, Collections.singletonList(key), arguments);
-        }
+    @Override
+    public void finish() throws Exception {
+        super.finish();
+        client.flush();
     }
 
     @Override
@@ -137,74 +156,136 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
         client.close();
     }
 
-    private static byte[] getKeyPrefix(String namespace) {
-        Preconditions.checkArgument(
-                namespace.matches("^[A-Za-z0-9][A-Za-z0-9_]*$"),
-                "Namespace %s should only contain letters, numbers and underscore, "
-                        + "and should not start with underscore.");
+    private static String getString(RowData data, int index, DataType dataType)
+            throws JsonProcessingException {
+        if (dataType instanceof AtomicDataType) {
+            LogicalType logicalType = dataType.getLogicalType();
+            if (logicalType instanceof VarCharType) {
+                return data.getString(index).toString();
+            } else if (logicalType instanceof VarBinaryType) {
+                return new String(data.getBinary(index));
+            } else if (logicalType instanceof IntType) {
+                return Integer.toString(data.getInt(index));
+            } else if (logicalType instanceof BigIntType) {
+                return Long.toString(data.getLong(index));
+            } else if (logicalType instanceof DoubleType) {
+                return Double.toString(data.getDouble(index));
+            } else if (logicalType instanceof FloatType) {
+                return Float.toString(data.getFloat(index));
+            } else if (logicalType instanceof BooleanType) {
+                return Boolean.toString(data.getBoolean(index));
+            } else if (logicalType instanceof TimestampType) {
+                return Long.toString(
+                        data.getTimestamp(index, ((TimestampType) logicalType).getPrecision())
+                                .getMillisecond());
+            }
 
-        return (namespace + ":").getBytes(StandardCharsets.UTF_8);
+            throw new UnsupportedOperationException(
+                    String.format(
+                            "Cannot write data with type %s to Redis.",
+                            dataType.getLogicalType().getClass().getName()));
+
+        } else if (dataType instanceof KeyValueDataType) {
+            return OBJECT_MAPPER.writeValueAsString(
+                    getMap(data.getMap(index), (KeyValueDataType) dataType));
+        } else if (dataType instanceof CollectionDataType) {
+            return OBJECT_MAPPER.writeValueAsString(
+                    getList(data.getArray(index), (CollectionDataType) dataType));
+        }
+
+        throw new UnsupportedOperationException(
+                String.format(
+                        "Cannot write data with type %s to Redis.", dataType.getClass().getName()));
     }
 
-    private static int getKeyFieldIndex(ReadableConfig config, ResolvedSchema schema) {
-        String keyFieldName = config.get(KEY_FIELD);
+    private static String getString(ArrayData data, int index, DataType dataType)
+            throws JsonProcessingException {
+        if (dataType instanceof AtomicDataType) {
+            LogicalType logicalType = dataType.getLogicalType();
+            if (logicalType instanceof VarCharType) {
+                return data.getString(index).toString();
+            } else if (logicalType instanceof VarBinaryType) {
+                return new String(data.getBinary(index));
+            } else if (logicalType instanceof IntType) {
+                return Integer.toString(data.getInt(index));
+            } else if (logicalType instanceof BigIntType) {
+                return Long.toString(data.getLong(index));
+            } else if (logicalType instanceof DoubleType) {
+                return Double.toString(data.getDouble(index));
+            } else if (logicalType instanceof FloatType) {
+                return Float.toString(data.getFloat(index));
+            } else if (logicalType instanceof BooleanType) {
+                return Boolean.toString(data.getBoolean(index));
+            } else if (logicalType instanceof TimestampType) {
+                return Long.toString(
+                        data.getTimestamp(index, ((TimestampType) logicalType).getPrecision())
+                                .getMillisecond());
+            }
 
+            throw new UnsupportedOperationException(
+                    String.format(
+                            "Cannot write data with type %s to Redis.",
+                            dataType.getLogicalType().getClass().getName()));
+
+        } else if (dataType instanceof KeyValueDataType) {
+            return OBJECT_MAPPER.writeValueAsString(
+                    getMap(data.getMap(index), (KeyValueDataType) dataType));
+        } else if (dataType instanceof CollectionDataType) {
+            return OBJECT_MAPPER.writeValueAsString(
+                    getList(data.getArray(index), (CollectionDataType) dataType));
+        }
+
+        throw new UnsupportedOperationException(
+                String.format(
+                        "Cannot write data with type %s to Redis.", dataType.getClass().getName()));
+    }
+
+    private static Map<String, String> getMap(MapData mapData, KeyValueDataType dataType)
+            throws JsonProcessingException {
+        ArrayData keyArrayData = mapData.keyArray();
+        DataType keyDataType = dataType.getKeyDataType();
+        ArrayData valueArrayData = mapData.valueArray();
+        DataType valueDataType = dataType.getValueDataType();
+        int size = keyArrayData.size();
+        Map<String, String> map = new HashMap<>();
+        for (int i = 0; i < size; i++) {
+            map.put(
+                    getString(keyArrayData, i, keyDataType),
+                    getString(valueArrayData, i, valueDataType));
+        }
+        return map;
+    }
+
+    private static List<String> getList(ArrayData arrayData, CollectionDataType dataType)
+            throws JsonProcessingException {
+        List<String> list = new ArrayList<>();
+        DataType elementDataType = dataType.getElementDataType();
+        int size = arrayData.size();
+        for (int i = 0; i < size; i++) {
+            list.add(getString(arrayData, i, elementDataType));
+        }
+        return list;
+    }
+
+    private static int[] getKeyFieldIndices(ReadableConfig config, ResolvedSchema schema) {
+        List<Integer> indices = new ArrayList<>();
         List<String> fieldNames = schema.getColumnNames();
-        int index = fieldNames.indexOf(keyFieldName);
-        Preconditions.checkArgument(
-                index >= 0, "Input table does not contain key field %s.", keyFieldName);
-        return index;
+        for (String keyFieldName : config.get(KEY_FIELDS).split(",")) {
+            int index = fieldNames.indexOf(keyFieldName);
+            Preconditions.checkArgument(
+                    index >= 0, "Input table does not contain key field %s.", keyFieldName);
+            indices.add(index);
+        }
+        return indices.stream().mapToInt(Integer::intValue).toArray();
     }
 
-    private static int getTimestampFieldIndex(ReadableConfig config, ResolvedSchema schema) {
-        String timestampFieldName = config.get(TIMESTAMP_FIELD);
-        if (StringUtils.isNullOrWhitespaceOnly(timestampFieldName)) {
-            return -1;
+    private static int[] getValueFieldIndices(ResolvedSchema schema, int[] keyFieldIndices) {
+        List<Integer> indices = new ArrayList<>();
+        for (int i = 0; i < schema.getColumnCount(); i++) {
+            if (!ArrayUtils.contains(keyFieldIndices, i)) {
+                indices.add(i);
+            }
         }
-
-        List<String> fieldNames = schema.getColumnNames();
-        int index = fieldNames.indexOf(timestampFieldName);
-        Preconditions.checkArgument(
-                index >= 0, "Input table does not contain timestamp field %s.", timestampFieldName);
-        return index;
-    }
-
-    private static byte[] getEvalScript(int timestampFieldIndex) {
-        if (timestampFieldIndex < 0) {
-            return new byte[0];
-        }
-
-        InputStream in =
-                RedisSinkFunction.class
-                        .getClassLoader()
-                        .getResourceAsStream(
-                                "com/alibaba/feathub/flink/connectors/redis/sink/script.lua");
-
-        String script =
-                new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))
-                        .lines()
-                        .reduce((x, y) -> x + "\n" + y)
-                        .get();
-
-        return script.getBytes(StandardCharsets.UTF_8);
-    }
-
-    private static void validateConfigAndSchema(
-            ReadableConfig config,
-            ResolvedSchema schema,
-            int keyFieldIndex,
-            int timestampFieldIndex) {
-        Preconditions.checkArgument(
-                keyFieldIndex != timestampFieldIndex,
-                "Timestamp field %s cannot be a key field.",
-                config.get(TIMESTAMP_FIELD));
-
-        int valueFieldNum = schema.getColumnNames().size() - 1;
-        if (timestampFieldIndex >= 0) {
-            valueFieldNum -= 1;
-        }
-        Preconditions.checkArgument(
-                valueFieldNum > 0,
-                "It is not allowed to treat all columns in the input table as key field or timestamp field.");
+        return indices.stream().mapToInt(Integer::intValue).toArray();
     }
 }

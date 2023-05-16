@@ -18,7 +18,6 @@ package com.alibaba.feathub.flink.connectors.redis.sink;
 
 import org.apache.flink.configuration.ReadableConfig;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -31,11 +30,15 @@ import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.U
 
 /** A wrapper interface for jedis clients in different deployment modes. */
 public interface JedisClient {
-    long hset(final byte[] key, final Map<byte[], byte[]> hash);
+    void del(String key);
 
-    byte[] scriptLoad(final byte[] script);
+    void hmset(String key, Map<String, String> hash);
 
-    Object evalsha(final byte[] sha1, final List<byte[]> keys, final List<byte[]> args);
+    void rpush(String key, String... string);
+
+    void set(String key, String value);
+
+    void flush();
 
     void close();
 

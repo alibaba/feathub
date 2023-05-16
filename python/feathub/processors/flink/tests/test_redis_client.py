@@ -87,6 +87,13 @@ class RedisClientTestBase(unittest.TestCase):
             .column("id", types.Int64)
             .column("val", types.Int64)
             .column("ts", types.String)
+            .column("map", types.MapType(types.String, types.Bool))
+            .column("list", types.Float64Vector)
+            .column(
+                "nested_map",
+                types.MapType(types.String, types.MapType(types.String, types.Bool)),
+            )
+            .column("nested_list", types.MapType(types.String, types.Float64Vector))
             .build()
         )
 
@@ -94,6 +101,10 @@ class RedisClientTestBase(unittest.TestCase):
             name="on_demand_feature_view",
             features=[
                 "table_name_1.val",
+                "table_name_1.map",
+                "table_name_1.list",
+                "table_name_1.nested_map",
+                "table_name_1.nested_list",
             ],
             keep_source_fields=True,
             request_schema=Schema.new_builder().column("id", types.Int64).build(),
@@ -123,7 +134,17 @@ class RedisClientTestBase(unittest.TestCase):
 
         for i in range(len(rows)):
             row = rows[i]
-            self.assertEquals({"id": i + 1, "val": i + 2}, row.to_dict())
+            self.assertEquals(
+                {
+                    "id": i + 1,
+                    "val": i + 2,
+                    "map": {"key": i % 2 == 0},
+                    "list": [i + 1.0, i + 2.0],
+                    "nested_map": {"key": {"key": i % 2 == 0}},
+                    "nested_list": {"key": [i + 1.0, i + 2.0]},
+                },
+                row.to_dict(),
+            )
 
     def test_more_input_column_than_keys(self):
         source = RedisSource(
@@ -153,14 +174,47 @@ class RedisClientTestBase(unittest.TestCase):
         for i in range(len(rows)):
             row = rows[i]
             self.assertEquals(
-                {"id": i + 1, "id_str": str(i + 1), "val": i + 2}, row.to_dict()
+                {
+                    "id": i + 1,
+                    "id_str": str(i + 1),
+                    "val": i + 2,
+                    "map": {"key": i % 2 == 0},
+                    "list": [i + 1.0, i + 2.0],
+                    "nested_map": {"key": {"key": i % 2 == 0}},
+                    "nested_list": {"key": [i + 1.0, i + 2.0]},
+                },
+                row.to_dict(),
             )
 
     def _produce_data_to_redis(self, t_env):
         row_data = [
-            (1, 2, datetime(2022, 1, 1, 0, 0, 0).strftime("%Y-%m-%d %H:%M:%S")),
-            (2, 3, datetime(2022, 1, 1, 0, 0, 1).strftime("%Y-%m-%d %H:%M:%S")),
-            (3, 4, datetime(2022, 1, 1, 0, 0, 2).strftime("%Y-%m-%d %H:%M:%S")),
+            [
+                1,
+                2,
+                datetime(2022, 1, 1, 0, 0, 0).strftime("%Y-%m-%d %H:%M:%S"),
+                {"key": True},
+                [1.0, 2.0],
+                {"key": {"key": True}},
+                {"key": [1.0, 2.0]},
+            ],
+            [
+                2,
+                3,
+                datetime(2022, 1, 1, 0, 0, 1).strftime("%Y-%m-%d %H:%M:%S"),
+                {"key": False},
+                [2.0, 3.0],
+                {"key": {"key": False}},
+                {"key": [2.0, 3.0]},
+            ],
+            [
+                3,
+                4,
+                datetime(2022, 1, 1, 0, 0, 2).strftime("%Y-%m-%d %H:%M:%S"),
+                {"key": True},
+                [3.0, 4.0],
+                {"key": {"key": True}},
+                {"key": [3.0, 4.0]},
+            ],
         ]
         table = t_env.from_elements(
             row_data,
@@ -169,6 +223,23 @@ class RedisClientTestBase(unittest.TestCase):
                     DataTypes.FIELD("id", DataTypes.BIGINT()),
                     DataTypes.FIELD("val", DataTypes.BIGINT()),
                     DataTypes.FIELD("ts", DataTypes.STRING()),
+                    DataTypes.FIELD(
+                        "map", DataTypes.MAP(DataTypes.STRING(), DataTypes.BOOLEAN())
+                    ),
+                    DataTypes.FIELD("list", DataTypes.ARRAY(DataTypes.DOUBLE())),
+                    DataTypes.FIELD(
+                        "nested_map",
+                        DataTypes.MAP(
+                            DataTypes.STRING(),
+                            DataTypes.MAP(DataTypes.STRING(), DataTypes.BOOLEAN()),
+                        ),
+                    ),
+                    DataTypes.FIELD(
+                        "nested_list",
+                        DataTypes.MAP(
+                            DataTypes.STRING(), DataTypes.ARRAY(DataTypes.DOUBLE())
+                        ),
+                    ),
                 ]
             ),
         )

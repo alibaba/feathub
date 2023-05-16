@@ -11,18 +11,70 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Optional, List, Union
+import datetime
+import json
+from typing import Optional, List, Any, Dict
+from typing import Union
 
 import pandas as pd
 import redis
 
-from feathub.common.utils import (
-    deserialize_object_with_protobuf,
-)
+from feathub.common import types
+from feathub.common.exceptions import FeathubException
+from feathub.common.types import MapType, VectorType
 from feathub.feature_tables.sinks.redis_sink import RedisMode
 from feathub.online_stores.online_store_client import OnlineStoreClient
-from feathub.processors.flink.table_builder.redis_utils import serialize_and_join_keys
 from feathub.table.schema import Schema
+
+REDIS_KEY_DELIMITER = ":"
+ROW_KEY_DELIMITER = "-"
+
+
+def _parse_bytes_or_string(data: Union[bytes, str], data_type: types.DType) -> Any:
+    if data_type == types.Bytes:
+        if isinstance(data, str):
+            return data.encode("utf-8")
+        return data
+
+    if isinstance(data, bytes):
+        data = data.decode("utf-8")
+
+    if data_type == types.String:
+        return data
+    elif data_type == types.Bool:
+        return data == "true"
+    elif data_type == types.Int32:
+        return int(data)
+    elif data_type == types.Int64:
+        return int(data)
+    elif data_type == types.Float32:
+        return float(data)
+    elif data_type == types.Float64:
+        return float(data)
+    elif data_type == types.Timestamp:
+        return datetime.datetime.fromtimestamp(int(data) / 1000.0)
+    elif isinstance(data_type, types.VectorType):
+        return _parse_list(json.loads(data), data_type)
+    elif isinstance(data_type, types.MapType):
+        return _parse_map(json.loads(data), data_type)
+
+    raise FeathubException(f"Cannot read data with type {data_type} from Redis.")
+
+
+def _parse_list(data: List[bytes], data_type: types.VectorType) -> List[Any]:
+    result = []
+    for element in data:
+        result.append(_parse_bytes_or_string(element, data_type.dtype))
+    return result
+
+
+def _parse_map(data: Dict[bytes, bytes], data_type: types.MapType) -> Dict[Any, Any]:
+    result = {}
+    for key, value in data.items():
+        result[
+            _parse_bytes_or_string(key, data_type.key_dtype)
+        ] = _parse_bytes_or_string(value, data_type.value_dtype)
+    return result
 
 
 class RedisClient(OnlineStoreClient):
@@ -45,7 +97,7 @@ class RedisClient(OnlineStoreClient):
     ):
         super().__init__()
         self.namespace = namespace
-
+        self.schema = schema
         self.key_names = keys
         self.key_types = [schema.get_field_type(x) for x in self.key_names]
 
@@ -92,22 +144,34 @@ class RedisClient(OnlineStoreClient):
         if feature_names is None:
             feature_names = self.all_feature_names
 
-        selected_feature_indices = [
-            self.encoded_feature_indices[field] for field in feature_names
-        ]
-
         results_list = []
         for _, row in input_data.iterrows():
             row_dict = row.to_dict()
-            key_value = serialize_and_join_keys(
-                [row_dict[x] for x in self.key_names], self.key_types
+            key_prefix = (
+                self.namespace
+                + REDIS_KEY_DELIMITER
+                + ROW_KEY_DELIMITER.join(
+                    str(row_dict[key_name]) for key_name in self.key_names
+                )
             )
-            key_value = (self.namespace + ":").encode("utf-8") + key_value
 
             result = []
-            raw_values = self.redis_client.hmget(key_value, selected_feature_indices)
-            for raw_value in raw_values:
-                result.append(deserialize_object_with_protobuf(bytes(raw_value)))
+            for feature_name in feature_names:
+                key = key_prefix + REDIS_KEY_DELIMITER + feature_name
+                field_type = self.schema.get_field_type(feature_name)
+                if isinstance(field_type, MapType):
+                    result.append(
+                        _parse_map(self.redis_client.hgetall(key), field_type)
+                    )
+                elif isinstance(field_type, VectorType):
+                    data: Any = _parse_list(
+                        self.redis_client.lrange(key, 0, -1), field_type
+                    )
+                    result.append(data)
+                else:
+                    result.append(
+                        _parse_bytes_or_string(self.redis_client.get(key), field_type)
+                    )
             results_list.append(result)
 
         features = pd.DataFrame(results_list, columns=feature_names)

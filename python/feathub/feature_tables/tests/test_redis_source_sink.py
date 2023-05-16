@@ -17,17 +17,13 @@ from typing import Union
 
 import pandas as pd
 import redis
-from redis import RedisCluster, Redis
+from redis import Redis
+from redis import RedisCluster
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_container_is_ready
 from testcontainers.redis import RedisContainer
 
 from feathub.common import types
-from feathub.common.types import Int64
-from feathub.common.utils import (
-    serialize_object_with_protobuf,
-    to_unix_timestamp,
-)
 from feathub.feature_tables.sinks.redis_sink import RedisSink
 from feathub.table.schema import Schema
 from feathub.tests.feathub_it_test_base import FeathubITTestBase
@@ -72,18 +68,49 @@ def _test_redis_sink(
     #  to Redis.
     input_data = pd.DataFrame(
         [
-            [1, 1, datetime(2022, 1, 1, 0, 0, 0).strftime("%Y-%m-%d %H:%M:%S")],
-            [2, 2, datetime(2022, 1, 1, 0, 0, 1).strftime("%Y-%m-%d %H:%M:%S")],
-            [3, 3, datetime(2022, 1, 1, 0, 0, 2).strftime("%Y-%m-%d %H:%M:%S")],
+            [
+                1,
+                1,
+                datetime(2022, 1, 1, 0, 0, 0).strftime("%Y-%m-%d %H:%M:%S"),
+                {"key": True},
+                [1.0, 2.0],
+                {"key": {"key": True}},
+                {"key": [1.0, 2.0]},
+            ],
+            [
+                2,
+                2,
+                datetime(2022, 1, 1, 0, 0, 1).strftime("%Y-%m-%d %H:%M:%S"),
+                {"key": False},
+                [2.0, 3.0],
+                {"key": {"key": False}},
+                {"key": [2.0, 3.0]},
+            ],
+            [
+                3,
+                3,
+                datetime(2022, 1, 1, 0, 0, 2).strftime("%Y-%m-%d %H:%M:%S"),
+                {"key": True},
+                [3.0, 4.0],
+                {"key": {"key": True}},
+                {"key": [3.0, 4.0]},
+            ],
         ],
-        columns=["id", "val", "ts"],
+        columns=["id", "val", "ts", "map", "list", "nested_map", "nested_list"],
     )
 
     schema = (
         Schema.new_builder()
         .column("id", types.Int64)
-        .column("val", types.Int64)
+        .column("val", types.Int32)
         .column("ts", types.String)
+        .column("map", types.MapType(types.String, types.Bool))
+        .column("list", types.Float64Vector)
+        .column(
+            "nested_map",
+            types.MapType(types.String, types.MapType(types.String, types.Bool)),
+        )
+        .column("nested_list", types.MapType(types.String, types.Float64Vector))
         .build()
     )
 
@@ -93,6 +120,7 @@ def _test_redis_sink(
         schema=schema,
         timestamp_field="ts",
         timestamp_format="%Y-%m-%d %H:%M:%S",
+        data_format="json",
     )
 
     sink = RedisSink(
@@ -110,26 +138,31 @@ def _test_redis_sink(
 
     if not isinstance(redis_client, RedisCluster):
         # Cluster client do not scan all nodes in the KEYS command
-        self.assertEquals(len(redis_client.keys("*")), input_data.shape[0])
+        self.assertEquals(len(redis_client.keys("*")), input_data.shape[0] * 6)
 
     for i in range(input_data.shape[0]):
-        key = b"test_namespace:" + serialize_object_with_protobuf(
-            input_data["id"][i], Int64
-        )
-
         self.assertEquals(
-            {
-                int(0).to_bytes(4, byteorder="big"): serialize_object_with_protobuf(
-                    i + 1, Int64
-                ),
-                b"__timestamp__": int(
-                    to_unix_timestamp(
-                        datetime(2022, 1, 1, 0, 0, i),
-                        format="%Y-%m-%d %H:%M:%S",
-                    )
-                ).to_bytes(8, byteorder="big"),
-            },
-            redis_client.hgetall(key.decode("utf-8")),
+            redis_client.get(f"test_namespace:{i+1}:ts"),
+            f"2022-01-01 00:00:0{i}".encode("utf-8"),
+        )
+        self.assertEquals(
+            redis_client.get(f"test_namespace:{i+1}:val"), f"{i+1}".encode("utf-8")
+        )
+        self.assertEquals(
+            redis_client.hgetall(f"test_namespace:{i+1}:map"),
+            {b"key": str(i % 2 == 0).lower().encode("utf-8")},
+        )
+        self.assertEquals(
+            redis_client.lrange(f"test_namespace:{i+1}:list", 0, -1),
+            [str(i + 1.0).encode("utf-8"), str(i + 2.0).encode("utf-8")],
+        )
+        self.assertEquals(
+            redis_client.hgetall(f"test_namespace:{i+1}:nested_map"),
+            {b"key": f'{{"key":"{str(i % 2 == 0).lower()}"}}'.encode("utf-8")},
+        )
+        self.assertEquals(
+            redis_client.hgetall(f"test_namespace:{i+1}:nested_list"),
+            {b"key": f'["{i + 1.0}","{i + 2.0}"]'.encode("utf-8")},
         )
 
     redis_client.close()
