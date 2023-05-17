@@ -345,7 +345,10 @@ Here is a list of key features that we plan to support:
 ## Contact Us
 
 Chinese-speaking users are recommended to join the following DingTalk group for
-questions and discussion.
+questions and discussion. You need to join the "Apache Flink China" DingTalk
+organization via
+[this](https://wx-in-i.dingtalk.com/invite-page/weixin.html?bizSource=____source____&corpId=ding82d2a9eeaf9e30ff35c2f4657eb6378f&inviteCode=zmC5CSqct5jEXoi)
+link first in order to join the following DingTalk Group.
 
 <img src="docs/static/img/dingtalk.png" width="20%" height="auto">
 
