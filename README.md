@@ -334,9 +334,10 @@ $ python -m mypy --config-file python/setup.cfg ./python
 Here is a list of key features that we plan to support:
 
 - [x] Support all FeatureView transformations with FlinkProcessor
-- [ ] Support all FeatureView transformations with LocalProcessor
-- [ ] Support all FeatureView transformations with SparkProcessor
-- [ ] Support common online and offline feature storages (e.g. MaxCompute, Redis, HDFS)
+- [x] Support all FeatureView transformations with LocalProcessor
+- [x] Support all FeatureView transformations with SparkProcessor
+- [x] Support common online and offline feature storages (e.g. Kafka, Redis, Hive, MySql)
+- [ ] Support persisting feature metadata in MySQL
 - [ ] Support online transformation with feature service
 - [ ] Support integration with Notebook
 - [ ] Support feature metadata exploration (e.g. definition, lineage, metrics) with FeatHub UI
