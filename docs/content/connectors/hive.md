@@ -36,7 +36,7 @@ hive_sink = HiveSink(
 )
 
 feathub_client.materialize_features(
-    features=feature_view,
+    feature_descriptor=feature_view,
     sink=sink,
     allow_overwrite=True,
 ).wait(30000)

@@ -103,7 +103,7 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
         ).reset_index(drop=True)
 
         result_df = (
-            self.client.get_features(features=built_feature_view_3)
+            self.client.get_features(feature_descriptor=built_feature_view_3)
             .to_pandas()
             .sort_values(by=["name", "time"])
             .reset_index(drop=True)
@@ -205,7 +205,7 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
         ).reset_index(drop=True)
 
         result_df = (
-            self.client.get_features(features=built_feature_view_2)
+            self.client.get_features(feature_descriptor=built_feature_view_2)
             .to_pandas()
             .sort_values(by=["name", "time"])
             .reset_index(drop=True)
@@ -317,7 +317,7 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
         ).reset_index(drop=True)
 
         result_df = (
-            client.get_features(features=built_feature_view_3)
+            client.get_features(feature_descriptor=built_feature_view_3)
             .to_pandas()
             .sort_values(by=["name", "time"])
             .reset_index(drop=True)

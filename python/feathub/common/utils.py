@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import sys
+import warnings
 from datetime import datetime, timezone, tzinfo
 from string import Template
-from typing import Union, Dict, Any, TYPE_CHECKING
+from typing import Union, Dict, Any, TYPE_CHECKING, Callable
 from urllib.parse import urlparse
 
 from feathub.common.exceptions import FeathubException
@@ -138,3 +139,47 @@ def from_json(json_dict: Dict) -> Any:
     class_name = json_dict["class"][class_name_start_index:]
 
     return getattr(sys.modules[module_name], class_name).from_json(json_dict)
+
+
+def deprecated_alias(**aliases: str) -> Callable:
+    """
+    Decorator for deprecated function and method arguments.
+
+    Use as follows:
+
+    @deprecated_alias(old_arg='new_arg')
+    def myfunc(new_arg):
+        ...
+
+    """
+
+    def deco(func: Callable) -> Callable:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            rename_kwargs(func.__name__, kwargs, aliases)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return deco
+
+
+def rename_kwargs(
+    func_name: str, kwargs: Dict[str, Any], aliases: Dict[str, str]
+) -> None:
+    """Helper function for deprecating function arguments."""
+    for alias, new in aliases.items():
+        if alias in kwargs:
+            if new in kwargs:
+                raise TypeError(
+                    f"{func_name} received both {alias} and {new} as arguments!"
+                    f" {alias} is deprecated, use {new} instead."
+                )
+            warnings.warn(
+                message=(
+                    f"`{alias}` is deprecated as an argument to `{func_name}`; use"
+                    f" `{new}` instead."
+                ),
+                category=DeprecationWarning,
+                stacklevel=3,
+            )
+            kwargs[new] = kwargs.pop(alias)

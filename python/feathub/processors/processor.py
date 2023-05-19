@@ -43,7 +43,7 @@ class Processor(ABC):
     @abstractmethod
     def get_table(
         self,
-        features: Union[str, TableDescriptor],
+        feature_descriptor: Union[str, TableDescriptor],
         keys: Union[pd.DataFrame, TableDescriptor, None] = None,
         start_datetime: Optional[datetime] = None,
         end_datetime: Optional[datetime] = None,
@@ -51,9 +51,9 @@ class Processor(ABC):
         """
         Returns a table of features according to the specified criteria.
 
-        :param features: Describes the features to be included in the table. If it is a
-                         string, it refers to the name of a table descriptor in the
-                         entity registry.
+        :param feature_descriptor: Describes the features to be included in the table.
+                                   If it is a string, it refers to the name of a table
+                                   descriptor in the entity registry.
         :param keys: Optional. If it is TableDescriptor or DataFrame, it should be
                      transformed into a table of keys. If it is not None, the output
                      table should only include rows whose key fields match at least one
@@ -76,7 +76,7 @@ class Processor(ABC):
     @abstractmethod
     def materialize_features(
         self,
-        features: Union[str, TableDescriptor],
+        feature_descriptor: Union[str, TableDescriptor],
         sink: FeatureTable,
         ttl: Optional[timedelta] = None,
         start_datetime: Optional[datetime] = None,
@@ -87,9 +87,9 @@ class Processor(ABC):
         Starts a job to write a table of features into the given sink according to the
         specified criteria.
 
-        :param features: Describes the table of features to be inserted in the sink. If
-                         it is a string, it refers to the name of a table descriptor in
-                         the entity registry.
+        :param feature_descriptor: Describes the table of features to be inserted in the
+                                   sink. If it is a string, it refers to the name of a
+                                   table descriptor in the entity registry.
         :param sink: Describes the location to write the features.
         :param ttl: Optional. If it is not None, the features data should be purged from
                     the sink after the specified period of time.

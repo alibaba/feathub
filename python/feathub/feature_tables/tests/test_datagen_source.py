@@ -93,7 +93,7 @@ class DataGenSourceITTest(ABC, FeathubITTestBase):
             timestamp_format="%Y-%m-%d %H:%M:%S",
         )
 
-        df = self.client.get_features(features=source).to_pandas()
+        df = self.client.get_features(feature_descriptor=source).to_pandas()
 
         self.assertEquals(10, df.shape[0])
         self.assertTrue((df["val"] >= 0).all() and (df["val"] <= 100).all())
@@ -111,7 +111,7 @@ class DataGenSourceITTest(ABC, FeathubITTestBase):
             timestamp_format="%Y-%m-%d %H:%M:%S",
         )
 
-        df = self.client.get_features(features=source).to_pandas()
+        df = self.client.get_features(feature_descriptor=source).to_pandas()
 
         self.assertEquals(10, df.shape[0])
         self.assertTrue((df["val"] >= 0).all() and (df["val"] <= 100).all())
@@ -129,7 +129,7 @@ class DataGenSourceITTest(ABC, FeathubITTestBase):
             timestamp_format="%Y-%m-%d %H:%M:%S",
         )
 
-        df = self.client.get_features(features=source).to_pandas()
+        df = self.client.get_features(feature_descriptor=source).to_pandas()
 
         self.assertEquals(10, df.shape[0])
         self.assertTrue((df["val"] >= 0).all() and (df["val"] <= 100).all())
@@ -147,7 +147,7 @@ class DataGenSourceITTest(ABC, FeathubITTestBase):
             timestamp_format="%Y-%m-%d %H:%M:%S",
         )
 
-        df = self.client.get_features(features=source).to_pandas()
+        df = self.client.get_features(feature_descriptor=source).to_pandas()
 
         self.assertEquals(10, df.shape[0])
         self.assertTrue((df["val"] >= 0).all() and (df["val"] <= 100).all())
@@ -186,7 +186,7 @@ class DataGenSourceITTest(ABC, FeathubITTestBase):
             ),
         )
 
-        df = self.client.get_features(features=source).to_pandas()
+        df = self.client.get_features(feature_descriptor=source).to_pandas()
 
         self.assertEquals(10, df.shape[0])
 
@@ -203,7 +203,7 @@ class DataGenSourceITTest(ABC, FeathubITTestBase):
             timestamp_format="%Y-%m-%d %H:%M:%S",
         )
 
-        df = self.client.get_features(features=source).to_pandas()
+        df = self.client.get_features(feature_descriptor=source).to_pandas()
 
         self.assertEquals(1000, df.shape[0])
         self.assertTrue((df["ts"].max() - df["ts"].min()) <= timedelta(seconds=1))
@@ -221,7 +221,7 @@ class DataGenSourceITTest(ABC, FeathubITTestBase):
             ),
         )
 
-        df = self.client.get_features(features=source).to_pandas()
+        df = self.client.get_features(feature_descriptor=source).to_pandas()
 
         self.assertEquals(10, df.shape[0])
         self.assertTrue((df["string_value"].str.len() == 101).all())

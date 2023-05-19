@@ -17,6 +17,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 from feathub.common.config import flatten_dict
+from feathub.common.utils import deprecated_alias
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.processors.processor import Processor
 from feathub.registries.registry import Registry
@@ -44,9 +45,10 @@ class FeathubClient:
             registry=self.registry,
         )
 
+    @deprecated_alias(features="feature_descriptor")
     def get_features(
         self,
-        features: Union[str, TableDescriptor],
+        feature_descriptor: Union[str, TableDescriptor],
         keys: Union[pd.DataFrame, TableDescriptor, None] = None,
         start_datetime: Optional[datetime] = None,
         end_datetime: Optional[datetime] = None,
@@ -54,9 +56,9 @@ class FeathubClient:
         """
         Returns a table of features according to the specified criteria.
 
-        :param features: Describes the features to be included in the table. If it is a
-                         string, it refers to the name of a table descriptor in the
-                         entity registry.
+        :param feature_descriptor: Describes the features to be included in the table.
+                                   If it is a string, it refers to the name of a table
+                                   descriptor in the entity registry.
         :param keys: Optional. If it is TableDescriptor or DataFrame, it should be
                      transformed into a table of keys. If it is not None, the output
                      table should only include features whose key fields match a row of
@@ -75,15 +77,16 @@ class FeathubClient:
         :return: A table of features.
         """
         return self.processor.get_table(
-            features=features,
+            feature_descriptor=feature_descriptor,
             keys=keys,
             start_datetime=start_datetime,
             end_datetime=end_datetime,
         )
 
+    @deprecated_alias(features="feature_descriptor")
     def materialize_features(
         self,
-        features: Union[str, TableDescriptor],
+        feature_descriptor: Union[str, TableDescriptor],
         sink: FeatureTable,
         ttl: Optional[timedelta] = None,
         start_datetime: Optional[datetime] = None,
@@ -94,9 +97,9 @@ class FeathubClient:
         Starts a job to write a table of features into the given sink according to the
         specified criteria.
 
-        :param features: Describes the table of features to be inserted in the sink. If
-                         it is a string, it refers to the name of a table descriptor in
-                         the entity registry.
+        :param feature_descriptor: Describes the table of features to be inserted in the
+                                   sink. If it is a string, it refers to the name of a
+                                   table descriptor in the entity registry.
         :param sink: Describes the location to write the features.
         :param ttl: Optional. If it is not None, the features data should be purged from
                     the sink after the specified period of time.
@@ -111,7 +114,7 @@ class FeathubClient:
         :return: A processor job corresponding to this materialization operation.
         """
         return self.processor.materialize_features(
-            features=features,
+            feature_descriptor=feature_descriptor,
             sink=sink,
             ttl=ttl,
             start_datetime=start_datetime,
@@ -137,8 +140,12 @@ class FeathubClient:
             feature_names=feature_names,
         )
 
+    @deprecated_alias(features_list="feature_descriptors")
     def build_features(
-        self, features_list: List[TableDescriptor], props: Optional[Dict] = None
+        self,
+        feature_descriptors: List[TableDescriptor],
+        force_update: bool = False,
+        props: Optional[Dict] = None,
     ) -> List[TableDescriptor]:
         """
         For each table descriptor in the given list, resolve this descriptor by
@@ -151,9 +158,35 @@ class FeathubClient:
         And caches the resolved table descriptors in memory so that they can be used
         when building other table descriptors.
 
-        :param features_list: A list of table descriptors.
+        :param feature_descriptors: A list of table descriptors.
+        :param force_update: If True, the feature descriptor would be directly searched
+                             in registry. If False, the feature descriptor would be
+                             searched in local cache first.
         :param props: Optional. If it is not None, it is the global properties that are
                       used to configure the given table descriptors.
         :return: A list of resolved descriptors corresponding to the input descriptors.
         """
-        return self.registry.build_features(features_list=features_list, props=props)
+        return self.registry.build_features(
+            feature_descriptors=feature_descriptors,
+            force_update=force_update,
+            props=props,
+        )
+
+    def register_features(
+        self, feature_descriptors: List[TableDescriptor], force_update: bool = False
+    ) -> List[bool]:
+        """
+        Registers the given table descriptor in the registry after building and
+        caching them in memory as described in build_features. Each descriptor is
+        uniquely identified by its name in the registry.
+
+        :param feature_descriptors: A table descriptor to be registered.
+        :param force_update: If True, the feature descriptor would be directly searched
+                             in registry. If False, the feature descriptor would be
+                             searched in local cache first.
+        :return: A list of bool values denoting whether the registration for each
+                 descriptor is successful.
+        """
+        return self.registry.register_features(
+            feature_descriptors=feature_descriptors, force_update=force_update
+        )

@@ -87,7 +87,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         )
 
         result_df = (
-            self.client.get_features(features=features)
+            self.client.get_features(feature_descriptor=features)
             .to_pandas()
             .sort_values(by=["name", "time"])
             .reset_index(drop=True)
@@ -148,7 +148,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         ).reset_index(drop=True)
 
         result_df = (
-            self.client.get_features(features=features)
+            self.client.get_features(feature_descriptor=features)
             .to_pandas()
             .sort_values(by=["name", "time"])
             .reset_index(drop=True)
@@ -250,7 +250,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         ).reset_index(drop=True)
 
         result_df = (
-            self.client.get_features(features=features)
+            self.client.get_features(feature_descriptor=features)
             .to_pandas()
             .sort_values(by=["name", "time"])
             .reset_index(drop=True)
@@ -305,7 +305,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         ).reset_index(drop=True)
 
         result_df = (
-            self.client.get_features(features=features)
+            self.client.get_features(feature_descriptor=features)
             .to_pandas()
             .sort_values(by=["name", "time"])
             .reset_index(drop=True)
@@ -347,7 +347,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         ).reset_index(drop=True)
 
         result_df = (
-            self.client.get_features(features=features)
+            self.client.get_features(feature_descriptor=features)
             .to_pandas()
             .sort_values(by=["name", "time"])
             .reset_index(drop=True)
@@ -401,7 +401,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         ).reset_index(drop=True)
 
         result_df = (
-            self.client.get_features(features=features)
+            self.client.get_features(feature_descriptor=features)
             .to_pandas()
             .sort_values(by=["lower_name", "time"])
             .reset_index(drop=True)
@@ -543,7 +543,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
             ],
         )
 
-        table = self.client.get_features(features=features)
+        table = self.client.get_features(feature_descriptor=features)
         result_df = (
             table.to_pandas().sort_values(by=["name", "time"]).reset_index(drop=True)
         )
@@ -873,7 +873,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         ).reset_index(drop=True)
 
         result_df = (
-            self.client.get_features(features=features)
+            self.client.get_features(feature_descriptor=features)
             .to_pandas()
             .sort_values(by=["name", "time"])
             .reset_index(drop=True)
@@ -955,7 +955,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         ).reset_index(drop=True)
 
         result_df = (
-            self.client.get_features(features=built_feature_view_2)
+            self.client.get_features(feature_descriptor=built_feature_view_2)
             .to_pandas()
             .sort_values(by=["name", "time"])
             .reset_index(drop=True)
@@ -1089,7 +1089,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
             ],
         )
 
-        table = self.client.get_features(features=features)
+        table = self.client.get_features(feature_descriptor=features)
         result_df = (
             table.to_pandas().sort_values(by=["name", "time"]).reset_index(drop=True)
         )

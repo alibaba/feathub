@@ -627,7 +627,9 @@ class FlinkTableBuilder:
         if isinstance(self.registry, LocalRegistry):
             return set(x for x in cast(LocalRegistry, self.registry).tables.keys())
 
-        raise FeathubException(f"Unsupported Registry type {type(self.registry)}.")
+        # Non-local registries do not support scanning all registered tables. Make sure
+        # that all needed features have been properly configures through other paths.
+        return set()
 
     @staticmethod
     def _apply_filter_if_any(

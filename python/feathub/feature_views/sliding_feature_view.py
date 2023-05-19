@@ -220,7 +220,10 @@ class SlidingFeatureView(FeatureView):
         return list(OrderedDict.fromkeys(output_fields))
 
     def build(
-        self, registry: Registry, props: Optional[Dict] = None
+        self,
+        registry: "Registry",
+        force_update: bool = False,
+        props: Optional[Dict] = None,
     ) -> TableDescriptor:
         """
         Gets a copy of self as a resolved table descriptor.
@@ -232,11 +235,13 @@ class SlidingFeatureView(FeatureView):
         The source table descriptor will be cached in the registry.
         """
         if isinstance(self.source, str):
-            source = registry.get_features(name=self.source)
+            source = registry.get_features(name=self.source, force_update=force_update)
         else:
-            source = registry.build_features(features_list=[self.source], props=props)[
-                0
-            ]
+            source = registry.build_features(
+                feature_descriptors=[self.source],
+                force_update=force_update,
+                props=props,
+            )[0]
 
         features = []
         for feature in self.features:

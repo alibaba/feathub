@@ -285,7 +285,7 @@ class DerivedFeatureViewITTest(ABC, FeathubITTestBase):
         self.client.build_features([features])
 
         result_df = (
-            self.client.get_features(features=features)
+            self.client.get_features(feature_descriptor=features)
             .to_pandas()
             .sort_values(by=["timestamp"])
             .reset_index(drop=True)

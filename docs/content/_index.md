@@ -16,6 +16,8 @@ applications.
 - [Engines](engines/_index.md)
 	- [Apache Flink](engines/flink.md)
 	- [Apache Spark](engines/spark.md)
+- [Registries](registries/_index.md)
+  - [MySQL](registries/mysql.md)
 - [Connectors](connectors/_index.md)
   - [Overview](connectors/overview.md) 
   - [Formats](connectors/formats/_index.md)

@@ -21,6 +21,7 @@ from feathub.common.validators import in_list
 
 class RegistryType(Enum):
     LOCAL = "local"
+    MYSQL = "mysql"
 
 
 REGISTRY_PREFIX = "registry."

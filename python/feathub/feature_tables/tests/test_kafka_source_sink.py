@@ -230,9 +230,7 @@ class KafkaSourceSinkITTest(ABC, FeathubITTestBase):
         start_time = datetime.now()
 
         self.client.materialize_features(
-            features=source,
-            sink=sink,
-            allow_overwrite=True,
+            feature_descriptor=source, sink=sink, allow_overwrite=True
         ).wait()
 
         return topic_name, start_time

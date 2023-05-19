@@ -83,7 +83,7 @@ class FlinkSqlFeatureViewITTest(ABC, FeathubITTestBase):
         self.client.build_features([features])
 
         result_df = (
-            self.client.get_features(features=features)
+            self.client.get_features(feature_descriptor=features)
             .to_pandas()
             .reset_index(drop=True)
         )
@@ -127,7 +127,7 @@ class FlinkSqlFeatureViewITTest(ABC, FeathubITTestBase):
         self.client.build_features([features])
 
         result_df = (
-            self.client.get_features(features=features, keys=keys)
+            self.client.get_features(feature_descriptor=features, keys=keys)
             .to_pandas()
             .sort_values(by=["name", "cost"])
             .reset_index(drop=True)
@@ -167,7 +167,7 @@ class FlinkSqlFeatureViewITTest(ABC, FeathubITTestBase):
         self.client.build_features([features])
 
         result_df = (
-            self.client.get_features(features=features)
+            self.client.get_features(feature_descriptor=features)
             .to_pandas()
             .reset_index(drop=True)
         )
@@ -226,7 +226,7 @@ class FlinkSqlFeatureViewITTest(ABC, FeathubITTestBase):
         self.client.build_features([features])
 
         result_df = (
-            self.client.get_features(features=features)
+            self.client.get_features(feature_descriptor=features)
             .to_pandas()
             .reset_index(drop=True)
         )
@@ -277,7 +277,7 @@ class FlinkSqlFeatureViewITTest(ABC, FeathubITTestBase):
         self.client.build_features([features])
 
         result_df = (
-            self.client.get_features(features=features)
+            self.client.get_features(feature_descriptor=features)
             .to_pandas()
             .reset_index(drop=True)
         )

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 from feathub.common.config import ConfigDef
 from feathub.common.exceptions import FeathubException
@@ -55,41 +55,45 @@ class LocalRegistry(Registry):
         super().__init__(LocalRegistry.REGISTRY_TYPE, props)
         local_registry_config = LocalRegistryConfig(props)
         self.namespace = local_registry_config.get(NAMESPACE_CONFIG)
-        self.tables: Dict[str, TableDescriptor] = {}
+        self.tables: Dict[str, Tuple[TableDescriptor, TableDescriptor]] = {}
 
     # TODO: maintain the version and version_timestamp so that we can recover the
     # lineage information of a table as upstream table evolves.
     def build_features(
-        self, features_list: List[TableDescriptor], props: Optional[Dict] = None
+        self,
+        feature_descriptors: List[TableDescriptor],
+        force_update: bool = False,
+        props: Optional[Dict] = None,
     ) -> List[TableDescriptor]:
         result = []
-        for table in features_list:
+        for table in feature_descriptors:
             if table.name == "":
                 raise FeathubException(
                     "Cannot build a TableDescriptor with empty name."
                 )
-            self.tables[table.name] = table.build(self, props)
-            result.append(self.tables[table.name])
+            self.tables[table.name] = (
+                table,
+                table.build(self, force_update=force_update, props=props),
+            )
+            result.append(self.tables[table.name][1])
 
         return result
 
     def register_features(
-        self, features: TableDescriptor, override: bool = True
-    ) -> bool:
-        if features.name == "":
-            raise FeathubException("Cannot register a TableDescriptor with empty name.")
-        if features.name in self.tables and not override:
-            return False
-        self.tables[features.name] = features
-        return True
+        self, feature_descriptors: List[TableDescriptor], force_update: bool = False
+    ) -> List[bool]:
+        self.build_features(feature_descriptors, force_update)
+        return [True for _ in feature_descriptors]
 
-    def get_features(self, name: str) -> TableDescriptor:
+    def get_features(
+        self, name: str, force_update: bool = False, is_resolved: bool = True
+    ) -> TableDescriptor:
         if name not in self.tables:
             raise RuntimeError(
                 f"Table '{name}' is not found in the cache or registry. "
                 "Please invoke build_features(..) for this table."
             )
-        return self.tables[name]
+        return self.tables[name][1 if is_resolved else 0]
 
     def delete_features(self, name: str) -> bool:
         if name not in self.tables:

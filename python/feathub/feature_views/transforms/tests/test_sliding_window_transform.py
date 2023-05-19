@@ -128,7 +128,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             )
 
             result_df = (
-                self.client.get_features(features=features)
+                self.client.get_features(feature_descriptor=features)
                 .to_pandas()
                 .sort_values(by=["window_time"])
                 .reset_index(drop=True)
@@ -225,7 +225,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             ).reset_index(drop=True)
 
             result_df = (
-                self.client.get_features(features=features)
+                self.client.get_features(feature_descriptor=features)
                 .to_pandas()
                 .sort_values(by=["name", "window_time"])
                 .reset_index(drop=True)
@@ -329,7 +329,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             ).reset_index(drop=True)
 
             result_df = (
-                self.client.get_features(features=features)
+                self.client.get_features(feature_descriptor=features)
                 .to_pandas()
                 .sort_values(by=["name_name", "window_time"])
                 .reset_index(drop=True)
@@ -723,7 +723,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             ).reset_index(drop=True)
 
             result_df = (
-                self.client.get_features(features=features)
+                self.client.get_features(feature_descriptor=features)
                 .to_pandas()
                 .sort_values(by=["name", "window_time"])
                 .reset_index(drop=True)
@@ -1128,7 +1128,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             ).reset_index(drop=True)
 
             result_df = (
-                self.client.get_features(features=features)
+                self.client.get_features(feature_descriptor=features)
                 .to_pandas()
                 .sort_values(by=["name", "window_time"])
                 .reset_index(drop=True)
@@ -1249,7 +1249,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             ).reset_index(drop=True)
 
             result_df = (
-                self.client.get_features(features=built_joined_feature)
+                self.client.get_features(feature_descriptor=built_joined_feature)
                 .to_pandas()
                 .sort_values(by=["name", "time"])
                 .reset_index(drop=True)
@@ -2259,7 +2259,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             )
 
             result_df = (
-                self.client.get_features(features=features)
+                self.client.get_features(feature_descriptor=features)
                 .to_pandas()
                 .sort_values(by=["name", "window_time"])
                 .reset_index(drop=True)
@@ -2458,7 +2458,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
         )
 
         result_df = (
-            client.get_features(features=features)
+            client.get_features(feature_descriptor=features)
             .to_pandas()
             .sort_values(by=["name", "window_time"])
             .reset_index(drop=True)

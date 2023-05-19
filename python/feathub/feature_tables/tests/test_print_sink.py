@@ -24,9 +24,7 @@ class PrintSinkITTest(ABC, FeathubITTestBase):
         sink = PrintSink()
 
         self.client.materialize_features(
-            features=source,
-            sink=sink,
-            allow_overwrite=True,
+            feature_descriptor=source, sink=sink, allow_overwrite=True
         ).wait()
 
     def test_print_sink_execute_insert(self):

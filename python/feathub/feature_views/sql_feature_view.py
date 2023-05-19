@@ -86,7 +86,10 @@ class SqlFeatureView(FeatureView):
         self._is_bounded = is_bounded
 
     def build(
-        self, registry: Registry, props: Optional[Dict] = None
+        self,
+        registry: "Registry",
+        force_update: bool = False,
+        props: Optional[Dict] = None,
     ) -> TableDescriptor:
         return SqlFeatureView(
             name=self.name,
