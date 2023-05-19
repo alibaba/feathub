@@ -13,6 +13,7 @@
 #  limitations under the License.
 from typing import Dict
 
+from feathub.common.utils import append_metadata_to_json
 from feathub.feature_tables.sinks.sink import Sink
 
 
@@ -24,5 +25,10 @@ class PrintSink(Sink):
     def __init__(self) -> None:
         super().__init__(name="", system_name="print", table_uri={})
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
-        return {"type": "PrintSink"}
+        return {}
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "PrintSink":
+        return PrintSink()

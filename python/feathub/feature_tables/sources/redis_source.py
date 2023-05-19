@@ -15,6 +15,7 @@ from enum import Enum
 from typing import List, Optional, Dict, Union
 
 from feathub.common.exceptions import FeathubException
+from feathub.common.utils import from_json, append_metadata_to_json
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.table.schema import Schema
 
@@ -95,9 +96,9 @@ class RedisSource(FeatureTable):
                 "Selecting database is not supported in Cluster mode."
             )
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
-            "type": "RedisSource",
             "name": self.name,
             "schema": None if self.schema is None else self.schema.to_json(),
             "keys": self.keys,
@@ -110,3 +111,19 @@ class RedisSource(FeatureTable):
             "namespace": self.namespace,
             "timestamp_field": self.timestamp_field,
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "RedisSource":
+        return RedisSource(
+            name=json_dict["name"],
+            schema=from_json(json_dict["schema"]),
+            keys=json_dict["keys"],
+            host=json_dict["host"],
+            port=json_dict["port"],
+            mode=json_dict["mode"],
+            username=json_dict["username"],
+            password=json_dict["password"],
+            db_num=json_dict["db_num"],
+            namespace=json_dict["namespace"],
+            timestamp_field=json_dict["timestamp_field"],
+        )

@@ -13,6 +13,7 @@
 # limitations under the License.
 from typing import Dict
 
+from feathub.common.utils import append_metadata_to_json
 from feathub.feature_tables.sinks.sink import Sink
 
 
@@ -32,8 +33,12 @@ class MemoryStoreSink(Sink):
         )
         self.table_name = table_name
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
-            "type": "MemoryStoreSink",
             "table_name": self.table_name,
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "MemoryStoreSink":
+        return MemoryStoreSink(table_name=json_dict["table_name"])

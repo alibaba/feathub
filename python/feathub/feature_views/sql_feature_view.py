@@ -14,6 +14,7 @@
 from typing import Dict, Sequence, Optional, List
 
 from feathub.common.exceptions import FeathubException
+from feathub.common.utils import from_json, append_metadata_to_json
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.feature_view import FeatureView
 from feathub.registries.registry import Registry
@@ -131,9 +132,9 @@ class SqlFeatureView(FeatureView):
             )
         return self
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
-            "type": "SqlFeatureView",
             "name": self.name,
             "sql_statement": self.sql_statement,
             "schema": self.schema.to_json(),
@@ -142,3 +143,15 @@ class SqlFeatureView(FeatureView):
             "timestamp_format": self.timestamp_format,
             "is_bounded": self._is_bounded,
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "SqlFeatureView":
+        return SqlFeatureView(
+            name=json_dict["name"],
+            sql_statement=json_dict["sql_statement"],
+            schema=from_json(json_dict["schema"]),
+            keys=json_dict["keys"],
+            timestamp_field=json_dict["timestamp_field"],
+            timestamp_format=json_dict["timestamp_format"],
+            is_bounded=json_dict["is_bounded"],
+        )

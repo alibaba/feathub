@@ -12,13 +12,15 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import base64
-import pickle
 import unittest
 from unittest.mock import patch, MagicMock
 
-import feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster_job_submitter  # noqa
+import cloudpickle
 from kubernetes.client import CoreV1Api, AppsV1Api
 
+import feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster_job_submitter  # noqa
+from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
+from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.processors.flink.flink_processor_config import FlinkProcessorConfig
 from feathub.processors.flink.job_submitter import (
     flink_kubernetes_application_cluster_job_submitter,
@@ -29,8 +31,6 @@ from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
 from feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster_job_submitter import (  # noqa
     FlinkKubernetesApplicationClusterJobSubmitter,
 )
-from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
-from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.table.schema import Schema
 
 
@@ -113,7 +113,7 @@ class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
             )
             self.assertEqual(
                 expected_job_descriptor,
-                pickle.loads(
+                cloudpickle.loads(
                     base64.decodebytes(binary_data["feathub_job_descriptor"].encode())
                 ),
             )
@@ -205,7 +205,7 @@ class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
             )
             self.assertEqual(
                 expected_job_descriptor,
-                pickle.loads(
+                cloudpickle.loads(
                     base64.decodebytes(binary_data["feathub_job_descriptor"].encode())
                 ),
             )

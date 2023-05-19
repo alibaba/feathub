@@ -14,6 +14,7 @@
 
 from typing import List, Dict, Optional
 
+from feathub.common.utils import append_metadata_to_json
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.registries.registry import Registry
@@ -57,10 +58,18 @@ class MemoryStoreSource(FeatureTable):
         )
         return built_table
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
-            "type": "MemoryStoreSource",
             "name": self.name,
             "keys": self.keys,
             "table_name": self.table_name,
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "MemoryStoreSource":
+        return MemoryStoreSource(
+            name=json_dict["name"],
+            keys=json_dict["keys"],
+            table_name=json_dict["table_name"],
+        )

@@ -26,6 +26,7 @@ types-redis~=4.3.21
 types-tzlocal~=4.2
 cryptography
 jupyter
+cloudpickle==2.1.0
 
 # Requests library introduce breaking change at 2.29. Thus, We have to specify the
 # version, otherwise tests will fail.

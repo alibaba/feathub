@@ -111,6 +111,7 @@ try:
         "redis==4.3.0",
         "tzlocal~=4.2",
         "mysql-connector-python~=8.0.0",
+        "cloudpickle==2.1.0",
     ]
 
     extras_require = {

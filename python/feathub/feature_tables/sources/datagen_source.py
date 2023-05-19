@@ -16,6 +16,7 @@ from datetime import timedelta
 from typing import Dict, Optional, List, Union, Any
 
 from feathub.common.exceptions import FeathubException
+from feathub.common.utils import from_json, append_metadata_to_json
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
@@ -52,14 +53,23 @@ class RandomField:
         self.max_past = max_past
         self.length = length
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
-            "type": "random",
             "minimum": self.minimum,
             "maximum": self.maximum,
-            "max_past": self.max_past,
+            "max_past_ms": self.max_past / timedelta(milliseconds=1),
             "length": self.length,
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "RandomField":
+        return RandomField(
+            minimum=json_dict["minimum"],
+            maximum=json_dict["maximum"],
+            max_past=timedelta(milliseconds=json_dict["max_past_ms"]),
+            length=json_dict["length"],
+        )
 
 
 class SequenceField:
@@ -75,8 +85,16 @@ class SequenceField:
         self.start = start
         self.end = end
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
-        return {"type": "sequence", "start": self.start, "end": self.end}
+        return {"start": self.start, "end": self.end}
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "SequenceField":
+        return SequenceField(
+            start=json_dict["start"],
+            end=json_dict["end"],
+        )
 
 
 class DataGenSource(FeatureTable):
@@ -180,11 +198,11 @@ class DataGenSource(FeatureTable):
         data_gen_source.number_of_rows = DEFAULT_BOUNDED_NUMBER_OF_ROWS
         return data_gen_source
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
-            "type": "DataGenSource",
             "name": self.name,
-            "schema": self.schema,
+            "schema": None if self.schema is None else self.schema.to_json(),
             "rows_per_second": self.rows_per_second,
             "number_of_rows": self.number_of_rows,
             "field_configs": {k: v.to_json() for k, v in self.field_configs.items()},
@@ -194,3 +212,23 @@ class DataGenSource(FeatureTable):
             "max_out_of_orderness_ms": self.max_out_of_orderness
             / timedelta(milliseconds=1),
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "DataGenSource":
+        return DataGenSource(
+            name=json_dict["name"],
+            schema=from_json(json_dict["schema"])
+            if json_dict["schema"] is not None
+            else None,
+            rows_per_second=json_dict["rows_per_second"],
+            number_of_rows=json_dict["number_of_rows"],
+            field_configs={
+                k: from_json(v) for k, v in json_dict["field_configs"].items()
+            },
+            keys=json_dict["keys"],
+            timestamp_field=json_dict["timestamp_field"],
+            timestamp_format=json_dict["timestamp_format"],
+            max_out_of_orderness=timedelta(
+                milliseconds=json_dict["max_out_of_orderness_ms"]
+            ),
+        )

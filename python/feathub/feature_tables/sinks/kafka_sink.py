@@ -13,6 +13,7 @@
 #  limitations under the License.
 from typing import Dict, Optional, Any
 
+from feathub.common.utils import append_metadata_to_json
 from feathub.feature_tables.sinks.sink import Sink
 
 
@@ -62,9 +63,9 @@ class KafkaSink(Sink):
         )
         self.producer_props = {} if producer_props is None else producer_props
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
-            "type": "KafkaSink",
             "bootstrap_server": self.bootstrap_server,
             "topic": self.topic,
             "key_format": self.key_format,
@@ -73,3 +74,15 @@ class KafkaSink(Sink):
             "key_data_format_props": self.key_format_props,
             "value_data_format_props": self.value_format_props,
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "KafkaSink":
+        return KafkaSink(
+            bootstrap_server=json_dict["bootstrap_server"],
+            topic=json_dict["topic"],
+            key_format=json_dict["key_format"],
+            value_format=json_dict["value_format"],
+            producer_props=json_dict["producer_props"],
+            key_data_format_props=json_dict["key_data_format_props"],
+            value_data_format_props=json_dict["value_data_format_props"],
+        )

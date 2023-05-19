@@ -19,12 +19,12 @@ from math import sqrt
 from typing import List
 
 import pandas as pd
-from feathub.feature_views.feature_view import FeatureView
 
 from feathub.common.test_utils import to_epoch_millis, to_epoch
 from feathub.common.types import Int64, String, Float64, Float32
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
+from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.sliding_feature_view import (
     SlidingFeatureView,
     ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG,

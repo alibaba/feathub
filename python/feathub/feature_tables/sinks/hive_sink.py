@@ -13,6 +13,7 @@
 #  limitations under the License.
 from typing import Dict, Optional
 
+from feathub.common.utils import append_metadata_to_json
 from feathub.feature_tables.sinks.sink import Sink
 from feathub.feature_tables.sources.hive_source import get_hive_catalog_identifier
 
@@ -59,12 +60,20 @@ class HiveSink(Sink):
         self.hive_catalog_conf_dir = hive_catalog_conf_dir
         self.processor_specific_props = processor_specific_props
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
-            "type": "HiveSink",
-            "name": self.name,
             "database": self.database,
             "table": self.table,
             "hive_catalog_conf_dir": self.hive_catalog_conf_dir,
             "processor_specific_props": self.processor_specific_props,
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "HiveSink":
+        return HiveSink(
+            database=json_dict["database"],
+            table=json_dict["table"],
+            hive_catalog_conf_dir=json_dict["hive_catalog_conf_dir"],
+            processor_specific_props=json_dict["processor_specific_props"],
+        )

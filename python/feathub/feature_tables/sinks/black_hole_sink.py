@@ -13,6 +13,7 @@
 #  limitations under the License.
 from typing import Dict
 
+from feathub.common.utils import append_metadata_to_json
 from feathub.feature_tables.sinks.sink import Sink
 
 
@@ -26,5 +27,10 @@ class BlackHoleSink(Sink):
     def __init__(self) -> None:
         super().__init__(name="", system_name="blackhole", table_uri={})
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
-        return {"type": "BlackHoleSink"}
+        return {}
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "BlackHoleSink":
+        return BlackHoleSink()
