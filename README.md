@@ -8,7 +8,8 @@ applications.
 - [Architecture Overview](#architecture-overview)
 - [Supported Compute Engines](#supported-compute-engines)
 - [FeatHub SDK Highlights](#feathub-sdk-highlights)
-- [Get Started](#get-started)
+- [User Guide](#user-guide)
+  * [Prerequisites](#prerequisites)
   * [Install FeatHub Nightly Build](#install-feathub-nightly-build)
   * [Quickstart](#quickstart)
   * [Examples](#examples)
@@ -201,7 +202,16 @@ f_lower_case_name = Feature(
 
 <!-- TODO: Add SqlFeatureView. -->
 
-## Get Started
+## User Guide
+
+Checkout [Documentation](docs/content/_index.md) for guidance on compute
+engines, connectors, expression language, and more.
+
+### Prerequisites
+
+You need the following to run FeatHub installed using pip:
+- Unix-like operating system (e.g. Linux, Mac OS X)
+- Python 3.7
 
 ### Install FeatHub Nightly Build
 
@@ -336,8 +346,9 @@ Here is a list of key features that we plan to support:
 - [x] Support all FeatureView transformations with FlinkProcessor
 - [x] Support all FeatureView transformations with LocalProcessor
 - [x] Support all FeatureView transformations with SparkProcessor
-- [x] Support common online and offline feature storages (e.g. Kafka, Redis, Hive, MySql)
+- [x] Support common online and offline feature storages (e.g. Kafka, Redis, Hive, MySQL)
 - [ ] Support persisting feature metadata in MySQL
+- [ ] Support pre-defined and user-defined feature metrics
 - [ ] Support online transformation with feature service
 - [ ] Support integration with Notebook
 - [ ] Support feature metadata exploration (e.g. definition, lineage, metrics) with FeatHub UI
