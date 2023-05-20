@@ -12,14 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
+import json
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import Type, Dict
 
 import numpy as np
-import json
 
-from feathub.common.exceptions import FeathubTypeException, FeathubExpressionException
+from feathub.common.exceptions import (
+    FeathubTypeException,
+    FeathubExpressionException,
+)
+from feathub.common.utils import append_metadata_to_json, from_json
 
 
 class BasicDType(Enum):
@@ -62,8 +66,13 @@ class PrimitiveType(DType):
         super().__init__()
         self.basic_dtype = basic_dtype
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
-        return {"type": "PrimitiveType", "basic_dtype": f"{self.basic_dtype.name}"}
+        return {"basic_dtype": f"{self.basic_dtype.name}"}
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "PrimitiveType":
+        return PrimitiveType(BasicDType[json_dict["basic_dtype"]])
 
 
 class VectorType(DType):
@@ -71,8 +80,13 @@ class VectorType(DType):
         super().__init__()
         self.dtype = dtype
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
-        return {"type": "VectorType", "dtype": self.dtype.to_json()}
+        return {"dtype": self.dtype.to_json()}
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "VectorType":
+        return VectorType(from_json(json_dict["dtype"]))
 
 
 class MapType(DType):
@@ -81,12 +95,19 @@ class MapType(DType):
         self.key_dtype = key_dtype
         self.value_dtype = value_dtype
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
-            "type": "MapType",
             "key_dtype": self.key_dtype.to_json(),
             "value_dtype": self.value_dtype.to_json(),
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "MapType":
+        return MapType(
+            from_json(json_dict["key_dtype"]),
+            from_json(json_dict["value_dtype"]),
+        )
 
 
 def from_numpy_dtype(dtype: Type) -> DType:

@@ -16,6 +16,7 @@ from typing import Dict, Union, Sequence, Set, Any, Optional, List, OrderedDict,
 from feathub.common import types
 from feathub.common.config import BaseConfig, ConfigDef
 from feathub.common.exceptions import FeathubException, FeathubConfigurationException
+from feathub.common.utils import from_json, append_metadata_to_json
 from feathub.dsl.expr_utils import get_variables
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.feature_view import FeatureView
@@ -264,22 +265,42 @@ class SlidingFeatureView(FeatureView):
         )
         return feature_view
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
+        features: List[Union[str, Dict]] = []
+        for feature in self.features:
+            if isinstance(feature, str):
+                features.append(feature)
+            elif feature.name != self.timestamp_field:
+                features.append(feature.to_json())
         return {
-            "type": "SlidingFeatureView",
             "name": self.name,
             "source": (
                 self.source if isinstance(self.source, str) else self.source.to_json()
             ),
-            "features": [
-                feature if isinstance(feature, str) else feature.to_json()
-                for feature in self.features
-            ],
+            "features": features,
             "timestamp_field": self.timestamp_field,
             "timestamp_format": self.timestamp_format,
             "filter_expr": self.filter_expr,
             "extra_props": self.config.original_props,
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "SlidingFeatureView":
+        return SlidingFeatureView(
+            name=json_dict["name"],
+            source=json_dict["source"]
+            if isinstance(json_dict["source"], str)
+            else from_json(json_dict["source"]),
+            features=[
+                feature if isinstance(feature, str) else from_json(feature)
+                for feature in json_dict["features"]
+            ],
+            timestamp_field=json_dict["timestamp_field"],
+            timestamp_format=json_dict["timestamp_format"],
+            filter_expr=json_dict["filter_expr"],
+            extra_props=json_dict["extra_props"],
+        )
 
     def _validate(self, source: TableDescriptor, features: Sequence[Feature]) -> None:
         pre_sliding_features: Set[Feature] = set()

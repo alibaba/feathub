@@ -13,6 +13,7 @@
 # limitations under the License.
 from typing import Dict
 
+from feathub.common.utils import append_metadata_to_json
 from feathub.feature_views.transforms.transformation import Transformation
 
 
@@ -29,5 +30,10 @@ class ExpressionTransform(Transformation):
         super().__init__()
         self.expr = expr
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
-        return {"type": "ExpressionTransform", "expr": self.expr}
+        return {"expr": self.expr}
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "ExpressionTransform":
+        return ExpressionTransform(json_dict["expr"])

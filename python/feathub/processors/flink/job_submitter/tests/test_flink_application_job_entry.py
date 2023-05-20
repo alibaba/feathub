@@ -13,17 +13,19 @@
 #  limitations under the License.
 import glob
 import os.path
-import pickle
 import tempfile
 import unittest
 from datetime import datetime
 from typing import Optional, List, Dict, Union
 
+import cloudpickle
 import pandas
 import pandas as pd
 
 from feathub.common.types import Int32, String
 from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
+from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.transforms.join_transform import JoinTransform
@@ -34,8 +36,6 @@ from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
 from feathub.processors.flink.job_submitter.flink_application_cluster_job_entry import (
     run_job,
 )
-from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
-from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
 
@@ -164,7 +164,7 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
         )
 
         with open(path, "wb") as f:
-            f.write(pickle.dumps(job_descriptor))
+            f.write(cloudpickle.dumps(job_descriptor))
         return path
 
     def _create_file_source(

@@ -17,7 +17,11 @@ import random
 import string
 from typing import Optional, Dict, List
 
-from feathub.common.utils import is_local_file_or_dir
+from feathub.common.utils import (
+    is_local_file_or_dir,
+    from_json,
+    append_metadata_to_json,
+)
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.table.schema import Schema
 
@@ -103,9 +107,9 @@ class HiveSource(FeatureTable):
         self.database = database
         self.processor_specific_props = processor_specific_props
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
-            "type": "HiveSource",
             "name": self.name,
             "database": self.database,
             "table": self.table,
@@ -116,3 +120,19 @@ class HiveSource(FeatureTable):
             "timestamp_format": self.timestamp_format,
             "processor_specific_props": self.processor_specific_props,
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "HiveSource":
+        return HiveSource(
+            name=json_dict["name"],
+            database=json_dict["database"],
+            table=json_dict["table"],
+            schema=from_json(json_dict["name"])
+            if json_dict["name"] is not None
+            else None,
+            keys=json_dict["keys"],
+            hive_catalog_conf_dir=json_dict["hive_catalog_conf_dir"],
+            timestamp_field=json_dict["timestamp_field"],
+            timestamp_format=json_dict["timestamp_format"],
+            processor_specific_props=json_dict["processor_specific_props"],
+        )

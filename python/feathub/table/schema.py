@@ -17,6 +17,7 @@ from typing import List, Dict
 
 from feathub.common.exceptions import FeathubException
 from feathub.common.types import DType
+from feathub.common.utils import from_json, append_metadata_to_json
 
 
 class Schema:
@@ -45,11 +46,21 @@ class Schema:
             and self.field_types == other.field_types
         )
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
             "field_names": self.field_names,
             "field_types": [field_type.to_json() for field_type in self.field_types],
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "Schema":
+        return Schema(
+            field_names=json_dict["field_names"],
+            field_types=[
+                from_json(type_json_dict) for type_json_dict in json_dict["field_types"]
+            ],
+        )
 
     def get_field_type(self, field_name: str) -> DType:
         """

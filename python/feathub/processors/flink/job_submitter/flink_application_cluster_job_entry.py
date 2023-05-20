@@ -12,9 +12,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import logging
-import pickle
 import sys
 
+import cloudpickle
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import (
     StreamTableEnvironment,
@@ -47,7 +47,7 @@ def run_job(feathub_job_descriptor_path: str) -> None:
     :param feathub_job_descriptor_path: The path of the FeatHub job config.
     """
     with open(feathub_job_descriptor_path, "rb") as f:
-        feathub_job_descriptor: FeathubJobDescriptor = pickle.load(f)
+        feathub_job_descriptor: FeathubJobDescriptor = cloudpickle.load(f)
     logger.info(f"Loaded FeatHub job config: {str(feathub_job_descriptor)}")
 
     env = StreamExecutionEnvironment.get_execution_environment()

@@ -14,6 +14,7 @@
 from typing import Dict, Union
 
 from feathub.common.exceptions import FeathubException
+from feathub.common.utils import append_metadata_to_json
 from feathub.feature_tables.sinks.sink import Sink
 from feathub.feature_tables.sources.redis_source import RedisMode
 
@@ -65,9 +66,9 @@ class RedisSink(Sink):
                 "Selecting database is not supported in Cluster mode."
             )
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
-            "type": "RedisSink",
             "namespace": self.namespace,
             "host": self.host,
             "port": self.port,
@@ -76,3 +77,15 @@ class RedisSink(Sink):
             "password": self.password,
             "db_num": self.db_num,
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "RedisSink":
+        return RedisSink(
+            namespace=json_dict["namespace"],
+            host=json_dict["host"],
+            port=json_dict["port"],
+            mode=json_dict["namespace"],
+            username=json_dict["username"],
+            password=json_dict["password"],
+            db_num=json_dict["db_num"],
+        )

@@ -13,6 +13,7 @@
 #  limitations under the License.
 from typing import Dict, Optional
 
+from feathub.common.utils import append_metadata_to_json
 from feathub.feature_tables.sinks.sink import Sink
 
 
@@ -61,9 +62,9 @@ class MySQLSink(Sink):
             {} if processor_specific_props is None else processor_specific_props
         )
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
-            "type": "MySQLSink",
             "database": self.database,
             "table": self.table,
             "host": self.host,
@@ -72,3 +73,15 @@ class MySQLSink(Sink):
             "port": self.port,
             "processor_specific_props": self.processor_specific_props,
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "MySQLSink":
+        return MySQLSink(
+            database=json_dict["database"],
+            table=json_dict["table"],
+            host=json_dict["host"],
+            username=json_dict["username"],
+            password=json_dict["password"],
+            port=json_dict["port"],
+            processor_specific_props=json_dict["processor_specific_props"],
+        )

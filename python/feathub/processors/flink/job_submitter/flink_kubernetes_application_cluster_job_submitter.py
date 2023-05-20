@@ -14,7 +14,6 @@
 import base64
 import logging
 import os
-import pickle
 import tempfile
 import uuid
 from concurrent.futures import ThreadPoolExecutor, Future, Executor
@@ -22,6 +21,7 @@ from datetime import datetime
 from subprocess import Popen
 from typing import Dict, Optional, List, Union
 
+import cloudpickle
 import kubernetes.watch
 import pandas as pd
 from kubernetes.client import (
@@ -157,7 +157,7 @@ class FlinkKubernetesApplicationClusterJobSubmitter(FlinkJobSubmitter):
             kind="ConfigMap",
             binary_data={
                 "feathub_job_descriptor": base64.encodebytes(
-                    pickle.dumps(job_descriptor)
+                    cloudpickle.dumps(job_descriptor)
                 ).decode()
             },
             metadata=metadata,

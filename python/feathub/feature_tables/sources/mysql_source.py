@@ -13,6 +13,7 @@
 #  limitations under the License.
 from typing import Dict, List, Optional
 
+from feathub.common.utils import from_json, append_metadata_to_json
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.table.schema import Schema
 
@@ -84,13 +85,13 @@ class MySQLSource(FeatureTable):
         self.password = password
         self.processor_specific_props = processor_specific_props
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
-            "type": "MySQLSource",
             "name": self.name,
             "database": self.database,
             "table": self.table,
-            "schema": self.schema,
+            "schema": None if self.schema is None else self.schema.to_json(),
             "host": self.host,
             "username": self.username,
             "password": self.password,
@@ -100,3 +101,22 @@ class MySQLSource(FeatureTable):
             "timestamp_format": self.timestamp_format,
             "processor_specific_props": self.processor_specific_props,
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "MySQLSource":
+        return MySQLSource(
+            name=json_dict["name"],
+            database=json_dict["database"],
+            table=json_dict["table"],
+            schema=from_json(json_dict["schema"])
+            if json_dict["schema"] is not None
+            else None,
+            host=json_dict["host"],
+            username=json_dict["username"],
+            password=json_dict["password"],
+            port=json_dict["port"],
+            keys=json_dict["keys"],
+            timestamp_field=json_dict["timestamp_field"],
+            timestamp_format=json_dict["timestamp_format"],
+            processor_specific_props=json_dict["processor_specific_props"],
+        )

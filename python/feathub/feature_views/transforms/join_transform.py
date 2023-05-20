@@ -13,6 +13,7 @@
 # limitations under the License.
 from typing import Dict
 
+from feathub.common.utils import append_metadata_to_json
 from feathub.feature_views.transforms.transformation import Transformation
 
 
@@ -34,9 +35,16 @@ class JoinTransform(Transformation):
         self.table_name = table_name
         self.feature_name = feature_name
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
-            "type": "JoinTransform",
             "table_name": self.table_name,
             "feature_name": self.feature_name,
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "JoinTransform":
+        return JoinTransform(
+            table_name=json_dict["table_name"],
+            feature_name=json_dict["feature_name"],
+        )

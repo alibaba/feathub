@@ -14,6 +14,7 @@
 
 from typing import Union, Dict, Sequence, Optional
 
+from feathub.common.utils import from_json, append_metadata_to_json
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_tables.sources.memory_store_source import MemoryStoreSource
 from feathub.feature_tables.sources.mysql_source import MySQLSource
@@ -52,7 +53,7 @@ class OnDemandFeatureView(FeatureView):
             )
 
         def to_json(self) -> Dict:
-            return {"type": "_OnlineRequestSource"}
+            pass
 
     def __init__(
         self,
@@ -143,14 +144,26 @@ class OnDemandFeatureView(FeatureView):
     def is_unresolved(self) -> bool:
         return any(isinstance(f, str) for f in self.features)
 
+    @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
-            "type": "OnDemandFeatureView",
             "name": self.name,
             "features": [
                 feature if isinstance(feature, str) else feature.to_json()
                 for feature in self.features
             ],
-            "request_schema": self.request_schema,
+            "request_schema": self.request_schema.to_json(),
             "keep_source_fields": self.keep_source_fields,
         }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "OnDemandFeatureView":
+        return OnDemandFeatureView(
+            name=json_dict["name"],
+            features=[
+                feature if isinstance(feature, str) else from_json(feature)
+                for feature in json_dict["features"]
+            ],
+            request_schema=from_json(json_dict["request_schema"]),
+            keep_source_fields=json_dict["keep_source_fields"],
+        )

@@ -11,12 +11,13 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import json
 import shutil
 import tempfile
 import unittest
 import uuid
 from abc import abstractmethod
-from typing import Optional, List, Dict, Type
+from typing import Optional, List, Dict, Type, cast
 from unittest import TestLoader
 
 import pandas as pd
@@ -24,12 +25,15 @@ from testcontainers.mysql import MySqlContainer
 
 from feathub.common import types
 from feathub.common.exceptions import FeathubException
+from feathub.common.utils import from_json
 from feathub.feathub_client import FeathubClient
 from feathub.feature_tables.format_config import DataFormat
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.registries.local_registry import LocalRegistry
+from feathub.registries.registry import Registry
 from feathub.table.schema import Schema
+from feathub.table.table_descriptor import TableDescriptor
 
 
 def _merge_nested_dict(a, b) -> None:
@@ -45,6 +49,37 @@ def _merge_nested_dict(a, b) -> None:
             raise FeathubException(
                 f"Mismatch value {a[key]} and {b[key]} found for key {key}"
             )
+
+
+# A wrapper class for Registry that verifies the to/from json methods for
+# every saved table descriptor.
+class RegistryWithJsonCheck(Registry):
+    def __init__(self, registry: Registry):
+        super().__init__("", {})
+        self.registry = registry
+
+    def build_features(
+        self, features_list: List[TableDescriptor], props: Optional[Dict] = None
+    ) -> List[TableDescriptor]:
+        features_list = [self._save_and_reload_through_json(x) for x in features_list]
+        return self.registry.build_features(features_list, props)
+
+    def register_features(
+        self, features: TableDescriptor, override: bool = True
+    ) -> bool:
+        features = self._save_and_reload_through_json(features)
+        return self.registry.register_features(features, override)
+
+    def get_features(self, name: str) -> TableDescriptor:
+        return self.registry.get_features(name)
+
+    def delete_features(self, name: str) -> bool:
+        return self.delete_features(name)
+
+    @staticmethod
+    def _save_and_reload_through_json(features: TableDescriptor):
+        json_bytes = json.dumps(features.to_json())
+        return from_json(json.loads(json_bytes))
 
 
 class FeathubITTestBase(unittest.TestCase):
@@ -74,8 +109,10 @@ class FeathubITTestBase(unittest.TestCase):
     def tearDown(self) -> None:
         MemoryOnlineStore.get_instance().reset()
         shutil.rmtree(self.temp_dir, ignore_errors=True)
-        if isinstance(self.client.registry, LocalRegistry):
-            self.client.registry.clear_features()
+
+        registry: Registry = cast(RegistryWithJsonCheck, self.client.registry).registry
+        if isinstance(registry, LocalRegistry):
+            registry.clear_features()
 
     @abstractmethod
     def get_client(self, extra_config: Optional[Dict] = None) -> FeathubClient:
@@ -109,7 +146,9 @@ class FeathubITTestBase(unittest.TestCase):
         if extra_config is not None:
             _merge_nested_dict(props, extra_config)
 
-        return FeathubClient(props)
+        client = FeathubClient(props)
+        client.registry = RegistryWithJsonCheck(client.registry)
+        return client
 
     def create_file_source(
         self,
