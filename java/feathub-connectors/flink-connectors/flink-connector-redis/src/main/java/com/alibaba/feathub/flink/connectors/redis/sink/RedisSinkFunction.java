@@ -18,9 +18,6 @@ package com.alibaba.feathub.flink.connectors.redis.sink;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.ReadableConfig;
-import org.apache.flink.runtime.state.FunctionInitializationContext;
-import org.apache.flink.runtime.state.FunctionSnapshotContext;
-import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.data.ArrayData;
@@ -48,8 +45,11 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.KEY_FIELDS;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.NAMESPACE;
@@ -61,7 +61,7 @@ import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.N
  * <p>The timestamp field, if specified, must contain Long values representing milliseconds from
  * epoch, and the other fields must contain byte arrays representing serialized key or data.
  */
-public class RedisSinkFunction extends RichSinkFunction<RowData> implements CheckpointedFunction {
+public class RedisSinkFunction extends RichSinkFunction<RowData> {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     // The delimiter to separate layers of Redis key.
@@ -121,31 +121,51 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> implements Chec
             String key = keyPrefix + REDIS_KEY_DELIMITER + fieldNames[i];
             DataType dataType = fieldTypes[i];
             if (dataType instanceof KeyValueDataType) {
-                client.del(key);
-                client.hmset(key, getMap(data.getMap(i), (KeyValueDataType) dataType));
+                Set<String> oldKeys = client.hkeys(key);
+                Map<String, String> newMap = getMap(data.getMap(i), (KeyValueDataType) dataType);
+                Set<String> keysToRemove = new HashSet<>(oldKeys);
+                keysToRemove.removeAll(newMap.keySet());
+                if (keysToRemove.equals(oldKeys)) {
+                    client.del(key);
+                } else {
+                    client.hdel(key, keysToRemove.toArray(new String[0]));
+                }
+                client.hmset(key, newMap);
             } else if (dataType instanceof CollectionDataType) {
-                client.del(key);
-                client.rpush(
-                        key,
-                        getList(data.getArray(i), (CollectionDataType) dataType)
-                                .toArray(new String[0]));
+                List<String> oldList = client.lrange(key, 0, -1);
+                List<String> newList = getList(data.getArray(i), (CollectionDataType) dataType);
+                int[] subListInfo = getLongestCommonSubList(oldList, newList);
+                int oldStartIndex = subListInfo[0];
+                int newStartIndex = subListInfo[1];
+                int subListLength = subListInfo[2];
+                if (subListLength == 0) {
+                    client.del(key);
+                    client.rpush(key, newList.toArray(new String[0]));
+                } else {
+                    if (oldStartIndex > 0) {
+                        client.lpop(key, oldStartIndex);
+                    }
+
+                    if (oldList.size() - oldStartIndex - subListLength > 0) {
+                        client.rpop(key, oldList.size() - oldStartIndex - subListLength);
+                    }
+
+                    if (newStartIndex > 0) {
+                        client.lpush(key, newList.subList(0, newStartIndex).toArray(new String[0]));
+                    }
+
+                    if (newStartIndex + subListLength < newList.size()) {
+                        client.rpush(
+                                key,
+                                newList.subList(newStartIndex + subListLength, newList.size())
+                                        .toArray(new String[0]));
+                    }
+                }
             } else {
                 client.set(key, getString(data, i, dataType));
             }
         }
-    }
 
-    @Override
-    public void snapshotState(FunctionSnapshotContext functionSnapshotContext) {
-        client.flush();
-    }
-
-    @Override
-    public void initializeState(FunctionInitializationContext functionInitializationContext) {}
-
-    @Override
-    public void finish() throws Exception {
-        super.finish();
         client.flush();
     }
 
@@ -154,6 +174,43 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> implements Chec
         // TODO: Remove the registered script from Redis when Redis supports removing a certain
         //  script.
         client.close();
+    }
+
+    /**
+     * Get the longest common sublist between two input lists. Used to minimize operations to update
+     * a Redis LIST.
+     *
+     * @return an int array containing the start index in list A, the start index in list B, and the
+     *     length of the sublist.
+     */
+    private static int[] getLongestCommonSubList(List<String> listA, List<String> listB) {
+        int maxSubListLen = 0;
+        int startIndexA = -1;
+        int startIndexB = -1;
+
+        int sizeA = listA.size();
+        int sizeB = listB.size();
+        int[][] dp = new int[sizeA + 1][sizeB + 1];
+
+        for (int i = 0; i <= sizeA; i++) {
+            for (int j = 0; j <= sizeB; j++) {
+                if (i == 0 || j == 0) {
+                    dp[i][j] = 0;
+                } else if (Objects.equals(listA.get(i - 1), listB.get(j - 1))) {
+                    dp[i][j] = 1 + dp[i - 1][j - 1];
+                } else {
+                    dp[i][j] = 0;
+                }
+
+                if (maxSubListLen < dp[i][j]) {
+                    maxSubListLen = dp[i][j];
+                    startIndexA = i - maxSubListLen;
+                    startIndexB = j - maxSubListLen;
+                }
+            }
+        }
+
+        return new int[] {startIndexA, startIndexB, maxSubListLen};
     }
 
     private static String getString(RowData data, int index, DataType dataType)

@@ -168,6 +168,100 @@ def _test_redis_sink(
     redis_client.close()
 
 
+def _test_redis_sink_update_entry(
+    self: FeathubITTestBase,
+    host: str,
+    port: int,
+    mode: str,
+    redis_client: Union[Redis, RedisCluster],
+):
+    result_data = [
+        1,
+        2,
+        {"key2": False, "key3": True},
+        [3.0, 4.0, 5.0],
+    ]
+
+    initial_data_overlapping_result_data = [
+        1,
+        1,
+        {"key1": False, "key2": True},
+        [1.0, 2.0, 3.0],
+    ]
+
+    initial_data_containing_result_data = [
+        1,
+        1,
+        {"key1": False, "key2": True, "key3": False, "key4": True},
+        [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0],
+    ]
+
+    initial_date_contained_by_result_data = [
+        1,
+        1,
+        {"key2": True},
+        [4.0],
+    ]
+
+    schema = (
+        Schema.new_builder()
+        .column("id", types.Int64)
+        .column("val", types.Int32)
+        .column("map", types.MapType(types.String, types.Bool))
+        .column("list", types.Float64Vector)
+        .build()
+    )
+
+    sink = RedisSink(
+        namespace="test_namespace",
+        mode=mode,
+        host=host,
+        port=port,
+    )
+
+    for initial_data in [
+        initial_data_overlapping_result_data,
+        initial_data_containing_result_data,
+        initial_date_contained_by_result_data,
+    ]:
+        redis_client.delete(*redis_client.keys("*"))
+
+        input_data = pd.DataFrame(
+            [initial_data, result_data],
+            columns=["id", "val", "map", "list"],
+        )
+
+        source = self.create_file_source(
+            input_data,
+            keys=["id"],
+            schema=schema,
+            timestamp_field=None,
+            data_format="json",
+        )
+
+        self.client.materialize_features(
+            features=source,
+            sink=sink,
+            allow_overwrite=True,
+        ).wait(30000)
+
+        if not isinstance(redis_client, RedisCluster):
+            # Cluster client do not scan all nodes in the KEYS command
+            self.assertEquals(len(redis_client.keys("*")), 3)
+
+        self.assertEquals(redis_client.get("test_namespace:1:val"), b"2")
+        self.assertEquals(
+            redis_client.hgetall("test_namespace:1:map"),
+            {b"key2": b"false", b"key3": b"true"},
+        )
+        self.assertEquals(
+            redis_client.lrange("test_namespace:1:list", 0, -1),
+            [b"3.0", b"4.0", b"5.0"],
+        )
+
+    redis_client.close()
+
+
 class RedisSourceSinkStandaloneModeITTest(ABC, FeathubITTestBase):
     redis_container: RedisContainer
 
@@ -184,6 +278,19 @@ class RedisSourceSinkStandaloneModeITTest(ABC, FeathubITTestBase):
 
     def test_redis_sink_standalone_mode(self):
         _test_redis_sink(
+            self,
+            "127.0.0.1",
+            int(
+                self.redis_container.get_exposed_port(
+                    self.redis_container.port_to_expose
+                )
+            ),
+            "standalone",
+            self.redis_container.get_client(),
+        )
+
+    def test_redis_sink_update_entry_standalone_mode(self):
+        _test_redis_sink_update_entry(
             self,
             "127.0.0.1",
             int(
@@ -212,6 +319,15 @@ class RedisSourceSinkClusterModeITTest(ABC, FeathubITTestBase):
 
     def test_redis_sink_cluster_mode(self):
         _test_redis_sink(
+            self,
+            "127.0.0.1",
+            7000,
+            "cluster",
+            self.redis_cluster_container.get_client(),
+        )
+
+    def test_redis_sink_update_entry_cluster_mode(self):
+        _test_redis_sink_update_entry(
             self,
             "127.0.0.1",
             7000,
