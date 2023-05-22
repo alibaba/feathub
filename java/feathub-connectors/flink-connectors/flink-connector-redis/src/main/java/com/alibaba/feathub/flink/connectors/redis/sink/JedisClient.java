@@ -18,8 +18,10 @@ package com.alibaba.feathub.flink.connectors.redis.sink;
 
 import org.apache.flink.configuration.ReadableConfig;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.DB_NUM;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.HOST;
@@ -37,6 +39,18 @@ public interface JedisClient {
     void rpush(String key, String... string);
 
     void set(String key, String value);
+
+    void lpush(String key, String... string);
+
+    void lpop(String key, int count);
+
+    void rpop(String key, int count);
+
+    List<String> lrange(String key, int start, int stop);
+
+    Set<String> hkeys(String key);
+
+    void hdel(String key, String... field);
 
     void flush();
 
