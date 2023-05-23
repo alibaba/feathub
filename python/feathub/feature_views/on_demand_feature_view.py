@@ -100,7 +100,10 @@ class OnDemandFeatureView(FeatureView):
                 )
 
     def build(
-        self, registry: Registry, props: Optional[Dict] = None
+        self,
+        registry: "Registry",
+        force_update: bool = False,
+        props: Optional[Dict] = None,
     ) -> TableDescriptor:
         """
         Gets a copy of self as a resolved table descriptor.
@@ -115,7 +118,9 @@ class OnDemandFeatureView(FeatureView):
                 join_table_name = parts[0]
                 join_feature_name = parts[1]
 
-                table_desc = registry.get_features(name=join_table_name)
+                table_desc = registry.get_features(
+                    name=join_table_name, force_update=force_update
+                )
 
                 if (
                     isinstance(table_desc, MemoryStoreSource)

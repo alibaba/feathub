@@ -517,7 +517,7 @@ class SlidingFeatureViewITTest(ABC, FeathubITTestBase):
         )
 
         result_df = (
-            self.client.get_features(features=features)
+            self.client.get_features(feature_descriptor=features)
             .to_pandas()
             .sort_values(by=["window_time"])
             .reset_index(drop=True)

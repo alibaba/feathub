@@ -48,7 +48,10 @@ class MemoryStoreSource(FeatureTable):
         self.table_name = table_name
 
     def build(
-        self, registry: "Registry", props: Optional[Dict] = None
+        self,
+        registry: "Registry",
+        force_update: bool = False,
+        props: Optional[Dict] = None,
     ) -> TableDescriptor:
         built_table = MemoryStoreSource(
             name=self.name, keys=self.keys, table_name=self.table_name

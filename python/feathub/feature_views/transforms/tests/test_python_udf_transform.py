@@ -54,7 +54,7 @@ class PythonUDFTransformITTest(ABC, FeathubITTestBase):
             by=["name", "time"]
         ).reset_index(drop=True)
 
-        table = self.client.get_features(features=feature_view)
+        table = self.client.get_features(feature_descriptor=feature_view)
         result_df = (
             table.to_pandas().sort_values(by=["name", "time"]).reset_index(drop=True)
         )
@@ -93,7 +93,7 @@ class PythonUDFTransformITTest(ABC, FeathubITTestBase):
             by=["name", "time"]
         ).reset_index(drop=True)
 
-        table = self.client.get_features(features=feature_view)
+        table = self.client.get_features(feature_descriptor=feature_view)
         result_df = (
             table.to_pandas().sort_values(by=["name", "time"]).reset_index(drop=True)
         )
@@ -135,7 +135,7 @@ class PythonUDFTransformITTest(ABC, FeathubITTestBase):
             by=["name", "time"]
         ).reset_index(drop=True)
 
-        table = self.client.get_features(features=feature_view)
+        table = self.client.get_features(feature_descriptor=feature_view)
         result_df = (
             table.to_pandas().sort_values(by=["name", "time"]).reset_index(drop=True)
         )

@@ -57,7 +57,7 @@ def run_job(feathub_job_descriptor_path: str) -> None:
     registry = Registry.instantiate(props=props)
 
     for _, join_table in feathub_job_descriptor.local_registry_tables.items():
-        registry.register_features(features=join_table, override=True)
+        registry.register_features(feature_descriptors=[join_table], force_update=True)
 
     flink_table_builder = FlinkTableBuilder(
         t_env=t_env,

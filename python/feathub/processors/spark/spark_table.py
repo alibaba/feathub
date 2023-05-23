@@ -112,7 +112,7 @@ class SparkTable(Table):
         allow_overwrite: bool = False,
     ) -> SparkJob:
         return self._spark_processor.materialize_features(
-            features=self._feature,
+            feature_descriptor=self._feature,
             sink=sink,
             ttl=ttl,
             allow_overwrite=allow_overwrite,

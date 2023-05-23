@@ -30,7 +30,7 @@ def _to_timestamp(datetime_str):
 class GetFeaturesITTest(ABC, FeathubITTestBase):
     def test_get_table_from_file_source(self):
         source = self.create_file_source(self.input_data.copy())
-        table = self.client.get_features(features=source)
+        table = self.client.get_features(feature_descriptor=source)
         df = table.to_pandas()
         self.assertTrue(self.input_data.equals(df))
 
@@ -45,7 +45,7 @@ class GetFeaturesITTest(ABC, FeathubITTestBase):
             columns=["name"],
         )
         result_df = (
-            self.client.get_features(features=source, keys=keys)
+            self.client.get_features(feature_descriptor=source, keys=keys)
             .to_pandas()
             .sort_values(by=["name", "cost", "distance", "time"])
             .reset_index(drop=True)
@@ -78,7 +78,7 @@ class GetFeaturesITTest(ABC, FeathubITTestBase):
             columns=["name", "cost"],
         )
         result_df = (
-            self.client.get_features(features=source, keys=keys)
+            self.client.get_features(feature_descriptor=source, keys=keys)
             .to_pandas()
             .sort_values(by=["name", "cost", "distance", "time"])
             .reset_index(drop=True)
@@ -110,7 +110,7 @@ class GetFeaturesITTest(ABC, FeathubITTestBase):
         )
 
         with self.assertRaises(FeathubException):
-            self.client.get_features(features=source, keys=keys).to_pandas()
+            self.client.get_features(feature_descriptor=source, keys=keys).to_pandas()
 
     def test_get_table_with_start_datetime(self):
         df = self.input_data.copy()
@@ -118,7 +118,9 @@ class GetFeaturesITTest(ABC, FeathubITTestBase):
         start_datetime = _to_timestamp("2022-01-02 08:03:00")
 
         result_df = (
-            self.client.get_features(features=source, start_datetime=start_datetime)
+            self.client.get_features(
+                feature_descriptor=source, start_datetime=start_datetime
+            )
             .to_pandas()
             .sort_values(by=["name", "cost", "distance", "time"])
             .reset_index(drop=True)
@@ -144,7 +146,9 @@ class GetFeaturesITTest(ABC, FeathubITTestBase):
         end_datetime = _to_timestamp("2022-01-02 08:03:00")
 
         result_df = (
-            self.client.get_features(features=source, end_datetime=end_datetime)
+            self.client.get_features(
+                feature_descriptor=source, end_datetime=end_datetime
+            )
             .to_pandas()
             .sort_values(by=["name", "cost", "distance", "time"])
             .reset_index(drop=True)
@@ -170,12 +174,12 @@ class GetFeaturesITTest(ABC, FeathubITTestBase):
 
         with self.assertRaises(FeathubException):
             self.client.get_features(
-                features=source, end_datetime=_datetime
+                feature_descriptor=source, end_datetime=_datetime
             ).to_pandas()
 
         with self.assertRaises(FeathubException):
             self.client.get_features(
-                features=source, start_datetime=_datetime
+                feature_descriptor=source, start_datetime=_datetime
             ).to_pandas()
 
     def test_get_table_with_unsupported_feature_view(self):
@@ -220,3 +224,9 @@ class GetFeaturesITTest(ABC, FeathubITTestBase):
             lambda row: row["cost"] / row["distance"] + 5, axis=1
         )
         self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_deprecated_parameter(self):
+        source = self.create_file_source(self.input_data.copy())
+        table = self.client.get_features(features=source)
+        df = table.to_pandas()
+        self.assertTrue(self.input_data.equals(df))

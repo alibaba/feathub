@@ -111,7 +111,7 @@ class FeatureServiceTest(unittest.TestCase):
         file_source = self._create_file_source(input_data, keys=keys)
 
         self.processor.materialize_features(
-            features=file_source,
+            feature_descriptor=file_source,
             sink=online_store_sink,
             allow_overwrite=True,
         ).wait()

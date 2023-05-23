@@ -177,16 +177,16 @@ class FlinkProcessor(Processor):
 
     def get_table(
         self,
-        features: Union[str, TableDescriptor],
+        feature_descriptor: Union[str, TableDescriptor],
         keys: Union[pd.DataFrame, TableDescriptor, None] = None,
         start_datetime: Optional[datetime] = None,
         end_datetime: Optional[datetime] = None,
     ) -> FlinkTable:
-        features = self._resolve_table_descriptor(features)
+        feature_descriptor = self._resolve_table_descriptor(feature_descriptor)
 
         return FlinkTable(
             flink_processor=self,
-            feature=features,
+            feature=feature_descriptor,
             keys=keys,
             start_datetime=start_datetime,
             end_datetime=end_datetime,
@@ -194,7 +194,7 @@ class FlinkProcessor(Processor):
 
     def materialize_features(
         self,
-        features: Union[str, TableDescriptor],
+        feature_descriptor: Union[str, TableDescriptor],
         sink: FeatureTable,
         ttl: Optional[timedelta] = None,
         start_datetime: Optional[datetime] = None,
@@ -204,18 +204,18 @@ class FlinkProcessor(Processor):
         if ttl is not None or not allow_overwrite:
             raise RuntimeError("Unsupported operation.")
 
-        features = self._resolve_table_descriptor(features)
+        feature_descriptor = self._resolve_table_descriptor(feature_descriptor)
 
         # Get the tables to join in order to compute the feature if we are using a local
         # registry.
         join_tables = (
-            self._get_join_tables(features)
+            self._get_join_tables(feature_descriptor)
             if self.registry.registry_type == LocalRegistry.REGISTRY_TYPE
             else {}
         )
 
         return self.flink_job_submitter.submit(
-            features=features,
+            features=feature_descriptor,
             keys=None,
             start_datetime=start_datetime,
             end_datetime=end_datetime,

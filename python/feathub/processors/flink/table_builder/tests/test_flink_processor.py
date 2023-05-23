@@ -473,7 +473,7 @@ class FlinkProcessorITTest(
             FeathubException, "Cannot sink files in CSV format to s3"
         ):
             self.client.materialize_features(
-                features=source, sink=sink, allow_overwrite=True
+                feature_descriptor=source, sink=sink, allow_overwrite=True
             )
 
     def test_random_field_max_past(self):

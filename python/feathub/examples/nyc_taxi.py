@@ -83,7 +83,7 @@ def run_nyc_taxi_example(client: FeathubClient) -> None:
     client.build_features([selected_features])
 
     job = client.materialize_features(
-        features=selected_features,
+        feature_descriptor=selected_features,
         sink=sink,
         start_datetime=datetime(2020, 1, 1),
         end_datetime=datetime(2020, 5, 20),
@@ -229,7 +229,7 @@ def build_features(client: FeathubClient) -> FeatureView:
         keep_source_fields=True,
     )
 
-    client.build_features(features_list=[feature_view_1, feature_view_2])
+    client.build_features(feature_descriptors=[feature_view_1, feature_view_2])
 
     return feature_view_2
 

@@ -77,7 +77,10 @@ class DerivedFeatureView(FeatureView):
         self.filter_expr = filter_expr
 
     def build(
-        self, registry: Registry, props: Optional[Dict] = None
+        self,
+        registry: "Registry",
+        force_update: bool = False,
+        props: Optional[Dict] = None,
     ) -> TableDescriptor:
         """
         Gets a copy of self as a resolved table descriptor.
@@ -89,14 +92,18 @@ class DerivedFeatureView(FeatureView):
         The source table descriptor will be cached in the registry.
         """
         if isinstance(self.source, str):
-            source = registry.get_features(name=self.source)
+            source = registry.get_features(name=self.source, force_update=force_update)
         else:
-            source = registry.build_features(features_list=[self.source])[0]
+            source = registry.build_features(
+                feature_descriptors=[self.source], force_update=force_update
+            )[0]
 
         features = []
         for feature in self.features:
             if isinstance(feature, str):
-                feature = self._get_feature_from_feature_str(feature, registry, source)
+                feature = self._get_feature_from_feature_str(
+                    feature, registry, source, force_update
+                )
             features.append(feature)
 
         self._validate(features, source)
@@ -147,7 +154,10 @@ class DerivedFeatureView(FeatureView):
 
     @staticmethod
     def _get_feature_from_feature_str(
-        feature_str: str, registry: Registry, source: TableDescriptor
+        feature_str: str,
+        registry: Registry,
+        source: TableDescriptor,
+        force_update: bool,
     ) -> Feature:
         parts = feature_str.split(".")
         if len(parts) == 1:
@@ -162,7 +172,9 @@ class DerivedFeatureView(FeatureView):
         elif len(parts) == 2:
             join_table_name = parts[0]
             join_feature_name = parts[1]
-            table_desc = registry.get_features(name=join_table_name)
+            table_desc = registry.get_features(
+                name=join_table_name, force_update=force_update
+            )
             join_feature = table_desc.get_feature(feature_name=join_feature_name)
             if join_feature.keys is None:
                 raise RuntimeError(

@@ -123,13 +123,13 @@ class LocalProcessor(Processor):
 
     def get_table(
         self,
-        features: Union[str, TableDescriptor],
+        feature_descriptor: Union[str, TableDescriptor],
         keys: Union[pd.DataFrame, TableDescriptor, None] = None,
         start_datetime: Optional[datetime] = None,
         end_datetime: Optional[datetime] = None,
     ) -> LocalTable:
-        features = self._resolve_table_descriptor(features)
-        df = self._get_table(features).df
+        feature_descriptor = self._resolve_table_descriptor(feature_descriptor)
+        df = self._get_table(feature_descriptor).df
         if keys is not None:
             if not isinstance(keys, pd.DataFrame):
                 keys = self._get_table(keys).df
@@ -146,12 +146,15 @@ class LocalProcessor(Processor):
             df = df[idx]
 
         if start_datetime is not None or end_datetime is not None:
-            if features.timestamp_field is None:
+            if feature_descriptor.timestamp_field is None:
                 raise FeathubException("Features do not have timestamp column.")
-            if features.timestamp_format is None:
+            if feature_descriptor.timestamp_format is None:
                 raise FeathubException("Features do not have timestamp format.")
             append_and_sort_unix_time_column(
-                df, features.timestamp_field, features.timestamp_format, self.timezone
+                df,
+                feature_descriptor.timestamp_field,
+                feature_descriptor.timestamp_format,
+                self.timezone,
             )
         if start_datetime is not None:
             unix_start_datetime = utils.to_unix_timestamp(
@@ -166,15 +169,15 @@ class LocalProcessor(Processor):
 
         return LocalTable(
             processor=self,
-            features=features,
+            features=feature_descriptor,
             df=df.reset_index(drop=True),
-            timestamp_field=features.timestamp_field,
-            timestamp_format=features.timestamp_format,
+            timestamp_field=feature_descriptor.timestamp_field,
+            timestamp_format=feature_descriptor.timestamp_format,
         )
 
     def materialize_features(
         self,
-        features: Union[str, TableDescriptor],
+        feature_descriptor: Union[str, TableDescriptor],
         sink: FeatureTable,
         ttl: Optional[timedelta] = None,
         start_datetime: Optional[datetime] = None,
@@ -183,17 +186,17 @@ class LocalProcessor(Processor):
     ) -> LocalJob:
         if ttl is not None or not allow_overwrite:
             raise RuntimeError("Unsupported operation.")
-        features = self._resolve_table_descriptor(features)
+        feature_descriptor = self._resolve_table_descriptor(feature_descriptor)
 
         features_df = self.get_table(
-            features=features,
+            feature_descriptor=feature_descriptor,
             keys=None,
             start_datetime=start_datetime,
             end_datetime=end_datetime,
         ).to_pandas()
 
         return self.materialize_dataframe(
-            features=features,
+            features=feature_descriptor,
             features_df=features_df,
             sink=sink,
             allow_overwrite=allow_overwrite,

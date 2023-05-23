@@ -154,7 +154,7 @@ class FlinkTable(Table):
         allow_overwrite: bool = False,
     ) -> ProcessorJob:
         return self.flink_processor.materialize_features(
-            features=self.feature,
+            feature_descriptor=self.feature,
             sink=sink,
             ttl=ttl,
             start_datetime=self.start_datetime,

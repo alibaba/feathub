@@ -170,9 +170,7 @@ class FileSystemSourceSinkITTest(ABC, FeathubITTestBase):
         sink = FileSystemSink(path, data_format, data_format_props)
 
         self.client.materialize_features(
-            features=source,
-            sink=sink,
-            allow_overwrite=True,
+            feature_descriptor=source, sink=sink, allow_overwrite=True
         ).wait()
 
         source = FileSystemSource(

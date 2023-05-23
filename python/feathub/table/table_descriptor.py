@@ -74,7 +74,10 @@ class TableDescriptor(Entity):
         self.timestamp_format = timestamp_format
 
     def build(
-        self, registry: "Registry", props: Optional[Dict] = None
+        self,
+        registry: "Registry",
+        force_update: bool = False,
+        props: Optional[Dict] = None,
     ) -> TableDescriptor:
         """
         Gets a copy of self after recursively replacing the dependent table and feature
@@ -86,10 +89,15 @@ class TableDescriptor(Entity):
         so that they can be used when building other table descriptors.
 
         :param registry: The entity registry to retrieve table description by name.
+        :param force_update: If True, the feature descriptor would be directly searched
+                             in registry. If False, the feature descriptor would be
+                             searched in local cache first.
         :param props: Optional. If it is not None, it is the global properties that are
                       used to configure the given table descriptors.
         :return: A resolved table descriptor.
         """
+
+        # TODO: return a COPY of self instead of the existing Python object.
         return self
 
     def get_feature(self, feature_name: str) -> Feature:

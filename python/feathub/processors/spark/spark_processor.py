@@ -96,15 +96,15 @@ class SparkProcessor(Processor):
 
     def get_table(
         self,
-        features: Union[str, TableDescriptor],
+        feature_descriptor: Union[str, TableDescriptor],
         keys: Union[pd.DataFrame, TableDescriptor, None] = None,
         start_datetime: Optional[datetime] = None,
         end_datetime: Optional[datetime] = None,
     ) -> SparkTable:
-        features = self._resolve_table_descriptor(features)
+        feature_descriptor = self._resolve_table_descriptor(feature_descriptor)
 
         return SparkTable(
-            feature=features,
+            feature=feature_descriptor,
             spark_processor=self,
             keys=keys,
             start_datetime=start_datetime,
@@ -113,7 +113,7 @@ class SparkProcessor(Processor):
 
     def materialize_features(
         self,
-        features: Union[str, TableDescriptor],
+        feature_descriptor: Union[str, TableDescriptor],
         sink: FeatureTable,
         ttl: Optional[timedelta] = None,
         start_datetime: Optional[datetime] = None,
@@ -125,7 +125,7 @@ class SparkProcessor(Processor):
                 "Spark processor does not support inserting features with ttl."
             )
 
-        resolved_features = self._resolve_table_descriptor(features)
+        resolved_features = self._resolve_table_descriptor(feature_descriptor)
 
         dataframe = self.get_spark_dataframe(
             feature=resolved_features,
