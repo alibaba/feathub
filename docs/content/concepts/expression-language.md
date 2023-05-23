@@ -121,3 +121,31 @@ Arguments:
   regarded as valid format patterns. See [Python's strftime() and strptime()
   Behavior](https://docs.python.org/3.7/library/datetime.html#strftime-strptime-behavior)
   for a brief list of and introduction to these format patterns.
+
+## Value Construction Functions
+
+### MAP
+
+`MAP(key0, value0, key1, value1, ...)` -  Create a map from the given key/value pairs. 
+The function expects to have at least two arguments and an even number of arguments. 
+All the keys must be of the same type, and all the values must be of the same type.
+
+## JSON Functions
+
+### JSON_STRING
+
+`JSON_STRING(value)` - Returns a JSON string containing the serialized value. If the 
+value is NULL, the function returns NULL.
+
+```SQL
+-- NULL
+JSON_STRING(CAST(NULL AS INTEGER))
+-- '1'
+JSON_STRING(1)
+-- 'true'
+JSON_STRING(TRUE)
+-- '"Hello, World!"'
+JSON_STRING('Hello, World!')
+-- '{"a":1,"b":2}'
+JSON_STRING(MAP("a", 1, "b", 2))
+```

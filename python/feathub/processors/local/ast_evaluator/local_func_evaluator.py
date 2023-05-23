@@ -11,9 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 from datetime import tzinfo, timezone
 from typing import Any
 
+from feathub.common.exceptions import FeathubException
 from feathub.common.utils import to_unix_timestamp
 
 
@@ -31,4 +33,15 @@ class LocalFuncEvaluator:
                 return int(to_unix_timestamp(values[0], tz=self.tz))
             else:
                 return int(to_unix_timestamp(values[0], values[1], self.tz))
+        elif func_name == "JSON_STRING":
+            if values[0] is None:
+                return None
+            return json.dumps(values[0], separators=(",", ":"))
+        elif func_name == "MAP":
+            if len(values) % 2 != 0:
+                raise FeathubException("Map requires an even number of arguments.")
+            res = {}
+            for i in range(0, len(values), 2):
+                res[values[i]] = values[i + 1]
+            return res
         raise RuntimeError(f"Unsupported function: {func_name}.")

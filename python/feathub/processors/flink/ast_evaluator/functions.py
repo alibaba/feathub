@@ -20,7 +20,7 @@ from feathub.common.utils import to_java_date_format
 This set contains the name of the built-in functions whose name
 and argument list is the same between FeatHub and in Flink.
 """
-_functions_with_equal_signature = {"LOWER"}
+_functions_with_equal_signature = {"LOWER", "JSON_STRING"}
 
 
 def evaluate_function(func_name: str, args: List[Any]) -> str:
@@ -30,4 +30,6 @@ def evaluate_function(func_name: str, args: List[Any]) -> str:
         if len(args) > 1:
             args[1] = to_java_date_format(args[1])
         return f"{func_name}({', '.join(args)})"
+    elif func_name == "MAP":
+        return f"MAP[{', '.join(args)}]"
     raise RuntimeError(f"Unsupported function: {func_name}.")

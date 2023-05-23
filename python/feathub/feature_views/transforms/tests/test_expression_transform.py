@@ -16,7 +16,7 @@ from abc import ABC
 import pandas as pd
 from dateutil.tz import tz
 
-from feathub.common.types import Float64, String, Int64
+from feathub.common.types import Float64, String, Int64, Bool, VectorType, MapType
 from feathub.common.utils import to_unix_timestamp
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
@@ -339,4 +339,119 @@ class ExpressionTransformITTest(ABC, FeathubITTestBase):
             drop=True
         )
 
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_map(self):
+        input_data = self.input_data.copy().head(2)
+        source = self.create_file_source(input_data)
+
+        feature_view_1 = DerivedFeatureView(
+            name="feature_view_1",
+            source=source,
+            features=[
+                Feature(
+                    name="row_map",
+                    transform="MAP('name', name, "
+                    "'cost', JSON_STRING(cost), "
+                    "'distance', JSON_STRING(distance), "
+                    "'time', time)",
+                ),
+                Feature(
+                    name="cost_distance_map",
+                    transform="MAP('cost', cost, 'distance', distance)",
+                ),
+                Feature(name="map_cost_to_distance", transform="MAP(cost, distance)"),
+            ],
+            keep_source_fields=True,
+        )
+
+        expected_result_df = input_data.copy()
+        expected_result_df["row_map"] = [
+            {
+                "name": "Alex",
+                "cost": "100",
+                "distance": "100",
+                "time": "2022-01-01 08:01:00",
+            },
+            {
+                "name": "Emma",
+                "cost": "400",
+                "distance": "250",
+                "time": "2022-01-01 08:02:00",
+            },
+        ]
+        expected_result_df["cost_distance_map"] = [
+            {"cost": 100, "distance": 100},
+            {"cost": 400, "distance": 250},
+        ]
+        expected_result_df["map_cost_to_distance"] = [
+            {100: 100},
+            {400: 250},
+        ]
+
+        result_df = self.client.get_features(feature_view_1).to_pandas()
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_json_string(self):
+        input_data = pd.DataFrame(
+            [[1, True, "Hello", [1, 2, 3], {"a": 1, "b": 2}]],
+            columns=["int_v", "bool_v", "string_v", "list_v", "map_v"],
+        )
+
+        source = self.create_file_source(
+            input_data,
+            schema=Schema.new_builder()
+            .column("int_v", Int64)
+            .column("bool_v", Bool)
+            .column("string_v", String)
+            .column("list_v", VectorType(Int64))
+            .column("map_v", MapType(String, Int64))
+            .build(),
+            timestamp_field=None,
+            data_format="json",
+        )
+
+        feature_view_1 = DerivedFeatureView(
+            name="feature_view_1",
+            source=source,
+            features=[
+                Feature(
+                    name="null_json_str", transform="JSON_STRING(CAST(NULL AS INTEGER))"
+                ),
+                Feature(
+                    name="int_json_str",
+                    transform="JSON_STRING(int_v)",
+                ),
+                Feature(
+                    name="bool_json_str",
+                    transform="JSON_STRING(bool_v)",
+                ),
+                Feature(
+                    name="string_json_str",
+                    transform="JSON_STRING(string_v)",
+                ),
+                Feature(
+                    name="list_json_str",
+                    transform="JSON_STRING(list_v)",
+                ),
+                Feature(
+                    name="map_json_str",
+                    transform="JSON_STRING(map_v)",
+                ),
+            ],
+            keep_source_fields=False,
+        )
+
+        expected_result_df = pd.DataFrame(
+            [[None, "1", "true", '"Hello"', "[1,2,3]", '{"a":1,"b":2}']],
+            columns=[
+                "null_json_str",
+                "int_json_str",
+                "bool_json_str",
+                "string_json_str",
+                "list_json_str",
+                "map_json_str",
+            ],
+        )
+        result_df = self.client.get_features(feature_view_1).to_pandas()
         self.assertTrue(expected_result_df.equals(result_df))

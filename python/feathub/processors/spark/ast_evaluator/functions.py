@@ -20,7 +20,7 @@ from feathub.common.utils import to_java_date_format
 This set contains the name of the built-in functions whose name
 and argument list is the same between FeatHub and in Spark.
 """
-_functions_with_equal_signature = {"LOWER"}
+_functions_with_equal_signature = {"LOWER", "MAP"}
 
 
 def evaluate_function(func_name: str, args: List[Any]) -> str:
@@ -30,4 +30,14 @@ def evaluate_function(func_name: str, args: List[Any]) -> str:
         if len(args) > 1:
             args[1] = to_java_date_format(args[1])
         return f"TO_UNIX_TIMESTAMP({', '.join(args)})"
+    elif func_name == "JSON_STRING":
+        array_json_str_expr = f"TO_JSON(ARRAY({args[0]}))"
+
+        # TO_JSON function only accepts struct value, so we put the value into array and
+        # remove the '[' and ']' from the result json string.
+        return (
+            f"NVL2({args[0]}, "
+            f"substring({array_json_str_expr}, 2, length({array_json_str_expr}) - 2), "
+            f"NULL)"
+        )
     raise RuntimeError(f"Unsupported function: {func_name}.")
