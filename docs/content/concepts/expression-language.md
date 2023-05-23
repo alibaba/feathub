@@ -106,6 +106,19 @@ Arguments:
 
 `LOWER(str)` - Returns `str` with all characters changed to lowercase.
 
+### CONCAT
+
+`CONCAT(string1, string2,… )` - Returns a string that concatenates string1,
+string2, ….E.g., CONCAT(‘AA’, ‘BB’, ‘CC’) returns “AABBCC”. Non-string
+parameters would first be cast to string before concatenation.
+
+### CONCAT_WS
+
+`CONCAT_WS(string1, string2, string3,…)` - Returns a string that concatenates
+string2, string3, … with a separator string1. The separator is added between the
+strings to be concatenated. Non-string parameters would first be cast to string
+before concatenation.
+
 ## Temporal Functions
 
 ### UNIX_TIMESTAMP

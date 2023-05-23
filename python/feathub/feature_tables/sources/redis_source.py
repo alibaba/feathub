@@ -30,6 +30,11 @@ class RedisMode(Enum):
     CLUSTER = "cluster"
 
 
+NAMESPACE_KEYWORD = "__NAMESPACE__"
+KEYS_KEYWORD = "__KEYS__"
+FEATURE_NAME_KEYWORD = "__FEATURE_NAME__"
+
+
 class RedisSource(FeatureTable):
     """
     A source which reads data from Redis. It can only read feature values written
@@ -49,6 +54,7 @@ class RedisSource(FeatureTable):
         db_num: int = 0,
         namespace: str = "default",
         timestamp_field: Optional[str] = None,
+        key_expr: str = 'CONCAT_WS(":", __NAMESPACE__, __KEYS__, __FEATURE_NAME__)',
     ):
         """
         :param name: The name that uniquely identifies this source in a registry.
@@ -68,6 +74,20 @@ class RedisSource(FeatureTable):
         :param timestamp_field: Optional. If it is not None, it is the name of the field
                                 whose values show the time when the corresponding row
                                 is generated.
+        :param key_expr: A string that represents a FeatHub expression which evaluates
+                         to a string value, which would be used as the key to a feature
+                         saved in Redis. Apart from the field names, UDFs and other
+                         grammars supported by Feathub expression, users may also use
+                         the following keywords in this expression, which are
+                         dynamically evaluated during compilation according to other
+                         configurations or the structure of feature tables.
+                         - __NAMESPACE__: the namespace to persist features in Redis.
+                         - __KEYS__: A colon separated list of all key field names.
+                         - __FEATURE_NAME__: the name of a feature to be written out
+                           to Redis.
+                         If not explicitly specified, the key would be a combination of
+                         the namespace, all key field values, and the name of the
+                         feature.
         """
         super().__init__(
             name=name,
@@ -90,6 +110,14 @@ class RedisSource(FeatureTable):
         self.password = password
         self.db_num = db_num
         self.namespace = namespace
+        self.key_expr = key_expr
+
+        if NAMESPACE_KEYWORD not in key_expr or FEATURE_NAME_KEYWORD not in key_expr:
+            raise FeathubException(
+                f"key_expr {key_expr} should contain {NAMESPACE_KEYWORD} and "
+                f"{FEATURE_NAME_KEYWORD} in order to guarantee the uniqueness of "
+                f"feature keys in Redis."
+            )
 
         if mode == RedisMode.CLUSTER and db_num != 0:
             raise FeathubException(
@@ -110,6 +138,7 @@ class RedisSource(FeatureTable):
             "db_num": self.db_num,
             "namespace": self.namespace,
             "timestamp_field": self.timestamp_field,
+            "key_expr": self.key_expr,
         }
 
     @classmethod
@@ -126,4 +155,5 @@ class RedisSource(FeatureTable):
             db_num=json_dict["db_num"],
             namespace=json_dict["namespace"],
             timestamp_field=json_dict["timestamp_field"],
+            key_expr=json_dict["key_expr"],
         )

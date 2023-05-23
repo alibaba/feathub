@@ -22,12 +22,12 @@ import redis
 from feathub.common import types
 from feathub.common.exceptions import FeathubException
 from feathub.common.types import MapType, VectorType
+from feathub.dsl.expr_parser import ExprParser
 from feathub.feature_tables.sinks.redis_sink import RedisMode
+from feathub.feature_tables.sources.redis_source import NAMESPACE_KEYWORD, KEYS_KEYWORD
 from feathub.online_stores.online_store_client import OnlineStoreClient
+from feathub.processors.local.ast_evaluator.local_ast_evaluator import LocalAstEvaluator
 from feathub.table.schema import Schema
-
-REDIS_KEY_DELIMITER = ":"
-ROW_KEY_DELIMITER = "-"
 
 
 def _parse_bytes_or_string(data: Union[bytes, str], data_type: types.DType) -> Any:
@@ -86,20 +86,35 @@ class RedisClient(OnlineStoreClient):
         self,
         schema: Schema,
         host: str,
-        port: int = 6379,
-        mode: RedisMode = RedisMode.STANDALONE,
-        username: str = None,
-        password: str = None,
-        db_num: int = 0,
-        namespace: str = "default",
-        keys: Optional[List[str]] = None,
-        timestamp_field: Optional[str] = None,
+        port: int,
+        mode: RedisMode,
+        username: str,
+        password: str,
+        db_num: int,
+        namespace: str,
+        keys: List[str],
+        timestamp_field: str,
+        key_expr: str,
     ):
         super().__init__()
         self.namespace = namespace
         self.schema = schema
         self.key_names = keys
         self.key_types = [schema.get_field_type(x) for x in self.key_names]
+
+        if KEYS_KEYWORD not in key_expr and any(key not in key_expr for key in keys):
+            raise FeathubException(
+                f"key_expr {key_expr} does not contain {KEYS_KEYWORD} and all key "
+                f"field names. Features saved to Redis might not have unique keys "
+                f"and overwrite each other."
+            )
+
+        self.key_expr_template = key_expr.replace(
+            NAMESPACE_KEYWORD, f'"{namespace}"'
+        ).replace(KEYS_KEYWORD, ", ".join(keys))
+
+        self.parser = ExprParser()
+        self.ast_evaluator = LocalAstEvaluator()
 
         self.all_feature_names = [
             x
@@ -147,17 +162,14 @@ class RedisClient(OnlineStoreClient):
         results_list = []
         for _, row in input_data.iterrows():
             row_dict = row.to_dict()
-            key_prefix = (
-                self.namespace
-                + REDIS_KEY_DELIMITER
-                + ROW_KEY_DELIMITER.join(
-                    str(row_dict[key_name]) for key_name in self.key_names
-                )
-            )
-
             result = []
             for feature_name in feature_names:
-                key = key_prefix + REDIS_KEY_DELIMITER + feature_name
+                key_expr = self.key_expr_template.replace(
+                    "__FEATURE_NAME__", f'"{feature_name}"'
+                )
+                expr_node = self.parser.parse(key_expr)
+                key = self.ast_evaluator.eval(expr_node, row_dict)
+
                 field_type = self.schema.get_field_type(feature_name)
                 if isinstance(field_type, MapType):
                     result.append(

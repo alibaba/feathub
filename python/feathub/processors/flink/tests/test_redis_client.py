@@ -251,7 +251,18 @@ class RedisClientTestBase(unittest.TestCase):
         )
 
         descriptor: TableDescriptor = MockTableDescriptor(
-            keys=["id"], timestamp_field="ts", timestamp_format="%Y-%m-%d %H:%M:%S"
+            keys=["id"],
+            timestamp_field="ts",
+            timestamp_format="%Y-%m-%d %H:%M:%S",
+            output_feature_names=[
+                "id",
+                "val",
+                "ts",
+                "map",
+                "list",
+                "nested_map",
+                "nested_list",
+            ],
         )
 
         insert_into_sink(t_env, table, descriptor, sink).wait(30000)

@@ -20,6 +20,7 @@ import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableDescriptor;
@@ -36,7 +37,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** Tests redis sink. */
 public class RedisSinkITCase extends RedisITCaseBase {
@@ -64,7 +64,8 @@ public class RedisSinkITCase extends RedisITCaseBase {
                 TableDescriptor.forConnector("redis")
                         .schema(
                                 Schema.newBuilder()
-                                        .fromResolvedSchema(table.getResolvedSchema())
+                                        .column("__KEY__f1", DataTypes.STRING())
+                                        .column("f1", DataTypes.STRING())
                                         .build());
 
         for (Map.Entry<String, Object> entry : configs.entrySet()) {
@@ -89,16 +90,12 @@ public class RedisSinkITCase extends RedisITCaseBase {
         DataStream<Row> stream =
                 env.fromSequence(1, NUM_ELEMENTS)
                         .map(
-                                x -> Row.of(x.toString().getBytes(), x.toString().getBytes()),
-                                new RowTypeInfo(
-                                        Types.PRIMITIVE_ARRAY(Types.BYTE),
-                                        Types.PRIMITIVE_ARRAY(Types.BYTE)));
+                                x -> Row.of("test_namespace:" + x + ":f1", x.toString()),
+                                new RowTypeInfo(Types.STRING, Types.STRING));
 
         Map<String, Object> configs = new HashMap<>();
         configs.put("host", REDIS_HOST);
         configs.put("port", redisPort.getPort());
-        configs.put("namespace", "test_namespace");
-        configs.put("keyFields", "f0");
         configs.put("dbNum", 0);
 
         buildAndExecute(stream, configs);
@@ -112,15 +109,11 @@ public class RedisSinkITCase extends RedisITCaseBase {
         DataStream<Row> stream =
                 env.fromSequence(1, NUM_ELEMENTS)
                         .map(
-                                x -> Row.of(x.toString().getBytes(), x.toString().getBytes()),
-                                new RowTypeInfo(
-                                        Types.PRIMITIVE_ARRAY(Types.BYTE),
-                                        Types.PRIMITIVE_ARRAY(Types.BYTE)));
+                                x -> Row.of("test_namespace:" + x + ":f1", x.toString()),
+                                new RowTypeInfo(Types.STRING, Types.STRING));
         Map<String, Object> configs = new HashMap<>();
         configs.put("host", REDIS_HOST);
         configs.put("port", redisPort.getPort());
-        configs.put("namespace", "test_namespace");
-        configs.put("keyFields", "f0");
         configs.put("dbNum", dbNum);
 
         buildAndExecute(stream, configs);
@@ -128,22 +121,6 @@ public class RedisSinkITCase extends RedisITCaseBase {
         assertThat(jedis.keys("*")).isEmpty();
         jedis.select(dbNum);
         verifyOutputResult();
-    }
-
-    @Test
-    public void testAllKeyFields() {
-        DataStream<Row> stream = env.fromSequence(1, NUM_ELEMENTS).map(Row::of);
-
-        Map<String, Object> configs = new HashMap<>();
-        configs.put("host", REDIS_HOST);
-        configs.put("port", redisPort.getPort());
-        configs.put("namespace", "test_namespace");
-        configs.put("keyFields", "f0");
-        configs.put("dbNum", 0);
-
-        assertThatThrownBy(() -> buildAndExecute(stream, configs))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("There should be at least one value field.");
     }
 
     @After

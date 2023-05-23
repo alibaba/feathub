@@ -28,6 +28,7 @@ class MockTableDescriptor(TableDescriptor):
         keys: Optional[List[str]] = None,
         timestamp_field: Optional[str] = None,
         timestamp_format: str = "epoch",
+        output_feature_names: Optional[List[str]] = None,
     ) -> None:
         super().__init__(
             name=name,
@@ -35,9 +36,12 @@ class MockTableDescriptor(TableDescriptor):
             timestamp_field=timestamp_field,
             timestamp_format=timestamp_format,
         )
+        self.output_feature_names = output_feature_names
 
     def get_output_features(self) -> List[Feature]:
-        raise RuntimeError("Unsupported operation.")
+        if self.output_feature_names is None:
+            raise RuntimeError("Unsupported operation.")
+        return [Feature(x, "") for x in self.output_feature_names]
 
     def is_bounded(self) -> bool:
         raise RuntimeError("Unsupported operation.")

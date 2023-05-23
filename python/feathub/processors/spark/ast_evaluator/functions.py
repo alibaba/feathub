@@ -20,7 +20,7 @@ from feathub.common.utils import to_java_date_format
 This set contains the name of the built-in functions whose name
 and argument list is the same between FeatHub and in Spark.
 """
-_functions_with_equal_signature = {"LOWER", "MAP"}
+_functions_with_equal_signature = {"LOWER", "MAP", "CONCAT", "CONCAT_WS"}
 
 
 def evaluate_function(func_name: str, args: List[Any]) -> str:

@@ -205,6 +205,76 @@ class ExpressionTransformITTest(ABC, FeathubITTestBase):
 
         self.assertTrue(expected_result_df.equals(result_df))
 
+    def test_concat(self):
+        source = self.create_file_source(self.input_data.copy())
+
+        name_distance = Feature(
+            name="name_distance",
+            transform='CONCAT(name, "_", distance)',
+        )
+
+        features = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                name_distance,
+            ],
+            keep_source_fields=True,
+        )
+
+        result_df = (
+            self.client.get_features(features)
+            .to_pandas()
+            .sort_values(by=["time"])
+            .reset_index(drop=True)
+        )
+
+        expected_result_df = self.input_data.copy()
+        expected_result_df["name_distance"] = expected_result_df.apply(
+            lambda row: str(row["name"]) + "_" + str(row["distance"]),
+            axis=1,
+        )
+        expected_result_df = expected_result_df.sort_values(by=["time"]).reset_index(
+            drop=True
+        )
+
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_concat_ws(self):
+        source = self.create_file_source(self.input_data.copy())
+
+        name_distance = Feature(
+            name="name_distance",
+            transform='CONCAT_WS("_", name, distance)',
+        )
+
+        features = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                name_distance,
+            ],
+            keep_source_fields=True,
+        )
+
+        result_df = (
+            self.client.get_features(features)
+            .to_pandas()
+            .sort_values(by=["time"])
+            .reset_index(drop=True)
+        )
+
+        expected_result_df = self.input_data.copy()
+        expected_result_df["name_distance"] = expected_result_df.apply(
+            lambda row: str(row["name"]) + "_" + str(row["distance"]),
+            axis=1,
+        )
+        expected_result_df = expected_result_df.sort_values(by=["time"]).reset_index(
+            drop=True
+        )
+
+        self.assertTrue(expected_result_df.equals(result_df))
+
     def test_case(self):
         upper_name = Feature(
             name="upper_name",

@@ -5,6 +5,8 @@ FeatHub provides `RedisSource` to read data from a Redis database and
 should be deployed in standalone, master-slave, or cluster mode. Currently,
 `RedisSource` can only be used as an online store source.
 
+<!-- TODO: Add document describing the structure of data saved to Redis. -->
+
 ## Supported Processors and Usages
 
 - Flink: Lookup<sup>1</sup>, Streaming Upsert
@@ -21,7 +23,10 @@ Here are the examples of using `RedisSource` and `RedisSink`:
  materialized must have keys.
 
 ```python
-feature_view = DerivedFeatureView(...)
+feature_view = DerivedFeatureView(
+    keys=["user_id", "item_id"],
+    ...
+)
 
 sink = RedisSink(
     host="host",
@@ -29,7 +34,9 @@ sink = RedisSink(
     username="username",
     password="password",
     db_num=0,
-    namespace="namespace",
+    key_expr='CONCAT_WS(":", __NAMESPACE__, __KEYS__, __FEATURE_NAME__)',
+    # key_expr can also be configured as follows, and the effect is the same.
+    # key_expr='CONCAT_WS(":", __NAMESPACE__, user_id, item_id, __FEATURE_NAME__)',
 )
 
 feathub_client.materialize_features(
@@ -53,10 +60,13 @@ feature_table_schema = (
 source = RedisSource(
     name="feature_table",
     schema=feature_table_schema,
-    keys=["id"],
+    keys=["user_id", "item_id"],
     host="host",
     port=6379,
     timestamp_field="ts",
+    key_expr='CONCAT_WS(":", __NAMESPACE__, __KEYS__, __FEATURE_NAME__)',
+    # key_expr can also be configured as follows, and the effect is the same.
+    # key_expr='CONCAT_WS(":", __NAMESPACE__, user_id, item_id, __FEATURE_NAME__)',
 )
 
 on_demand_feature_view = OnDemandFeatureView(

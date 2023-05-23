@@ -26,6 +26,13 @@ _functions_with_equal_signature = {"LOWER", "JSON_STRING"}
 def evaluate_function(func_name: str, args: List[Any]) -> str:
     if func_name in _functions_with_equal_signature:
         return f"{func_name}({', '.join(args)})"
+    elif func_name in {"CONCAT", "CONCAT_WS"}:
+        tmp_args = args.copy()
+        for i in range(len(tmp_args)):
+            if i == 0 and func_name == "CONCAT_WS":
+                continue
+            tmp_args[i] = f"CAST({tmp_args[i]} AS STRING)"
+        return f"{func_name}({', '.join(tmp_args)})"
     elif func_name == "UNIX_TIMESTAMP":
         if len(args) > 1:
             args[1] = to_java_date_format(args[1])

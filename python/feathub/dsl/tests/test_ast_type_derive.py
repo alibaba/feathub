@@ -118,6 +118,12 @@ class AstTypeDeriverTest(unittest.TestCase):
         ast = self.expr_parser.parse("LOWER('ABC')")
         self.assertEqual(String, ast.eval_dtype({}))
 
+        ast = self.expr_parser.parse("CONCAT('AA', 'BB')")
+        self.assertEqual(String, ast.eval_dtype({}))
+
+        ast = self.expr_parser.parse("CONCAT_WS(';', 'AA', 'BB')")
+        self.assertEqual(String, ast.eval_dtype({}))
+
         ast = self.expr_parser.parse("UNIX_TIMESTAMP('2022-01-01 00:00:00')")
         self.assertEqual(Int64, ast.eval_dtype({}))
 

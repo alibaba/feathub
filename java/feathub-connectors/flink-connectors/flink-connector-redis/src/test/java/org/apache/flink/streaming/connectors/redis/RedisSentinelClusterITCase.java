@@ -20,6 +20,8 @@ import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.DataTypes;
+import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableDescriptor;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
@@ -34,7 +36,6 @@ import redis.clients.jedis.Jedis;
 import redis.embedded.RedisCluster;
 import redis.embedded.util.JedisUtil;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -54,6 +55,8 @@ public class RedisSentinelClusterITCase extends AbstractTestBase {
 
     private Jedis jedis;
 
+    private List<String> url;
+
     @BeforeClass
     public static void setUpCluster() {
         cluster =
@@ -67,7 +70,7 @@ public class RedisSentinelClusterITCase extends AbstractTestBase {
 
     @Before
     public void setUp() {
-        List<String> url = getMasterUrl(cluster);
+        url = getMasterUrl(cluster);
         jedis = new Jedis(url.get(0), Integer.parseInt(url.get(1)));
         env = StreamExecutionEnvironment.getExecutionEnvironment();
         tEnv = StreamTableEnvironment.create(env);
@@ -78,27 +81,23 @@ public class RedisSentinelClusterITCase extends AbstractTestBase {
         DataStream<Row> stream =
                 env.fromSequence(1, NUM_ELEMENTS)
                         .map(
-                                x ->
-                                        Row.of(
-                                                x.toString().getBytes(StandardCharsets.UTF_8),
-                                                x.toString().getBytes(StandardCharsets.UTF_8)),
-                                new RowTypeInfo(
-                                        Types.PRIMITIVE_ARRAY(Types.BYTE),
-                                        Types.PRIMITIVE_ARRAY(Types.BYTE)));
+                                x -> Row.of("test_namespace:" + x + ":f1", x.toString()),
+                                new RowTypeInfo(Types.STRING, Types.STRING));
         Table table = tEnv.fromDataStream(stream);
 
-        List<String> url = getMasterUrl(cluster);
         String host = url.get(0);
         String port = url.get(1);
 
         TableDescriptor descriptor =
                 TableDescriptor.forConnector("redis")
-                        .schema(table.getSchema().toSchema())
+                        .schema(
+                                Schema.newBuilder()
+                                        .column("__KEY__f1", DataTypes.STRING())
+                                        .column("f1", DataTypes.STRING())
+                                        .build())
                         .option("host", host)
                         .option("port", port)
                         .option("dbNum", "0")
-                        .option("namespace", "test_namespace")
-                        .option("keyFields", "f0")
                         .build();
 
         tEnv.createTemporaryTable("redis_sink", descriptor);

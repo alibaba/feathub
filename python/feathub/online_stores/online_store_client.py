@@ -71,6 +71,7 @@ class OnlineStoreClient(ABC):
                 namespace=source.namespace,
                 keys=source.keys,
                 timestamp_field=source.timestamp_field,
+                key_expr=source.key_expr,
             )
 
         if isinstance(source, MySQLSource):
