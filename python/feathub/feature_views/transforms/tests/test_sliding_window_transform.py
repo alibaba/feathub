@@ -1413,6 +1413,158 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 f"actual: {result_df}",
             )
 
+    def test_transform_with_collect_list(self):
+        df = pd.DataFrame(
+            [
+                ["Alex", 100.0, "2022-01-01 09:01:00"],
+                ["Alex", 100.0, "2022-01-01 09:01:20"],
+                ["Alex", 200.0, "2022-01-01 09:02:00"],
+                ["Alex", 200.0, "2022-01-01 09:02:30"],
+            ],
+            columns=["name", "cost", "time"],
+        )
+
+        schema = Schema(["name", "cost", "time"], [String, Float64, String])
+        source = self.create_file_source(df, schema=schema, keys=["name"])
+
+        expected_results = {
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:01:59.999"),
+                        [100.0, 100.0],
+                        2,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:02:59.999"),
+                        [100.0, 200.0, 200.0],
+                        3,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:03:59.999"),
+                        [200.0, 200.0],
+                        2,
+                    ],
+                    ["Alex", to_epoch_millis("2022-01-01 09:04:59.999"), [], 0],
+                ],
+                columns=[
+                    "name",
+                    "window_time",
+                    "last_2_minute_cost_collect_list",
+                    "cnt",
+                ],
+            ),
+            DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:01:59.999"),
+                        [100.0, 100.0],
+                        2,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:02:59.999"),
+                        [100.0, 200.0, 200.0],
+                        3,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:03:59.999"),
+                        [200.0, 200.0],
+                        2,
+                    ],
+                ],
+                columns=[
+                    "name",
+                    "window_time",
+                    "last_2_minute_cost_collect_list",
+                    "cnt",
+                ],
+            ),
+            ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:01:59.999"),
+                        [100.0, 100.0],
+                        2,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:02:59.999"),
+                        [100.0, 200.0, 200.0],
+                        3,
+                    ],
+                    [
+                        "Alex",
+                        to_epoch_millis("2022-01-01 09:03:59.999"),
+                        [200.0, 200.0],
+                        2,
+                    ],
+                    ["Alex", to_epoch_millis("2022-01-01 09:04:59.999"), [], 0],
+                ],
+                columns=[
+                    "name",
+                    "window_time",
+                    "last_2_minute_cost_collect_list",
+                    "cnt",
+                ],
+            ),
+        }
+
+        for props in self.get_supported_sliding_window_config():
+            expected_result_df = expected_results.get(props)
+            features = SlidingFeatureView(
+                name="features",
+                source=source,
+                features=[
+                    Feature(
+                        name="last_2_minute_cost_collect_list",
+                        transform=SlidingWindowTransform(
+                            expr="cost",
+                            agg_func="COLLECT_LIST",
+                            group_by_keys=["name"],
+                            window_size=timedelta(minutes=2),
+                            step_size=timedelta(minutes=1),
+                            limit=3,
+                        ),
+                    ),
+                    Feature(
+                        name="cnt",
+                        transform=SlidingWindowTransform(
+                            expr="1",
+                            agg_func="COUNT",
+                            group_by_keys=["name"],
+                            window_size=timedelta(minutes=2),
+                            step_size=timedelta(minutes=1),
+                            limit=3,
+                        ),
+                    ),
+                ],
+                extra_props=props.value,
+            )
+
+            expected_result_df = expected_result_df.sort_values(
+                by=["name", "window_time"]
+            ).reset_index(drop=True)
+
+            result_df = (
+                self.client.get_features(features)
+                .to_pandas()
+                .sort_values(by=["name", "window_time"])
+                .reset_index(drop=True)
+            )
+
+            self.assertTrue(
+                expected_result_df.equals(result_df),
+                f"Failed with props: {props}\nexpected: {expected_result_df}\n"
+                f"actual: {result_df}",
+            )
+
     def test_sliding_window_with_millisecond_sliding_window_timestamp(self):
         df = pd.DataFrame(
             [

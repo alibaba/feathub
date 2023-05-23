@@ -82,6 +82,7 @@ FLOAT_TYPES = {type(DataTypes.FLOAT()), type(DataTypes.DOUBLE())}
 def get_default_value_and_type(
     agg_descriptor: AggregationFieldDescriptor,
 ) -> Tuple[Any, DataType]:
+    default_type = agg_descriptor.field_data_type
     if (
         agg_descriptor.agg_func == AggFunc.COUNT
         or agg_descriptor.agg_func == AggFunc.SUM
@@ -95,9 +96,12 @@ def get_default_value_and_type(
                 f"Unsupported DataType of AggFunc COUNT or SUM: "
                 f"{type(agg_descriptor.field_data_type)}"
             )
+    elif agg_descriptor.agg_func == AggFunc.COLLECT_LIST:
+        default_value = []
+        default_type = DataTypes.ARRAY(agg_descriptor.field_data_type)
     else:
         default_value = None
     return (
         default_value,
-        agg_descriptor.field_data_type,
+        default_type,
     )

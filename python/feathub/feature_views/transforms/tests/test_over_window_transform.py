@@ -755,6 +755,84 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
 
         self.assertTrue(expected_df.equals(result_df))
 
+    def test_over_window_transform_collect_list(self):
+        df = pd.DataFrame(
+            [
+                ["Alex", 100, 100, "2022-01-01 08:01:00"],
+                ["Alex", 100, 100, "2022-01-01 08:01:01"],
+                ["Emma", 400, 250, "2022-01-01 08:02:00"],
+                ["Alex", 100, 200, "2022-01-02 08:03:00"],
+                ["Emma", 200, 250, "2022-01-02 08:04:00"],
+                ["Jack", 500, 500, "2022-01-03 08:05:00"],
+                ["Alex", 600, 800, "2022-01-03 08:06:00"],
+            ],
+            columns=["name", "cost", "distance", "time"],
+        )
+        source = self.create_file_source(df)
+
+        feature_view = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                Feature(
+                    name="cost_collect_list_limit",
+                    transform=OverWindowTransform(
+                        expr="cost",
+                        agg_func="COLLECT_LIST",
+                        group_by_keys=["name"],
+                        window_size=timedelta(days=2),
+                        limit=2,
+                    ),
+                ),
+                Feature(
+                    name="cost_collect_list",
+                    transform=OverWindowTransform(
+                        expr="cost",
+                        agg_func="COLLECT_LIST",
+                        group_by_keys=["name"],
+                        window_size=timedelta(days=2),
+                    ),
+                ),
+            ],
+        )
+
+        expected_df = df.copy()
+        expected_df["cost_collect_list_limit"] = pd.Series(
+            [
+                [100],
+                [100, 100],
+                [400],
+                [100, 100],
+                [400, 200],
+                [500],
+                [100, 600],
+            ]
+        )
+        expected_df["cost_collect_list"] = pd.Series(
+            [
+                [100],
+                [100, 100],
+                [400],
+                [100, 100, 100],
+                [400, 200],
+                [500],
+                [100, 600],
+            ]
+        )
+        expected_df.drop(["cost", "distance"], axis=1, inplace=True)
+        expected_df = expected_df.sort_values(by=["name", "time"]).reset_index(
+            drop=True
+        )
+
+        result_df = (
+            self.client.get_features(feature_view)
+            .to_pandas()
+            .sort_values(by=["name", "time"])
+            .reset_index(drop=True)
+        )
+
+        self.assertTrue(expected_df.equals(result_df))
+
     def test_over_window_transform_filter_expr_with_window_size(self):
         df, result_df = self._over_window_transform_filter_expr(
             window_size=timedelta(minutes=2)

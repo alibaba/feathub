@@ -78,5 +78,5 @@ FeatHub window transforms.
 | ROW_NUMBER   | Assigns a unique, sequential number to each value in the ordered list of input values, starting with one. |
 | COUNT        | Returns the number of input values. |
 | VALUE_COUNTS | Returns a map that maps each value to the number of occurrences of this value in the input values. |
-
+| COLLECT_LIST | returns a list that contains the ordered list of input values. |
 

@@ -239,6 +239,8 @@ def _get_over_window_agg_select_expr(
         result = expr.sum
     elif agg_func == AggFunc.VALUE_COUNTS:
         result = native_flink_expr.call("value_counts", expr)
+    elif agg_func == AggFunc.COLLECT_LIST:
+        result = native_flink_expr.call("collect_list", expr)
     elif agg_func == AggFunc.FIRST_VALUE:
         result = expr.first_value
     elif agg_func == AggFunc.LAST_VALUE:

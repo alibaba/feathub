@@ -17,93 +17,79 @@
 package com.alibaba.feathub.flink.udf;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.Over;
 import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
-import org.apache.flink.table.types.DataType;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.CollectionUtil;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.apache.flink.table.api.Expressions.$;
 import static org.apache.flink.table.api.Expressions.call;
-import static org.apache.flink.table.api.Expressions.callSql;
 import static org.apache.flink.table.api.Expressions.rowInterval;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Base class for TimeWindowAggFunction tests. */
-public abstract class AbstractTimeWindowedAggFuncTest {
+/** Test for {@link CollectListAggFunc}. */
+public class CollectListAggFuncTest {
 
-    protected Table inputTable;
+    private StreamTableEnvironment tEnv;
+    private Table inputTable;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        StreamTableEnvironment tEnv = StreamTableEnvironment.create(env);
+        tEnv = StreamTableEnvironment.create(env);
 
-        final DataStream<Row> data = getData(env);
+        final DataStream<Row> data =
+                env.fromElements(
+                        Row.of(0, "a", Instant.ofEpochMilli(1000)),
+                        Row.of(0, "b", Instant.ofEpochMilli(3000)),
+                        Row.of(0, "b", Instant.ofEpochMilli(2000)),
+                        Row.of(0, "c", Instant.ofEpochMilli(4000)));
 
         inputTable =
                 tEnv.fromDataStream(
                                 data,
                                 Schema.newBuilder()
                                         .column("f0", DataTypes.INT())
-                                        .column("f1", DataTypes.INT())
+                                        .column("f1", DataTypes.STRING())
                                         .column("f2", DataTypes.TIMESTAMP_LTZ(3))
                                         .watermark("f2", "f2 - INTERVAL '2' SECOND")
                                         .build())
                         .as("id", "val", "ts");
     }
 
-    protected DataStreamSource<Row> getData(StreamExecutionEnvironment env) {
-        return env.fromElements(
-                Row.of(0, 1, Instant.ofEpochMilli(1000), ZoneId.systemDefault()),
-                Row.of(0, 3, Instant.ofEpochMilli(3000), ZoneId.systemDefault()),
-                Row.of(0, 2, Instant.ofEpochMilli(2000), ZoneId.systemDefault()),
-                Row.of(0, 4, Instant.ofEpochMilli(4000), ZoneId.systemDefault()));
-    }
-
-    protected abstract Class<? extends AbstractTimeWindowedAggFunc<?, ?>> getAggFunc();
-
-    protected void internalTest(DataType valueType, List<Row> expected) {
+    @Test
+    void testCollectListOverWindow() {
         final Table table =
                 inputTable
-                        .addOrReplaceColumns($("val").cast(valueType).as("val"))
                         .window(
                                 Over.partitionBy($("id"))
                                         .orderBy($("ts"))
-                                        .preceding(rowInterval(3L))
+                                        .preceding(rowInterval(2L))
                                         .as("w"))
                         .select(
                                 $("id"),
-                                call(
-                                                getAggFunc(),
-                                                callSql("INTERVAL '1' SECONDS"),
-                                                $("val"),
-                                                $("ts"))
+                                call(CollectListAggFunc.class, $("val"))
                                         .over($("w"))
-                                        .as("value_cnts"));
+                                        .as("collect_lists"));
+
         List<Row> actual = CollectionUtil.iteratorToList(table.execute().collect());
-        assertThat(actual).hasSameSizeAs(expected);
-        for (int i = 0; i < actual.size(); i++) {
-            assertThat(actual.get(i).getArity()).isEqualTo(expected.get(i).getArity());
-            for (int j = 0; j < actual.get(i).getArity(); j++) {
-                if (actual.get(i).getField(j).getClass().isArray()) {
-                    assertThat((Object[]) actual.get(i).getField(j))
-                            .containsExactly((Object[]) expected.get(i).getField(j));
-                } else {
-                    assertThat(actual.get(i).getField(j)).isEqualTo(expected.get(i).getField(j));
-                }
-            }
-        }
+        List<Row> expected =
+                Arrays.asList(
+                        Row.of(0, new String[] {"a"}),
+                        Row.of(0, new String[] {"a", "b"}),
+                        Row.of(0, new String[] {"a", "b", "b"}),
+                        Row.of(0, new String[] {"b", "b", "c"}));
+        assertThat(actual).isEqualTo(expected);
     }
 }

@@ -180,6 +180,11 @@ def _get_over_window_agg_column(
         raise FeathubTransformationException(
             "VALUE_COUNTS is not supported for SparkProcessor currently."
         )
+    elif agg_func == AggFunc.COLLECT_LIST:
+        # TODO Adds COLLECT_LIST support for SparkProcessor
+        raise FeathubTransformationException(
+            "COLLECT_LIST is not supported for SparkProcessor currently."
+        )
     else:
         raise FeathubTransformationException(
             f"Unsupported aggregation for SparkProcessor {agg_func}."
