@@ -14,7 +14,7 @@
 from typing import List, Callable
 
 from feathub.common.exceptions import FeathubExpressionException
-from feathub.common.types import DType, String, Int64
+from feathub.common.types import DType, String, Int64, MapType
 
 
 class BuiltInFuncDefinition:
@@ -26,6 +26,25 @@ class BuiltInFuncDefinition:
         return self.result_type_strategy(input_types)
 
 
+def map_type_strategy(input_types: List[DType]) -> DType:
+    if len(input_types) < 2:
+        raise FeathubExpressionException("Map requires at least 2 arguments.")
+    value_type = None
+    key_type = None
+    for i in range(0, len(input_types), 2):
+        if key_type is None:
+            key_type = input_types[i]
+        elif key_type != input_types[i]:
+            raise FeathubExpressionException("Map keys must be the same type.")
+
+        if value_type is None:
+            value_type = input_types[i + 1]
+        elif value_type != input_types[i + 1]:
+            raise FeathubExpressionException("Map values must be the same type.")
+
+    return MapType(key_type, value_type)
+
+
 BUILTIN_FUNCS = [
     BuiltInFuncDefinition(
         name="LOWER", result_type_strategy=lambda input_types: String
@@ -33,6 +52,10 @@ BUILTIN_FUNCS = [
     BuiltInFuncDefinition(
         name="UNIX_TIMESTAMP", result_type_strategy=lambda input_types: Int64
     ),
+    BuiltInFuncDefinition(
+        name="JSON_STRING", result_type_strategy=lambda input_types: String
+    ),
+    BuiltInFuncDefinition(name="MAP", result_type_strategy=map_type_strategy),
 ]
 
 BUILTIN_FUNC_DEF_MAP = {f.name: f for f in BUILTIN_FUNCS}

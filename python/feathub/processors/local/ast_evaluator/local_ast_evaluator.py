@@ -118,6 +118,8 @@ class LocalAstEvaluator(AbstractAstEvaluator):
 
     def _eval_cast_node(self, ast: CastOp, variables: Optional[Dict]) -> Any:
         val = self.eval(ast.child, variables)
+        if val is None:
+            return None
         if ast.type_name == "BYTES":
             if isinstance(val, str):
                 return bytes(val, "utf-8")
