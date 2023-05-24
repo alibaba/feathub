@@ -71,6 +71,7 @@ public class ValueCountsAggFunc implements AggFunc<Object, Map<Object, Long>, Ma
 
     @Override
     public Map<Object, Long> getResult(Map<Object, Long> accumulator) {
+        // TODO: change default value for empty window to empty map.
         if (accumulator.isEmpty()) {
             return null;
         }

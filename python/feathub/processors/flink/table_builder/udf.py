@@ -61,7 +61,10 @@ def _is_row_and_time_based_over_window(
 AGG_JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
     AggFunc.VALUE_COUNTS: JavaUDFDescriptor(
         "VALUE_COUNTS", "com.alibaba.feathub.flink.udf.ValueCountsAggFunc"
-    )
+    ),
+    AggFunc.COLLECT_LIST: JavaUDFDescriptor(
+        "COLLECT_LIST", "com.alibaba.feathub.flink.udf.CollectListAggFunc"
+    ),
 }
 
 ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
@@ -95,6 +98,10 @@ ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
     AggFunc.VALUE_COUNTS: JavaUDFDescriptor(
         "TIME_WINDOWED_VALUE_COUNTS",
         "com.alibaba.feathub.flink.udf.TimeWindowedValueCountsAggFunc",
+    ),
+    AggFunc.COLLECT_LIST: JavaUDFDescriptor(
+        "TIME_WINDOWED_COLLECT_LIST",
+        "com.alibaba.feathub.flink.udf.TimeWindowedCollectListAggFunc",
     ),
 }
 

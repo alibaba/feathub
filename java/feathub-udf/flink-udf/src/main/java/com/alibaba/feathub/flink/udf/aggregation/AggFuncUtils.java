@@ -58,6 +58,8 @@ public class AggFuncUtils {
             return new CountAggFunc();
         } else if ("VALUE_COUNTS".equals(aggFuncName)) {
             return new ValueCountsAggFunc(inDataType);
+        } else if ("COLLECT_LIST".equals(aggFuncName)) {
+            return new CollectListAggFunc(inDataType);
         }
 
         throw new RuntimeException(

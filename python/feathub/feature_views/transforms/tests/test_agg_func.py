@@ -13,7 +13,7 @@
 #  limitations under the License.
 import unittest
 
-from feathub.common.types import Int32, Float64, Int64, MapType
+from feathub.common.types import Int32, Float64, Int64, MapType, VectorType
 from feathub.feature_views.transforms.agg_func import AggFunc
 
 
@@ -30,3 +30,4 @@ class AggFuncTest(unittest.TestCase):
         self.assertEqual(
             MapType(Int32, Int64), AggFunc.VALUE_COUNTS.get_result_type(Int32)
         )
+        self.assertEqual(VectorType(Int32), AggFunc.COLLECT_LIST.get_result_type(Int32))

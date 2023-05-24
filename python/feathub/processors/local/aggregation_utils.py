@@ -25,6 +25,12 @@ def _value_counts(inputs: Sequence[Any]) -> Any:
     return dict(pd.Series(inputs).value_counts())
 
 
+def _collect_list(inputs: Sequence[Any]) -> Any:
+    if len(inputs) <= 0:
+        return []
+    return list(inputs)
+
+
 AGG_FUNCTIONS: Dict[AggFunc, Callable[[Sequence[Any]], Any]] = {
     AggFunc.AVG: np.mean,
     AggFunc.SUM: np.sum,
@@ -35,4 +41,5 @@ AGG_FUNCTIONS: Dict[AggFunc, Callable[[Sequence[Any]], Any]] = {
     AggFunc.ROW_NUMBER: lambda l: len(l),
     AggFunc.COUNT: lambda l: len(l),
     AggFunc.VALUE_COUNTS: _value_counts,
+    AggFunc.COLLECT_LIST: _collect_list,
 }

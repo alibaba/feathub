@@ -24,8 +24,11 @@ import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.inference.TypeInference;
 import org.apache.flink.util.Preconditions;
 
+import org.apache.commons.collections.IteratorUtils;
+
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -54,11 +57,13 @@ public abstract class AbstractTimeWindowedAggFunc<INPUT_T, RESULT_T>
         final Long lowerBound = accumulator.latestTimestamp - timeInterval.toMillis();
         List<INPUT_T> values = new LinkedList<>();
         try {
-            for (Map.Entry<Long, List<INPUT_T>> entry : accumulator.values.entries()) {
-                if (entry.getKey() < lowerBound) {
+            List<Long> timestamps = IteratorUtils.toList(accumulator.values.keys().iterator());
+            timestamps.sort(Comparator.naturalOrder());
+            for (Long timestamp : timestamps) {
+                if (timestamp < lowerBound) {
                     continue;
                 }
-                values.addAll(entry.getValue());
+                values.addAll(accumulator.values.get(timestamp));
             }
         } catch (Exception e) {
             throw new RuntimeException(e);

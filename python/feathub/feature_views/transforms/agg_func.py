@@ -15,7 +15,7 @@
 from enum import Enum
 
 from feathub.common.exceptions import FeathubException
-from feathub.common.types import DType, Float64, Int64, MapType
+from feathub.common.types import DType, Float64, Int64, MapType, VectorType
 
 
 class AggFunc(Enum):
@@ -30,6 +30,7 @@ class AggFunc(Enum):
     ROW_NUMBER = "ROW_NUMBER"
     COUNT = "COUNT"
     VALUE_COUNTS = "VALUE_COUNTS"
+    COLLECT_LIST = "COLLECT_LIST"
 
     def get_result_type(self, input_type: DType) -> DType:
         if self == AggFunc.AVG:
@@ -46,5 +47,7 @@ class AggFunc(Enum):
             return Int64
         elif self == AggFunc.VALUE_COUNTS:
             return MapType(input_type, Int64)
+        elif self == AggFunc.COLLECT_LIST:
+            return VectorType(input_type)
 
         raise FeathubException(f"Unknown AggFunc {self}.")

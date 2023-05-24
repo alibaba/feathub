@@ -126,6 +126,9 @@ class SparkProcessorITTest(
     def test_over_window_transform_value_counts(self):
         pass
 
+    def test_over_window_transform_collect_list(self):
+        pass
+
     def test_over_window_transform_row_num(self):
         pass
 
