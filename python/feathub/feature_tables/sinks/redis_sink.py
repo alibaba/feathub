@@ -16,7 +16,11 @@ from typing import Dict, Union
 from feathub.common.exceptions import FeathubException
 from feathub.common.utils import append_metadata_to_json
 from feathub.feature_tables.sinks.sink import Sink
-from feathub.feature_tables.sources.redis_source import RedisMode
+from feathub.feature_tables.sources.redis_source import (
+    RedisMode,
+    NAMESPACE_KEYWORD,
+    FEATURE_NAME_KEYWORD,
+)
 
 
 class RedisSink(Sink):
@@ -29,6 +33,7 @@ class RedisSink(Sink):
         password: str = None,
         db_num: int = 0,
         namespace: str = "default",
+        key_expr: str = 'CONCAT_WS(":", __NAMESPACE__, __KEYS__, __FEATURE_NAME__)',
     ):
         """
         :param host: The host of the Redis instance to connect.
@@ -42,6 +47,20 @@ class RedisSink(Sink):
                           sinking to Redis sinks with different namespaces can save
                           records with the same key into Redis without overwriting
                           each other.
+        :param key_expr: A string that represents a FeatHub expression which evaluates
+                         to a string value, which would be used as the key to a feature
+                         saved in Redis. Apart from the field names, UDFs and other
+                         grammars supported by Feathub expression, users may also use
+                         the following keywords in this expression, which are
+                         dynamically evaluated during compilation according to other
+                         configurations or the structure of feature tables.
+                         - __NAMESPACE__: the namespace to persist features in Redis.
+                         - __KEYS__: A colon separated list of all key field names.
+                         - __FEATURE_NAME__: the name of a feature to be written out
+                           to Redis.
+                         If not explicitly specified, the key would be a combination of
+                         the namespace, all key field values, and the name of the
+                         feature.
         """
         super().__init__(
             name="",
@@ -60,6 +79,14 @@ class RedisSink(Sink):
         self.username = username
         self.password = password
         self.db_num = db_num
+        self.key_expr = key_expr
+
+        if NAMESPACE_KEYWORD not in key_expr or FEATURE_NAME_KEYWORD not in key_expr:
+            raise FeathubException(
+                f"key_expr {key_expr} should contain {NAMESPACE_KEYWORD} and "
+                f"{FEATURE_NAME_KEYWORD} in order to guarantee the uniqueness of "
+                f"feature keys in Redis."
+            )
 
         if mode == RedisMode.CLUSTER and db_num != 0:
             raise FeathubException(
@@ -76,6 +103,7 @@ class RedisSink(Sink):
             "username": self.username,
             "password": self.password,
             "db_num": self.db_num,
+            "key_expr": self.key_expr,
         }
 
     @classmethod
@@ -88,4 +116,5 @@ class RedisSink(Sink):
             username=json_dict["username"],
             password=json_dict["password"],
             db_num=json_dict["db_num"],
+            key_expr=json_dict["key_expr"],
         )

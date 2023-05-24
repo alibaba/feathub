@@ -50,7 +50,9 @@ class RedisSourceSinkTest(unittest.TestCase):
 
         table = t_env.from_elements([(1,)]).alias("id")
         with patch("pyflink.table.table.Table.execute_insert") as execute_insert:
-            descriptor: TableDescriptor = MockTableDescriptor(keys=["id"])
+            descriptor: TableDescriptor = MockTableDescriptor(
+                keys=["id"], output_feature_names=["id", "val"]
+            )
 
             insert_into_sink(t_env, table, descriptor, sink)
             flink_table_descriptor: NativeFlinkTableDescriptor = (
@@ -59,13 +61,11 @@ class RedisSourceSinkTest(unittest.TestCase):
 
             expected_options = {
                 "connector": "redis",
-                "namespace": "test_namespace",
                 "mode": "STANDALONE",
                 "host": "127.0.0.1",
                 "port": "6379",
                 "password": "123456",
                 "dbNum": "3",
-                "keyFields": "id",
             }
             self.assertEquals(
                 expected_options, dict(flink_table_descriptor.get_options())

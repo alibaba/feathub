@@ -26,6 +26,10 @@ class LocalFuncEvaluator:
     def eval(self, func_name: str, values: Any) -> Any:
         if func_name == "LOWER":
             return values[0].lower()
+        elif func_name == "CONCAT":
+            return "".join([str(x) for x in values])
+        elif func_name == "CONCAT_WS":
+            return values[0].join([str(x) for x in values[1:]])
         elif func_name == "UNIX_TIMESTAMP":
             if values[0] is None:
                 return None

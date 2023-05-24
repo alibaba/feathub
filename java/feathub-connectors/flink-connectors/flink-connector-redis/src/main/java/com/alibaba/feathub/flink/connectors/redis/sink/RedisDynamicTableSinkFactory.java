@@ -26,8 +26,6 @@ import java.util.Set;
 
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.DB_NUM;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.HOST;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.KEY_FIELDS;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.NAMESPACE;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.PASSWORD;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.PORT;
 import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.REDIS_MODE;
@@ -55,8 +53,6 @@ public class RedisDynamicTableSinkFactory implements DynamicTableSinkFactory {
         options.add(HOST);
         options.add(PORT);
         options.add(DB_NUM);
-        options.add(NAMESPACE);
-        options.add(KEY_FIELDS);
         return options;
     }
 

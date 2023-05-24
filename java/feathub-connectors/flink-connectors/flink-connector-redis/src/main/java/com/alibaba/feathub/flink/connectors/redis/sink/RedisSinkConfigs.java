@@ -58,25 +58,6 @@ public class RedisSinkConfigs {
                     .withDescription(
                             "The No. of the Redis database to connect. Not supported in cluster mode.");
 
-    static final ConfigOption<String> NAMESPACE =
-            ConfigOptions.key("namespace")
-                    .stringType()
-                    .noDefaultValue()
-                    .withDescription(
-                            "A string that identifies a namespace for Redis keys. "
-                                    + "Input tables with different namespaces can save "
-                                    + "records with the same key into Redis without "
-                                    + "overwriting each other.");
-
-    static final ConfigOption<String> KEY_FIELDS =
-            ConfigOptions.key("keyFields")
-                    .stringType()
-                    .noDefaultValue()
-                    .withDescription(
-                            "A comma-separated list of the key field names in the input table. "
-                                    + "Values in this field would be concatenated with the "
-                                    + "namespace and used as keys in Redis storage");
-
     enum RedisMode {
         STANDALONE,
         MASTER_SLAVE,

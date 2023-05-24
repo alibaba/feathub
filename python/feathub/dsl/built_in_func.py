@@ -50,6 +50,12 @@ BUILTIN_FUNCS = [
         name="LOWER", result_type_strategy=lambda input_types: String
     ),
     BuiltInFuncDefinition(
+        name="CONCAT", result_type_strategy=lambda input_types: String
+    ),
+    BuiltInFuncDefinition(
+        name="CONCAT_WS", result_type_strategy=lambda input_types: String
+    ),
+    BuiltInFuncDefinition(
         name="UNIX_TIMESTAMP", result_type_strategy=lambda input_types: Int64
     ),
     BuiltInFuncDefinition(

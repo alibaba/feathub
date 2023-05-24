@@ -41,8 +41,6 @@ import org.apache.flink.util.Preconditions;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.apache.commons.lang3.ArrayUtils;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -51,32 +49,25 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.KEY_FIELDS;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.NAMESPACE;
-
 /**
  * A {@link org.apache.flink.streaming.api.functions.sink.SinkFunction} that writes to a Redis
  * database.
  *
- * <p>The timestamp field, if specified, must contain Long values representing milliseconds from
- * epoch, and the other fields must contain byte arrays representing serialized key or data.
+ * <p>The input table should contain an even number of columns. half of the columns should have the
+ * prefix "__KEY__" in their column names and, once the prefix is removed, their columns names
+ * should be equal to those of the other half. Except the fields starting with "__KEY__", each field
+ * in the input row would be saved as an individual entry into Redis. The value of the entry is the
+ * value of this field, and the key of the entry is the value of the corresponding field starting
+ * with "__KEY__".
  */
 public class RedisSinkFunction extends RichSinkFunction<RowData> {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    // The delimiter to separate layers of Redis key.
-    private static final String REDIS_KEY_DELIMITER = ":";
-
-    // The delimiter to conjunct row key values.
-    private static final String ROW_KEY_DELIMITER = "-";
-
     private final ReadableConfig config;
-    private final String namespace;
     private final int[] keyFieldIndices;
     private final int[] valueFieldIndices;
 
     private final DataType[] fieldTypes;
-    private final String[] fieldNames;
 
     private transient JedisClient client;
 
@@ -84,21 +75,16 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
         this.config = config;
 
         this.fieldTypes = schema.getColumnDataTypes().toArray(new DataType[0]);
-        this.fieldNames = schema.getColumnNames().toArray(new String[0]);
-        this.namespace = config.get(NAMESPACE);
-        this.keyFieldIndices = getKeyFieldIndices(config, schema);
-        this.valueFieldIndices = getValueFieldIndices(schema, keyFieldIndices);
+        this.valueFieldIndices = getValueFieldIndices(schema);
+        this.keyFieldIndices = getKeyFieldIndices(schema, valueFieldIndices);
 
         Preconditions.checkArgument(
-                namespace.matches("^[A-Za-z0-9][A-Za-z0-9_]*$"),
-                "Namespace %s should only contain letters, numbers and underscore, "
-                        + "and should not start with underscore.");
+                schema.getColumnCount() % 2 == 0,
+                "Input table should contain an even number of columns.");
 
         Preconditions.checkArgument(
-                keyFieldIndices.length > 0, "There should be at least one key field.");
-
-        Preconditions.checkArgument(
-                valueFieldIndices.length > 0, "There should be at least one value field.");
+                valueFieldIndices.length == schema.getColumnCount() / 2,
+                "Half of the columns in the input table should not have their names starting with \"__KEY__\".");
     }
 
     @Override
@@ -110,19 +96,14 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
 
     @Override
     public void invoke(RowData data, Context context) throws JsonProcessingException {
-        List<String> keyValues = new ArrayList<>();
-        for (int i : keyFieldIndices) {
-            keyValues.add(getString(data, i, fieldTypes[i]));
-        }
-        String keyPrefix =
-                namespace + REDIS_KEY_DELIMITER + String.join(ROW_KEY_DELIMITER, keyValues);
-
-        for (int i : valueFieldIndices) {
-            String key = keyPrefix + REDIS_KEY_DELIMITER + fieldNames[i];
-            DataType dataType = fieldTypes[i];
+        for (int i = 0; i < valueFieldIndices.length; i++) {
+            String key = data.getString(keyFieldIndices[i]).toString();
+            int valueFieldIndex = valueFieldIndices[i];
+            DataType dataType = fieldTypes[valueFieldIndex];
             if (dataType instanceof KeyValueDataType) {
                 Set<String> oldKeys = client.hkeys(key);
-                Map<String, String> newMap = getMap(data.getMap(i), (KeyValueDataType) dataType);
+                Map<String, String> newMap =
+                        getMap(data.getMap(valueFieldIndex), (KeyValueDataType) dataType);
                 Set<String> keysToRemove = new HashSet<>(oldKeys);
                 keysToRemove.removeAll(newMap.keySet());
                 if (keysToRemove.equals(oldKeys)) {
@@ -133,7 +114,8 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
                 client.hmset(key, newMap);
             } else if (dataType instanceof CollectionDataType) {
                 List<String> oldList = client.lrange(key, 0, -1);
-                List<String> newList = getList(data.getArray(i), (CollectionDataType) dataType);
+                List<String> newList =
+                        getList(data.getArray(valueFieldIndex), (CollectionDataType) dataType);
                 int[] subListInfo = getLongestCommonSubList(oldList, newList);
                 int oldStartIndex = subListInfo[0];
                 int newStartIndex = subListInfo[1];
@@ -162,7 +144,7 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
                     }
                 }
             } else {
-                client.set(key, getString(data, i, dataType));
+                client.set(key, getString(data, valueFieldIndex, dataType));
             }
         }
 
@@ -324,22 +306,25 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
         return list;
     }
 
-    private static int[] getKeyFieldIndices(ReadableConfig config, ResolvedSchema schema) {
+    private static int[] getKeyFieldIndices(ResolvedSchema schema, int[] valueFieldIndices) {
         List<Integer> indices = new ArrayList<>();
         List<String> fieldNames = schema.getColumnNames();
-        for (String keyFieldName : config.get(KEY_FIELDS).split(",")) {
-            int index = fieldNames.indexOf(keyFieldName);
+        for (int i : valueFieldIndices) {
+            int keyFieldIndex = fieldNames.indexOf("__KEY__" + fieldNames.get(i));
             Preconditions.checkArgument(
-                    index >= 0, "Input table does not contain key field %s.", keyFieldName);
-            indices.add(index);
+                    keyFieldIndex >= 0,
+                    "Input table does not contain key field %s.",
+                    "__KEY__" + fieldNames.get(i));
+            indices.add(keyFieldIndex);
         }
         return indices.stream().mapToInt(Integer::intValue).toArray();
     }
 
-    private static int[] getValueFieldIndices(ResolvedSchema schema, int[] keyFieldIndices) {
+    private static int[] getValueFieldIndices(ResolvedSchema schema) {
         List<Integer> indices = new ArrayList<>();
+        List<String> fieldNames = schema.getColumnNames();
         for (int i = 0; i < schema.getColumnCount(); i++) {
-            if (!ArrayUtils.contains(keyFieldIndices, i)) {
+            if (!fieldNames.get(i).startsWith("__KEY__")) {
                 indices.add(i);
             }
         }
