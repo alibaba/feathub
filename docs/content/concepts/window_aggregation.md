@@ -69,14 +69,14 @@ FeatHub window transforms.
 
 | Function     | Description                                                  |
 | ------------ | ------------------------------------------------------------ |
-| AVG          | Returns the average (arithmetic mean) of an expression or column across input rows.         |
-| SUM          | Returns the sum of an expression or column across input rows.                               |
-| MAX          | Returns the maximum value of an expression or column across input rows.                     |
-| MIN          | Returns the minimum value of an expression or column across input rows.                     |
-| FIRST_VALUE  | Returns the first value (ordered by timestamp) of an expression or column across input rows. |
-| LAST_VALUE   | Returns the last value (ordered by timestamp) of an expression or column across input rows. |
-| ROW_NUMBER   | Assigns a unique, sequential number to each row, starting with one, to the input rows within the window partition. |
-| COUNT        | Returns the number of input rows.                                                           |
-| VALUE_COUNTS | Returns a frequency map containing the counts of unique values of an expression or column across input rows. |
+| AVG          | Returns the average (arithmetic mean) of input values. |
+| SUM          | Returns the sum of input values. |
+| MAX          | Returns the maximum value of input values. |
+| MIN          | Returns the minimum value of input values. |
+| FIRST_VALUE  | Returns the first value in the ordered list of input values. |
+| LAST_VALUE   | Returns the last value in the ordered list of input values. |
+| ROW_NUMBER   | Assigns a unique, sequential number to each value in the ordered list of input values, starting with one. |
+| COUNT        | Returns the number of input values. |
+| VALUE_COUNTS | Returns a map that maps each value to the number of occurrences of this value in the input values. |
 
 
