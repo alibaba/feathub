@@ -347,7 +347,7 @@ Here is a list of key features that we plan to support:
 - [x] Support all FeatureView transformations with LocalProcessor
 - [x] Support all FeatureView transformations with SparkProcessor
 - [x] Support common online and offline feature storages (e.g. Kafka, Redis, Hive, MySQL)
-- [ ] Support persisting feature metadata in MySQL
+- [x] Support persisting feature metadata in MySQL
 - [ ] Support pre-defined and user-defined feature metrics
 - [ ] Support online transformation with feature service
 - [ ] Support integration with Notebook
