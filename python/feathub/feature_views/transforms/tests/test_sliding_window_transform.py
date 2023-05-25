@@ -1261,6 +1261,102 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 f"actual: {result_df}",
             )
 
+    def test_sliding_feature_join_source(self):
+        df = pd.DataFrame(
+            [
+                ["Alex", 100.0, "2022-01-01 09:01:00"],
+                ["Alex", 200.0, "2022-01-01 09:01:20"],
+                ["Alex", 450.0, "2022-01-01 09:06:00"],
+            ],
+            columns=["name", "cost", "time"],
+        )
+
+        schema = Schema(["name", "cost", "time"], [String, Float64, String])
+        source = self.create_file_source(
+            df, schema=schema, keys=["name"], name="source"
+        )
+
+        df2 = pd.DataFrame(
+            [
+                ["Alex", "a", "2022-01-01 09:01:00"],
+                ["Alex", "b", "2022-01-01 09:02:00"],
+                ["Alex", "c", "2022-01-01 09:05:00"],
+                ["Alex", "d", "2022-01-01 09:07:00"],
+                ["Alex", "e", "2022-01-01 09:09:00"],
+            ]
+        )
+        source2 = self.create_file_source(
+            df2,
+            schema=Schema(["name", "feature", "time"], [String, String, String]),
+            keys=["name"],
+            name="source2",
+            timestamp_field="time",
+        )
+
+        sliding_features = SlidingFeatureView(
+            name="sliding_features",
+            source=source,
+            features=[
+                Feature(
+                    name="last_2_minute_total_cost",
+                    transform=SlidingWindowTransform(
+                        expr="cost",
+                        agg_func="SUM",
+                        group_by_keys=["name"],
+                        window_size=timedelta(minutes=2),
+                        step_size=timedelta(minutes=1),
+                    ),
+                ),
+                Feature(
+                    name="cnt",
+                    transform=SlidingWindowTransform(
+                        expr="1",
+                        agg_func="COUNT",
+                        group_by_keys=["name"],
+                        window_size=timedelta(minutes=2),
+                        step_size=timedelta(minutes=1),
+                    ),
+                ),
+            ],
+        )
+
+        joined_features = DerivedFeatureView(
+            name="joined_feature",
+            source=sliding_features,
+            features=["source2.feature"],
+            keep_source_fields=True,
+        )
+
+        built_joined_feature = self.client.build_features([source2, joined_features])[1]
+
+        expected_result_df = pd.DataFrame(
+            [
+                ["Alex", to_epoch_millis("2022-01-01 09:01:59.999"), 300.0, 2, "a"],
+                ["Alex", to_epoch_millis("2022-01-01 09:03:59.999"), 0.0, 0, "b"],
+                ["Alex", to_epoch_millis("2022-01-01 09:06:59.999"), 450.0, 1, "c"],
+                ["Alex", to_epoch_millis("2022-01-01 09:08:59.999"), 0.0, 0, "d"],
+            ],
+            columns=[
+                "name",
+                "window_time",
+                "last_2_minute_total_cost",
+                "cnt",
+                "feature",
+            ],
+        )
+        expected_result_df = expected_result_df.sort_values(
+            by=["name", "window_time"]
+        ).reset_index(drop=True)
+
+        result_df = (
+            self.client.get_features(features=built_joined_feature)
+            .to_pandas()
+            .sort_values(by=["name", "window_time"])
+            .reset_index(drop=True)
+        )
+
+        self.assertTrue(expected_result_df.equals(result_df))
+
     def test_transform_with_value_counts(self):
         df = pd.DataFrame(
             [
