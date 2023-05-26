@@ -20,29 +20,18 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.apache.flink.table.catalog.ResolvedSchema;
-import org.apache.flink.table.data.ArrayData;
-import org.apache.flink.table.data.MapData;
 import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.types.AtomicDataType;
 import org.apache.flink.table.types.CollectionDataType;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.KeyValueDataType;
-import org.apache.flink.table.types.logical.BigIntType;
-import org.apache.flink.table.types.logical.BooleanType;
-import org.apache.flink.table.types.logical.DoubleType;
-import org.apache.flink.table.types.logical.FloatType;
-import org.apache.flink.table.types.logical.IntType;
-import org.apache.flink.table.types.logical.LogicalType;
-import org.apache.flink.table.types.logical.TimestampType;
-import org.apache.flink.table.types.logical.VarBinaryType;
-import org.apache.flink.table.types.logical.VarCharType;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
+
+import com.alibaba.feathub.flink.connectors.redis.ConversionUtils;
+import com.alibaba.feathub.flink.connectors.redis.JedisClient;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +50,6 @@ import java.util.Set;
  * with "__KEY__".
  */
 public class RedisSinkFunction extends RichSinkFunction<RowData> {
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final ReadableConfig config;
     private final int[] keyFieldIndices;
@@ -103,7 +91,8 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
             if (dataType instanceof KeyValueDataType) {
                 Set<String> oldKeys = client.hkeys(key);
                 Map<String, String> newMap =
-                        getMap(data.getMap(valueFieldIndex), (KeyValueDataType) dataType);
+                        ConversionUtils.toMap(
+                                data.getMap(valueFieldIndex), (KeyValueDataType) dataType);
                 Set<String> keysToRemove = new HashSet<>(oldKeys);
                 keysToRemove.removeAll(newMap.keySet());
                 if (keysToRemove.equals(oldKeys)) {
@@ -115,7 +104,8 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
             } else if (dataType instanceof CollectionDataType) {
                 List<String> oldList = client.lrange(key, 0, -1);
                 List<String> newList =
-                        getList(data.getArray(valueFieldIndex), (CollectionDataType) dataType);
+                        ConversionUtils.toList(
+                                data.getArray(valueFieldIndex), (CollectionDataType) dataType);
                 int[] subListInfo = getLongestCommonSubList(oldList, newList);
                 int oldStartIndex = subListInfo[0];
                 int newStartIndex = subListInfo[1];
@@ -144,7 +134,7 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
                     }
                 }
             } else {
-                client.set(key, getString(data, valueFieldIndex, dataType));
+                client.set(key, ConversionUtils.toString(data, valueFieldIndex, dataType));
             }
         }
 
@@ -193,117 +183,6 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
         }
 
         return new int[] {startIndexA, startIndexB, maxSubListLen};
-    }
-
-    private static String getString(RowData data, int index, DataType dataType)
-            throws JsonProcessingException {
-        if (dataType instanceof AtomicDataType) {
-            LogicalType logicalType = dataType.getLogicalType();
-            if (logicalType instanceof VarCharType) {
-                return data.getString(index).toString();
-            } else if (logicalType instanceof VarBinaryType) {
-                return new String(data.getBinary(index));
-            } else if (logicalType instanceof IntType) {
-                return Integer.toString(data.getInt(index));
-            } else if (logicalType instanceof BigIntType) {
-                return Long.toString(data.getLong(index));
-            } else if (logicalType instanceof DoubleType) {
-                return Double.toString(data.getDouble(index));
-            } else if (logicalType instanceof FloatType) {
-                return Float.toString(data.getFloat(index));
-            } else if (logicalType instanceof BooleanType) {
-                return Boolean.toString(data.getBoolean(index));
-            } else if (logicalType instanceof TimestampType) {
-                return Long.toString(
-                        data.getTimestamp(index, ((TimestampType) logicalType).getPrecision())
-                                .getMillisecond());
-            }
-
-            throw new UnsupportedOperationException(
-                    String.format(
-                            "Cannot write data with type %s to Redis.",
-                            dataType.getLogicalType().getClass().getName()));
-
-        } else if (dataType instanceof KeyValueDataType) {
-            return OBJECT_MAPPER.writeValueAsString(
-                    getMap(data.getMap(index), (KeyValueDataType) dataType));
-        } else if (dataType instanceof CollectionDataType) {
-            return OBJECT_MAPPER.writeValueAsString(
-                    getList(data.getArray(index), (CollectionDataType) dataType));
-        }
-
-        throw new UnsupportedOperationException(
-                String.format(
-                        "Cannot write data with type %s to Redis.", dataType.getClass().getName()));
-    }
-
-    private static String getString(ArrayData data, int index, DataType dataType)
-            throws JsonProcessingException {
-        if (dataType instanceof AtomicDataType) {
-            LogicalType logicalType = dataType.getLogicalType();
-            if (logicalType instanceof VarCharType) {
-                return data.getString(index).toString();
-            } else if (logicalType instanceof VarBinaryType) {
-                return new String(data.getBinary(index));
-            } else if (logicalType instanceof IntType) {
-                return Integer.toString(data.getInt(index));
-            } else if (logicalType instanceof BigIntType) {
-                return Long.toString(data.getLong(index));
-            } else if (logicalType instanceof DoubleType) {
-                return Double.toString(data.getDouble(index));
-            } else if (logicalType instanceof FloatType) {
-                return Float.toString(data.getFloat(index));
-            } else if (logicalType instanceof BooleanType) {
-                return Boolean.toString(data.getBoolean(index));
-            } else if (logicalType instanceof TimestampType) {
-                return Long.toString(
-                        data.getTimestamp(index, ((TimestampType) logicalType).getPrecision())
-                                .getMillisecond());
-            }
-
-            throw new UnsupportedOperationException(
-                    String.format(
-                            "Cannot write data with type %s to Redis.",
-                            dataType.getLogicalType().getClass().getName()));
-
-        } else if (dataType instanceof KeyValueDataType) {
-            return OBJECT_MAPPER.writeValueAsString(
-                    getMap(data.getMap(index), (KeyValueDataType) dataType));
-        } else if (dataType instanceof CollectionDataType) {
-            return OBJECT_MAPPER.writeValueAsString(
-                    getList(data.getArray(index), (CollectionDataType) dataType));
-        }
-
-        throw new UnsupportedOperationException(
-                String.format(
-                        "Cannot write data with type %s to Redis.", dataType.getClass().getName()));
-    }
-
-    private static Map<String, String> getMap(MapData mapData, KeyValueDataType dataType)
-            throws JsonProcessingException {
-        ArrayData keyArrayData = mapData.keyArray();
-        DataType keyDataType = dataType.getKeyDataType();
-        ArrayData valueArrayData = mapData.valueArray();
-        DataType valueDataType = dataType.getValueDataType();
-        int size = keyArrayData.size();
-        Map<String, String> map = new HashMap<>();
-        for (int i = 0; i < size; i++) {
-            map.put(
-                    getString(keyArrayData, i, keyDataType),
-                    getString(valueArrayData, i, valueDataType));
-        }
-        return map;
-    }
-
-    private static List<String> getList(ArrayData arrayData, CollectionDataType dataType)
-            throws JsonProcessingException {
-        List<String> list = new ArrayList<>();
-        DataType elementDataType = dataType.getElementDataType();
-        int size = arrayData.size();
-        for (int i = 0; i < size; i++) {
-            list.add(getString(arrayData, i, elementDataType));
-        }
-        return list;
     }
 
     private static int[] getKeyFieldIndices(ResolvedSchema schema, int[] valueFieldIndices) {

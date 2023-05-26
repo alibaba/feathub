@@ -14,25 +14,41 @@
  * limitations under the License.
  */
 
-package com.alibaba.feathub.flink.connectors.redis.sink;
+package com.alibaba.feathub.flink.connectors.redis;
 
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
+import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.factories.DynamicTableSinkFactory;
+import org.apache.flink.table.factories.DynamicTableSourceFactory;
 import org.apache.flink.table.factories.FactoryUtil;
+
+import com.alibaba.feathub.flink.connectors.redis.lookup.RedisLookupTableSource;
+import com.alibaba.feathub.flink.connectors.redis.sink.RedisDynamicTableSink;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.DB_NUM;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.HOST;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.PASSWORD;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.PORT;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.REDIS_MODE;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.USERNAME;
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.DB_NUM;
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.HOST;
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.KEY_FIELDS;
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.PASSWORD;
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.PORT;
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.REDIS_MODE;
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.USERNAME;
 
-/** {@link DynamicTableSinkFactory} for {@link RedisDynamicTableSink}. */
-public class RedisDynamicTableSinkFactory implements DynamicTableSinkFactory {
+/** The table factory for {@link RedisLookupTableSource} and {@link RedisDynamicTableSink}. */
+public class RedisDynamicTableFactory
+        implements DynamicTableSourceFactory, DynamicTableSinkFactory {
+    @Override
+    public DynamicTableSource createDynamicTableSource(Context context) {
+        FactoryUtil.TableFactoryHelper helper = FactoryUtil.createTableFactoryHelper(this, context);
+        helper.validate();
+
+        return new RedisLookupTableSource(
+                helper.getOptions(), context.getCatalogTable().getResolvedSchema());
+    }
+
     @Override
     public DynamicTableSink createDynamicTableSink(Context context) {
         FactoryUtil.TableFactoryHelper helper = FactoryUtil.createTableFactoryHelper(this, context);
@@ -62,6 +78,7 @@ public class RedisDynamicTableSinkFactory implements DynamicTableSinkFactory {
         options.add(REDIS_MODE);
         options.add(USERNAME);
         options.add(PASSWORD);
+        options.add(KEY_FIELDS);
         return options;
     }
 }

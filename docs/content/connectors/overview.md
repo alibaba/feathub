@@ -37,7 +37,7 @@ where "Y" means supported, "Y/N" means partially supported, "N" means unsupporte
 | [FileSystem](filesystem.md) | N          | Y              | N             | N               | N            | Y                | N                |
 | [MySQL](mysql.md)           | N          | N              | N             | Y/N<sup>1</sup> | N            | Y                | Y                |
 | [Kafka](kafka.md)           | N          | Y              | N             | N               | N            | Y                | N                |
-| [Redis](redis.md)           | N          | N              | N             | Y/N<sup>1</sup> | N            | N                | Y                |
+| [Redis](redis.md)           | N          | N              | N             | Y               | N            | N                | Y                |
 | [Hive](hive.md)             | N          | Y              | N             | N               | N            | Y                | N                |
 
 1. Only supported in OnDemandFeatureView currently.

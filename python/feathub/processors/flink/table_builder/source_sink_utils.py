@@ -31,6 +31,7 @@ from feathub.feature_tables.sources.datagen_source import DataGenSource
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_tables.sources.hive_source import HiveSource
 from feathub.feature_tables.sources.kafka_source import KafkaSource
+from feathub.feature_tables.sources.redis_source import RedisSource
 from feathub.processors.flink.table_builder.black_hole_utils import (
     insert_into_black_hole_sink,
 )
@@ -53,7 +54,10 @@ from feathub.processors.flink.table_builder.mysql_utils import (
     insert_into_mysql_sink,
 )
 from feathub.processors.flink.table_builder.print_utils import insert_into_print_sink
-from feathub.processors.flink.table_builder.redis_utils import insert_into_redis_sink
+from feathub.processors.flink.table_builder.redis_utils import (
+    insert_into_redis_sink,
+    get_table_from_redis_source,
+)
 from feathub.table.table_descriptor import TableDescriptor
 
 
@@ -74,6 +78,8 @@ def get_table_from_source(
         return get_table_from_kafka_source(t_env, source, source.keys)
     elif isinstance(source, HiveSource):
         return get_table_from_hive_source(t_env, source)
+    elif isinstance(source, RedisSource):
+        return get_table_from_redis_source(t_env, source)
     elif isinstance(source, DataGenSource):
         return get_table_from_data_gen_source(t_env, source)
     else:

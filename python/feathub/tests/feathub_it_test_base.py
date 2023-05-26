@@ -53,6 +53,8 @@ def _merge_nested_dict(a, b) -> None:
 
 # A wrapper class for Registry that verifies the to/from json methods for
 # every saved table descriptor.
+# TODO: remove Sinks' to_json() implementations or add tests that covers
+#  these methods.
 class RegistryWithJsonCheck(Registry):
     def __init__(self, registry: Registry):
         super().__init__("", {})

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.alibaba.feathub.flink.connectors.redis.sink;
+package com.alibaba.feathub.flink.connectors.redis;
 
 import org.apache.flink.util.StringUtils;
 
@@ -57,6 +57,11 @@ public class JedisMasterClient implements JedisClient {
     }
 
     @Override
+    public Map<String, String> hgetAll(String key) {
+        return jedis.hgetAll(key);
+    }
+
+    @Override
     public void hmset(String key, Map<String, String> hash) {
         commands.add(commandObjects.hmset(key, hash));
     }
@@ -64,6 +69,11 @@ public class JedisMasterClient implements JedisClient {
     @Override
     public void rpush(String key, String... string) {
         commands.add(commandObjects.rpush(key, string));
+    }
+
+    @Override
+    public String get(String key) {
+        return jedis.get(key);
     }
 
     @Override
