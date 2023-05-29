@@ -29,7 +29,7 @@ from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sources.kafka_source import KafkaSource
 from feathub.processors.flink.table_builder.source_sink_utils import (
     get_table_from_source,
-    insert_into_sink,
+    add_sink_to_statement_set,
 )
 from feathub.processors.flink.table_builder.tests.mock_table_descriptor import (
     MockTableDescriptor,
@@ -167,12 +167,16 @@ class KafkaSourceSinkTest(unittest.TestCase):
         )
 
         table = self.t_env.from_elements([(1,)])
-        with patch.object(table, "execute_insert") as execute_insert:
+        statement_set = self.t_env.create_statement_set()
+
+        with patch.object(statement_set, "add_insert") as add_insert:
             descriptor: TableDescriptor = MockTableDescriptor(keys=["id"])
-            insert_into_sink(self.t_env, table, descriptor, sink)
-            flink_table_descriptor: NativeFlinkTableDescriptor = (
-                execute_insert.call_args[0][0]
+            add_sink_to_statement_set(
+                self.t_env, statement_set, table, descriptor, sink
             )
+            flink_table_descriptor: NativeFlinkTableDescriptor = add_insert.call_args[
+                0
+            ][0]
 
             expected_options = {
                 "connector": "kafka",

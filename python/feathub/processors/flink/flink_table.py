@@ -28,6 +28,9 @@ from feathub.common.types import MapType
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
 from feathub.processors.flink.flink_types_utils import to_feathub_schema
+from feathub.processors.materialization_descriptor import (
+    MaterializationDescriptor,
+)
 from feathub.processors.type_utils import cast_dataframe_dtype
 from feathub.processors.processor_job import ProcessorJob
 from feathub.table.schema import Schema
@@ -154,12 +157,16 @@ class FlinkTable(Table):
         allow_overwrite: bool = False,
     ) -> ProcessorJob:
         return self.flink_processor.materialize_features(
-            feature_descriptor=self.feature,
-            sink=sink,
-            ttl=ttl,
-            start_datetime=self.start_datetime,
-            end_datetime=self.end_datetime,
-            allow_overwrite=allow_overwrite,
+            materialization_descriptors=[
+                MaterializationDescriptor(
+                    feature_descriptor=self.feature,
+                    sink=sink,
+                    ttl=ttl,
+                    start_datetime=self.start_datetime,
+                    end_datetime=self.end_datetime,
+                    allow_overwrite=allow_overwrite,
+                )
+            ],
         )
 
     def _get_flink_table(self, feature: TableDescriptor) -> NativeFlinkTable:

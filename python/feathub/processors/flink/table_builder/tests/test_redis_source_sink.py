@@ -23,7 +23,7 @@ from pyflink.table import (
 
 from feathub.feature_tables.sinks.redis_sink import RedisSink
 from feathub.processors.flink.table_builder.source_sink_utils import (
-    insert_into_sink,
+    add_sink_to_statement_set,
 )
 from feathub.processors.flink.table_builder.tests.mock_table_descriptor import (
     MockTableDescriptor,
@@ -49,15 +49,16 @@ class RedisSourceSinkTest(unittest.TestCase):
         )
 
         table = t_env.from_elements([(1,)]).alias("id")
-        with patch("pyflink.table.table.Table.execute_insert") as execute_insert:
+        statement_set = t_env.create_statement_set()
+        with patch.object(statement_set, "add_insert") as add_insert:
             descriptor: TableDescriptor = MockTableDescriptor(
                 keys=["id"], output_feature_names=["id", "val"]
             )
 
-            insert_into_sink(t_env, table, descriptor, sink)
-            flink_table_descriptor: NativeFlinkTableDescriptor = (
-                execute_insert.call_args[0][0]
-            )
+            add_sink_to_statement_set(t_env, statement_set, table, descriptor, sink)
+            flink_table_descriptor: NativeFlinkTableDescriptor = add_insert.call_args[
+                0
+            ][0]
 
             expected_options = {
                 "connector": "redis",

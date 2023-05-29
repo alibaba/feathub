@@ -30,6 +30,9 @@ from feathub.feature_views.feature import Feature
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.processors.local.local_processor import LocalProcessor
+from feathub.processors.materialization_descriptor import (
+    MaterializationDescriptor,
+)
 from feathub.registries.local_registry import LocalRegistry
 from feathub.table.schema import Schema
 
@@ -111,9 +114,13 @@ class FeatureServiceTest(unittest.TestCase):
         file_source = self._create_file_source(input_data, keys=keys)
 
         self.processor.materialize_features(
-            feature_descriptor=file_source,
-            sink=online_store_sink,
-            allow_overwrite=True,
+            materialization_descriptors=[
+                MaterializationDescriptor(
+                    feature_descriptor=file_source,
+                    sink=online_store_sink,
+                    allow_overwrite=True,
+                )
+            ]
         ).wait()
 
         online_store_source = MemoryStoreSource(

@@ -20,9 +20,9 @@ from pyflink.table import (
     StreamTableEnvironment,
     Table as NativeFlinkTable,
     TableDescriptor as NativeFlinkTableDescriptor,
-    TableResult,
     Schema,
     DataTypes,
+    StatementSet,
 )
 
 from feathub.common import types
@@ -179,12 +179,13 @@ def get_table_from_kafka_source(
     return table
 
 
-def insert_into_kafka_sink(
+def add_kafka_sink_to_statement_set(
     t_env: StreamTableEnvironment,
+    statement_set: StatementSet,
     table: NativeFlinkTable,
     sink: KafkaSink,
     keys: Sequence[str],
-) -> TableResult:
+) -> None:
     add_jar_to_t_env(
         t_env, _get_kafka_connector_jar(), _get_bounded_kafka_connector_jar()
     )
@@ -218,7 +219,7 @@ def insert_into_kafka_sink(
     for k, v in sink.producer_props.items():
         kafka_sink_descriptor_builder.option(f"properties.{k}", v)
 
-    return table.execute_insert(kafka_sink_descriptor_builder.build())
+    statement_set.add_insert(kafka_sink_descriptor_builder.build(), table)
 
 
 def _get_kafka_connector_jar() -> str:

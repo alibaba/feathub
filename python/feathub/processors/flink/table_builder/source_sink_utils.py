@@ -15,7 +15,7 @@
 from pyflink.table import (
     StreamTableEnvironment,
     Table as NativeFlinkTable,
-    TableResult,
+    StatementSet,
 )
 
 from feathub.common.exceptions import FeathubException
@@ -33,29 +33,31 @@ from feathub.feature_tables.sources.hive_source import HiveSource
 from feathub.feature_tables.sources.kafka_source import KafkaSource
 from feathub.feature_tables.sources.redis_source import RedisSource
 from feathub.processors.flink.table_builder.black_hole_utils import (
-    insert_into_black_hole_sink,
+    add_black_hole_sink_to_statement_set,
 )
 from feathub.processors.flink.table_builder.datagen_utils import (
     get_table_from_data_gen_source,
 )
 from feathub.processors.flink.table_builder.file_system_utils import (
     get_table_from_file_source,
-    insert_into_file_sink,
+    add_file_sink_to_statement_set,
 )
 from feathub.processors.flink.table_builder.hive_utils import (
     get_table_from_hive_source,
-    insert_into_hive_sink,
+    add_hive_sink_to_statement_set,
 )
 from feathub.processors.flink.table_builder.kafka_utils import (
     get_table_from_kafka_source,
-    insert_into_kafka_sink,
+    add_kafka_sink_to_statement_set,
 )
 from feathub.processors.flink.table_builder.mysql_utils import (
-    insert_into_mysql_sink,
+    add_mysql_sink_to_statement_set,
 )
-from feathub.processors.flink.table_builder.print_utils import insert_into_print_sink
+from feathub.processors.flink.table_builder.print_utils import (
+    add_print_sink_to_statement_set,
+)
 from feathub.processors.flink.table_builder.redis_utils import (
-    insert_into_redis_sink,
+    add_redis_sink_to_statement_set,
     get_table_from_redis_source,
 )
 from feathub.table.table_descriptor import TableDescriptor
@@ -86,28 +88,36 @@ def get_table_from_source(
         raise FeathubException(f"Unsupported source type {type(source)}.")
 
 
-def insert_into_sink(
+def add_sink_to_statement_set(
     t_env: StreamTableEnvironment,
+    statement_set: StatementSet,
     features_table: NativeFlinkTable,
     features_desc: TableDescriptor,
     sink: FeatureTable,
-) -> TableResult:
+) -> None:
     """
-    Insert the flink table to the given sink.
+    Add an insert operation of the flink table to the given statement set.
     """
+
     if isinstance(sink, FileSystemSink):
-        return insert_into_file_sink(t_env, features_table, sink)
+        add_file_sink_to_statement_set(t_env, statement_set, features_table, sink)
     elif isinstance(sink, KafkaSink):
-        return insert_into_kafka_sink(t_env, features_table, sink, features_desc.keys)
+        add_kafka_sink_to_statement_set(
+            t_env, statement_set, features_table, sink, features_desc.keys
+        )
     elif isinstance(sink, PrintSink):
-        return insert_into_print_sink(features_table)
+        add_print_sink_to_statement_set(statement_set, features_table)
     elif isinstance(sink, RedisSink):
-        return insert_into_redis_sink(t_env, features_table, features_desc, sink)
+        add_redis_sink_to_statement_set(
+            t_env, statement_set, features_table, features_desc, sink
+        )
     elif isinstance(sink, HiveSink):
-        return insert_into_hive_sink(t_env, features_table, features_desc, sink)
+        add_hive_sink_to_statement_set(t_env, statement_set, features_table, sink)
     elif isinstance(sink, MySQLSink):
-        return insert_into_mysql_sink(t_env, features_table, sink, features_desc.keys)
+        add_mysql_sink_to_statement_set(
+            t_env, statement_set, features_table, sink, features_desc.keys
+        )
     elif isinstance(sink, BlackHoleSink):
-        return insert_into_black_hole_sink(features_table)
+        add_black_hole_sink_to_statement_set(statement_set, features_table)
     else:
         raise FeathubException(f"Unsupported sink type {type(sink)}.")

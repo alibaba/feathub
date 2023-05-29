@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from feathub.common.config import flatten_dict
 from feathub.common.utils import deprecated_alias
 from feathub.feature_tables.feature_table import FeatureTable
+from feathub.materialization_group import MaterializationGroup
 from feathub.processors.processor import Processor
 from feathub.registries.registry import Registry
 from feathub.feature_service.feature_service import FeatureService
@@ -113,7 +114,8 @@ class FeathubClient:
                                 existing data in the given sink.
         :return: A processor job corresponding to this materialization operation.
         """
-        return self.processor.materialize_features(
+        materialization_group = self.create_materialization_group()
+        materialization_group.materialize_features(
             feature_descriptor=feature_descriptor,
             sink=sink,
             ttl=ttl,
@@ -121,6 +123,14 @@ class FeathubClient:
             end_datetime=end_datetime,
             allow_overwrite=allow_overwrite,
         )
+        return materialization_group.execute()
+
+    def create_materialization_group(self) -> MaterializationGroup:
+        """
+        Create a job group that can group multiple features materialization and execute
+        them as one job.
+        """
+        return MaterializationGroup(self.processor)
 
     def get_online_features(
         self,

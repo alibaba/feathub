@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from concurrent.futures import ThreadPoolExecutor
-from datetime import timedelta, datetime
-from typing import Union, Optional, Dict
+from datetime import datetime
+from typing import Union, Optional, Dict, Sequence
 
 import pandas as pd
 from pyspark.sql import DataFrame as NativeSparkDataFrame
@@ -21,16 +21,21 @@ from pyspark.sql import SparkSession
 
 from feathub.common.config import TIMEZONE_CONFIG
 from feathub.common.exceptions import FeathubException, FeathubConfigurationException
-from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_views.feature_view import FeatureView
-from feathub.processors.processor import Processor
+from feathub.processors.processor import (
+    Processor,
+)
+from feathub.processors.materialization_descriptor import (
+    MaterializationDescriptor,
+)
+from feathub.processors.processor_job import ProcessorJob
 from feathub.processors.spark.dataframe_builder.source_sink_utils import (
     insert_into_sink,
 )
 from feathub.processors.spark.dataframe_builder.spark_dataframe_builder import (
     SparkDataFrameBuilder,
 )
-from feathub.processors.spark.spark_job import SparkJob
+from feathub.processors.spark.spark_job import SparkJob, CombinedSparkJob
 from feathub.processors.spark.spark_processor_config import (
     SparkProcessorConfig,
     MASTER_CONFIG,
@@ -113,35 +118,40 @@ class SparkProcessor(Processor):
 
     def materialize_features(
         self,
-        feature_descriptor: Union[str, TableDescriptor],
-        sink: FeatureTable,
-        ttl: Optional[timedelta] = None,
-        start_datetime: Optional[datetime] = None,
-        end_datetime: Optional[datetime] = None,
-        allow_overwrite: bool = False,
-    ) -> SparkJob:
-        if ttl is not None:
-            raise FeathubException(
-                "Spark processor does not support inserting features with ttl."
+        materialization_descriptors: Sequence[MaterializationDescriptor],
+    ) -> ProcessorJob:
+        # TODO: Optimize performance by reusing intermediate results.
+        spark_jobs = []
+        for materialization_descriptor in materialization_descriptors:
+            if materialization_descriptor.ttl is not None:
+                raise FeathubException(
+                    "Spark processor does not support inserting features with ttl."
+                )
+
+            resolved_features = self._resolve_table_descriptor(
+                materialization_descriptor.feature_descriptor
             )
 
-        resolved_features = self._resolve_table_descriptor(feature_descriptor)
+            dataframe = self.get_spark_dataframe(
+                feature=resolved_features,
+                start_datetime=materialization_descriptor.start_datetime,
+                end_datetime=materialization_descriptor.end_datetime,
+            )
 
-        dataframe = self.get_spark_dataframe(
-            feature=resolved_features,
-            start_datetime=start_datetime,
-            end_datetime=end_datetime,
-        )
+            future = insert_into_sink(
+                executor=self._executor,
+                dataframe=dataframe,
+                features_desc=resolved_features,
+                sink=materialization_descriptor.sink,
+                allow_overwrite=materialization_descriptor.allow_overwrite,
+            )
 
-        future = insert_into_sink(
-            executor=self._executor,
-            dataframe=dataframe,
-            features_desc=resolved_features,
-            sink=sink,
-            allow_overwrite=allow_overwrite,
-        )
+            spark_jobs.append(SparkJob(job_future=future))
 
-        return SparkJob(future)
+        if len(spark_jobs) == 1:
+            return spark_jobs[0]
+        else:
+            return CombinedSparkJob(spark_jobs, self._executor)
 
     def _resolve_table_descriptor(
         self, features: Union[str, TableDescriptor]

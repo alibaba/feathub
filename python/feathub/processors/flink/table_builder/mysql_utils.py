@@ -19,8 +19,8 @@ from pyflink.table import (
     Table as NativeFlinkTable,
     StreamTableEnvironment,
     TableDescriptor as NativeFlinkTableDescriptor,
-    TableResult,
     Schema as NativeFlinkSchema,
+    StatementSet,
 )
 
 from feathub.common.exceptions import FeathubException
@@ -28,12 +28,13 @@ from feathub.feature_tables.sinks.mysql_sink import MySQLSink
 from feathub.processors.flink.flink_jar_utils import add_jar_to_t_env, find_jar_lib
 
 
-def insert_into_mysql_sink(
+def add_mysql_sink_to_statement_set(
     t_env: StreamTableEnvironment,
+    statement_set: StatementSet,
     feature_table: NativeFlinkTable,
     sink: MySQLSink,
     keys: List[str],
-) -> TableResult:
+) -> None:
     add_jar_to_t_env(t_env, _get_jdbc_connector_jar(), _get_mysql_driver_jar())
 
     table_descriptor_builder = (
@@ -57,7 +58,7 @@ def insert_into_mysql_sink(
     schema_builder.primary_key(*keys)
     table_descriptor_builder.schema(schema_builder.build())
 
-    return feature_table.execute_insert(table_descriptor_builder.build())
+    statement_set.add_insert(table_descriptor_builder.build(), feature_table)
 
 
 def _get_mysql_url(host: str, port: int, database: str) -> str:

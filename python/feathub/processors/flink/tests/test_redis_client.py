@@ -29,7 +29,9 @@ from feathub.feature_tables.sinks.redis_sink import RedisSink, RedisMode
 from feathub.feature_tables.sources.redis_source import RedisSource
 from feathub.feature_tables.tests.test_redis_source_sink import RedisClusterContainer
 from feathub.feature_views.on_demand_feature_view import OnDemandFeatureView
-from feathub.processors.flink.table_builder.source_sink_utils import insert_into_sink
+from feathub.processors.flink.table_builder.source_sink_utils import (
+    add_sink_to_statement_set,
+)
 from feathub.processors.flink.table_builder.tests.mock_table_descriptor import (
     MockTableDescriptor,
 )
@@ -265,7 +267,9 @@ class RedisClientTestBase(unittest.TestCase):
             ],
         )
 
-        insert_into_sink(t_env, table, descriptor, sink).wait(30000)
+        statement_set = t_env.create_statement_set()
+        add_sink_to_statement_set(t_env, statement_set, table, descriptor, sink)
+        statement_set.execute().wait(30000)
         return row_data
 
 

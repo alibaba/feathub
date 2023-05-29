@@ -13,21 +13,25 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Dict, Union, Optional
-from datetime import datetime, timedelta
+
 from abc import ABC, abstractmethod
+from datetime import datetime
+from typing import Dict, Union, Optional, Sequence
+
 import pandas as pd
 
-from feathub.feature_tables.feature_table import FeatureTable
+from feathub.processors.materialization_descriptor import (
+    MaterializationDescriptor,
+)
 from feathub.processors.processor_config import (
     ProcessorConfig,
     ProcessorType,
     PROCESSOR_TYPE_CONFIG,
 )
-from feathub.table.table import Table
-from feathub.table.table_descriptor import TableDescriptor
 from feathub.processors.processor_job import ProcessorJob
 from feathub.registries.registry import Registry
+from feathub.table.table import Table
+from feathub.table.table_descriptor import TableDescriptor
 
 
 class Processor(ABC):
@@ -76,32 +80,12 @@ class Processor(ABC):
     @abstractmethod
     def materialize_features(
         self,
-        feature_descriptor: Union[str, TableDescriptor],
-        sink: FeatureTable,
-        ttl: Optional[timedelta] = None,
-        start_datetime: Optional[datetime] = None,
-        end_datetime: Optional[datetime] = None,
-        allow_overwrite: bool = False,
+        materialization_descriptors: Sequence[MaterializationDescriptor],
     ) -> ProcessorJob:
         """
-        Starts a job to write a table of features into the given sink according to the
-        specified criteria.
+        Start a job that executes the given list of materialization.
 
-        :param feature_descriptor: Describes the table of features to be inserted in the
-                                   sink. If it is a string, it refers to the name of a
-                                   table descriptor in the entity registry.
-        :param sink: Describes the location to write the features.
-        :param ttl: Optional. If it is not None, the features data should be purged from
-                    the sink after the specified period of time.
-        :param start_datetime: Optional. If it is not None, the `features` table should
-                               have a timestamp field. And only writes into sink those
-                               features whose timestamp >= floor(start_datetime).
-        :param end_datetime: Optional. If it is not None, the `features` table should
-                             have a timestamp field. And only writes into sink those
-                             features whose timestamp <= ceil(start_datetime).
-        :param allow_overwrite: If it is false, throw error if the features collide with
-                                existing data in the given sink.
-        :return: A processor job corresponding to this materialization operation.
+        :return: A processor job that executes the materialization.
         """
         pass
 
