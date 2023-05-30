@@ -134,8 +134,13 @@ class FlinkProcessor(Processor):
                 )
 
             parse_result = urlparse(master)
-            if not parse_result.scheme:
-                parse_result = urlparse("http://" + master)
+            if (
+                not parse_result.scheme
+                or not parse_result.hostname
+                or not parse_result.port
+            ):
+                # Prepend schema
+                parse_result = urlparse("//" + master)
 
             jobmanager_rpc_address = parse_result.hostname
             jobmanager_rpc_port = str(parse_result.port)

@@ -8,7 +8,7 @@ result.
 ## Prerequisites
 
 - Unix-like operating system (e.g. Linux, Mac OS X)
-- Python 3.7
+- Python 3.7/3.8/3.9
 - Java 8
 
 ## Install Flink
