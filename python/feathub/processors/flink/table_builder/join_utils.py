@@ -28,11 +28,17 @@ from feathub.feature_views.sliding_feature_view import (
 from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
-from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
+from feathub.processors.constants import (
+    EVENT_TIME_ATTRIBUTE_NAME,
+    PROCESSING_TIME_ATTRIBUTE_NAME,
+)
 from feathub.processors.flink.flink_types_utils import to_flink_type
 from feathub.processors.flink.table_builder.aggregation_utils import (
     get_default_value_and_type,
     AggregationFieldDescriptor,
+)
+from feathub.processors.flink.table_builder.source_sink_utils_common import (
+    generate_random_table_name,
 )
 from feathub.processors.flink.table_builder.time_utils import (
     timedelta_to_flink_sql_interval,
@@ -140,6 +146,59 @@ def join_table_on_key(
             if right_field_name not in key_fields
         ],
     )
+
+
+def lookup_join(
+    t_env: StreamTableEnvironment,
+    left: NativeFlinkTable,
+    right: NativeFlinkTable,
+    key_fields: List[str],
+) -> NativeFlinkTable:
+    """
+    Lookup join the right table to the left table.
+    """
+    left = _append_processing_time_attribute_if_not_exist(t_env, left)
+
+    t_env.create_temporary_view("left_table", left)
+    t_env.create_temporary_view("right_table", right)
+
+    predicates = " and ".join(
+        [f"left_table.`{k}` = right_table.`{k}`" for k in key_fields]
+    )
+
+    result_table = t_env.sql_query(
+        f"""
+        SELECT * FROM left_table LEFT JOIN right_table
+            FOR SYSTEM_TIME AS OF left_table.`{PROCESSING_TIME_ATTRIBUTE_NAME}`
+            ON {predicates};
+        """
+    )
+
+    t_env.drop_temporary_view("left_table")
+    t_env.drop_temporary_view("right_table")
+
+    return result_table
+
+
+# TODO: figure out why Flink SQL requires a processing time attribute for lookup join
+#  and see if there is space for improvement on Flink API.
+def _append_processing_time_attribute_if_not_exist(
+    t_env: StreamTableEnvironment,
+    table: NativeFlinkTable,
+) -> NativeFlinkTable:
+    if PROCESSING_TIME_ATTRIBUTE_NAME in table.get_schema().get_field_names():
+        return table
+
+    tmp_table_name = generate_random_table_name("tmp_table")
+
+    t_env.create_temporary_view(tmp_table_name, table)
+    table = t_env.sql_query(
+        f"SELECT *, PROCTIME() AS {PROCESSING_TIME_ATTRIBUTE_NAME} "
+        f"FROM {tmp_table_name};"
+    )
+    t_env.drop_temporary_view(tmp_table_name)
+
+    return table
 
 
 def full_outer_join_on_key_with_default_value(

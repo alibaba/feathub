@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.alibaba.feathub.flink.connectors.redis.sink;
+package com.alibaba.feathub.flink.connectors.redis;
 
 import org.apache.flink.configuration.ReadableConfig;
 
@@ -23,20 +23,24 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.DB_NUM;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.HOST;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.PASSWORD;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.PORT;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.REDIS_MODE;
-import static com.alibaba.feathub.flink.connectors.redis.sink.RedisSinkConfigs.USERNAME;
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.DB_NUM;
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.HOST;
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.PASSWORD;
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.PORT;
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.REDIS_MODE;
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.USERNAME;
 
 /** A wrapper interface for jedis clients in different deployment modes. */
 public interface JedisClient {
     void del(String key);
 
+    Map<String, String> hgetAll(final String key);
+
     void hmset(String key, Map<String, String> hash);
 
     void rpush(String key, String... string);
+
+    String get(String key);
 
     void set(String key, String value);
 
@@ -61,7 +65,7 @@ public interface JedisClient {
         String password = config.get(PASSWORD);
         String host = config.get(HOST);
         int port = config.get(PORT);
-        if (Objects.requireNonNull(config.get(REDIS_MODE)) == RedisSinkConfigs.RedisMode.CLUSTER) {
+        if (Objects.requireNonNull(config.get(REDIS_MODE)) == RedisConfigs.RedisMode.CLUSTER) {
             return new JedisClusterClient(host, port, username, password);
         }
         int dbNum = config.get(DB_NUM);

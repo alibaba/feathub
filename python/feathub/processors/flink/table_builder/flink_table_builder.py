@@ -60,6 +60,7 @@ from feathub.processors.flink.table_builder.join_utils import (
     full_outer_join_on_key_with_default_value,
     temporal_join,
     JoinFieldDescriptor,
+    lookup_join,
 )
 from feathub.processors.flink.table_builder.over_window_utils import (
     evaluate_over_window_transform,
@@ -67,6 +68,10 @@ from feathub.processors.flink.table_builder.over_window_utils import (
 )
 from feathub.processors.flink.table_builder.python_udf_utils import (
     evaluate_python_udf_transform,
+)
+from feathub.processors.flink.table_builder.redis_utils import (
+    get_redis_source,
+    append_physical_key_columns_per_feature,
 )
 from feathub.processors.flink.table_builder.sliding_window_utils import (
     evaluate_sliding_window_transform,
@@ -353,12 +358,6 @@ class FlinkTableBuilder:
                         "currently not supported. You can make the right table bounded "
                         "by setting its source to be bounded."
                     )
-                right_timestamp_field = right_table_descriptor.timestamp_field
-                if right_timestamp_field is None:
-                    raise FeathubException(
-                        f"FlinkProcessor cannot join with {right_table_descriptor} "
-                        f"without timestamp field."
-                    )
                 right_table_join_field_descriptors = right_tables.setdefault(
                     (join_transform.table_name, tuple(feature.keys)), dict()
                 )
@@ -368,13 +367,16 @@ class FlinkTableBuilder:
                         for key in feature.keys
                     }
                 )
-                right_table_join_field_descriptors[
-                    right_timestamp_field
-                ] = JoinFieldDescriptor.from_field_name(right_timestamp_field)
 
-                right_table_join_field_descriptors[
-                    EVENT_TIME_ATTRIBUTE_NAME
-                ] = JoinFieldDescriptor.from_field_name(EVENT_TIME_ATTRIBUTE_NAME)
+                right_timestamp_field = right_table_descriptor.timestamp_field
+                if right_timestamp_field is not None:
+                    right_table_join_field_descriptors[
+                        right_timestamp_field
+                    ] = JoinFieldDescriptor.from_field_name(right_timestamp_field)
+
+                    right_table_join_field_descriptors[
+                        EVENT_TIME_ATTRIBUTE_NAME
+                    ] = JoinFieldDescriptor.from_field_name(EVENT_TIME_ATTRIBUTE_NAME)
 
                 right_table_join_field_descriptors[
                     join_transform.feature_name
@@ -391,12 +393,47 @@ class FlinkTableBuilder:
             right_table_name,
             keys,
         ), right_table_join_field_descriptors in right_tables.items():
-            right_table = table_by_names[right_table_name].select(
+            right_table = table_by_names[right_table_name]
+            right_table_descriptor = self.registry.get_features(right_table_name)
+            redis_source = get_redis_source(right_table_descriptor)
+
+            # TODO: Add Java implementation to evaluate Feathub expression so that
+            #  Redis lookup source can directly process key_expr and remove the
+            #  following codes.
+            if redis_source is not None:
+                tmp_table, physical_keys = append_physical_key_columns_per_feature(
+                    table=tmp_table,
+                    key_expr=redis_source.key_expr,
+                    namespace=redis_source.namespace,
+                    keys=redis_source.keys,
+                    feature_names=[
+                        x
+                        for x in redis_source.schema.field_names
+                        if x not in redis_source.keys
+                    ],
+                )
+
+                tmp_table = lookup_join(
+                    self.t_env,
+                    tmp_table,
+                    right_table,
+                    list(keys) + physical_keys,
+                )
+                continue
+
+            if right_table_descriptor.timestamp_field is None:
+                raise FeathubException(
+                    "FlinkProcessor can only perform join operation when right table "
+                    "contains timestamp field or is from a lookup source like Redis."
+                )
+
+            right_table = right_table.select(
                 *[
                     native_flink_expr.col(right_table_field)
                     for right_table_field in right_table_join_field_descriptors.keys()
                 ]
             )
+
             tmp_table = temporal_join(
                 self.t_env,
                 tmp_table,

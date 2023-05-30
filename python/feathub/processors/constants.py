@@ -14,3 +14,5 @@
 
 
 EVENT_TIME_ATTRIBUTE_NAME = "__event_time_attribute__"
+
+PROCESSING_TIME_ATTRIBUTE_NAME = "__processing_time_attribute__"

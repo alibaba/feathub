@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-com.alibaba.feathub.flink.connectors.redis.sink.RedisDynamicTableSinkFactory
+com.alibaba.feathub.flink.connectors.redis.RedisDynamicTableFactory

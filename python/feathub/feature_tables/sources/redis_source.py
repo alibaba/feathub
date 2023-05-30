@@ -34,6 +34,8 @@ NAMESPACE_KEYWORD = "__NAMESPACE__"
 KEYS_KEYWORD = "__KEYS__"
 FEATURE_NAME_KEYWORD = "__FEATURE_NAME__"
 
+KEY_COLUMN_PREFIX = "__KEY__"
+
 
 class RedisSource(FeatureTable):
     """
@@ -119,6 +121,13 @@ class RedisSource(FeatureTable):
                 f"feature keys in Redis."
             )
 
+        if KEYS_KEYWORD not in key_expr and any(key not in key_expr for key in keys):
+            raise FeathubException(
+                f"key_expr {key_expr} does not contain {KEYS_KEYWORD} and all key "
+                f"field names. Features saved to Redis might not have unique keys "
+                f"and overwrite each other."
+            )
+
         if mode == RedisMode.CLUSTER and db_num != 0:
             raise FeathubException(
                 "Selecting database is not supported in Cluster mode."
@@ -132,7 +141,7 @@ class RedisSource(FeatureTable):
             "keys": self.keys,
             "host": self.host,
             "port": self.port,
-            "mode": self.mode.name,
+            "mode": self.mode.value,
             "username": self.username,
             "password": self.password,
             "db_num": self.db_num,

@@ -99,7 +99,7 @@ class RedisSink(Sink):
             "namespace": self.namespace,
             "host": self.host,
             "port": self.port,
-            "mode": self.mode.name,
+            "mode": self.mode.value,
             "username": self.username,
             "password": self.password,
             "db_num": self.db_num,

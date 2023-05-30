@@ -9,9 +9,7 @@ should be deployed in standalone, master-slave, or cluster mode. Currently,
 
 ## Supported Processors and Usages
 
-- Flink: Lookup<sup>1</sup>, Streaming Upsert
-
-1. Only supported in OnDemandFeatureView currently.
+- Flink: Lookup, Streaming Upsert
 
 ## Examples
 
@@ -51,7 +49,8 @@ feathub_client.materialize_features(
 ```python
 feature_table_schema = (
     Schema.new_builder()
-    .column("id", types.Int64)
+    .column("user_id", types.Int64)
+    .column("item_id", types.Int64)
     .column("feature_1", types.Int64)
     .column("ts", types.String)
     .build()
@@ -86,4 +85,62 @@ online_features = feathub_client.get_online_features(
     request_df=request_df,
     feature_view=on_demand_feature_view,
 )
+```
+
+### Use as Lookup Source for DerivedFeatureView
+
+```python
+lookup_source_schema = (
+    Schema.new_builder()
+    .column("user_id", types.Int64)
+    .column("item_id", types.Int64)
+    .column("feature_1", types.Int64)
+    .build()
+)
+
+lookup_source = RedisSource(
+    name="feature_table",
+    schema=feature_table_schema,
+    keys=["user_id", "item_id"],
+    host="host",
+    port=6379,
+    timestamp_field="ts",
+    key_expr='CONCAT_WS(":", __NAMESPACE__, __KEYS__, __FEATURE_NAME__)',
+    # key_expr can also be configured as follows, and the effect is the same.
+    # key_expr='CONCAT_WS(":", __NAMESPACE__, user_id, item_id, __FEATURE_NAME__)',
+)
+
+streaming_source_schema = (
+    Schema.new_builder()
+    .column("user_id", types.Int64)
+    .column("item_id", types.Int64)
+    .column("ts", types.String)
+    .build()
+)
+
+streaming_source = KafkaSource(
+    name="kafka_source",
+    schema=streaming_source_schema,
+    ...
+)
+
+feature_view = DerivedFeatureView(
+    name="feature_view",
+    source=streaming_source,
+    features=[
+        "user_id",
+        "item_id",
+        f"{lookup_source.name}.feature_1",
+        "ts",
+    ],
+    keep_source_fields=False,
+)
+
+[_, built_feature_view] = feathub_client.build_features([lookup_source, feature_view])
+
+feathub_client.materialize_features(
+    feature_descriptor=feature_view,
+    sink=...,
+    allow_overwrite=True,
+).wait(30000)
 ```

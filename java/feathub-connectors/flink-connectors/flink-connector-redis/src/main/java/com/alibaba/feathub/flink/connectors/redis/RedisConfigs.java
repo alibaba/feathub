@@ -14,51 +14,60 @@
  * limitations under the License.
  */
 
-package com.alibaba.feathub.flink.connectors.redis.sink;
+package com.alibaba.feathub.flink.connectors.redis;
 
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 
 /** Configurations used by Redis sink. */
-public class RedisSinkConfigs {
-    static final ConfigOption<RedisMode> REDIS_MODE =
+public class RedisConfigs {
+    public static final ConfigOption<RedisMode> REDIS_MODE =
             ConfigOptions.key("mode")
                     .enumType(RedisMode.class)
                     .defaultValue(RedisMode.STANDALONE)
                     .withDescription("The deployment mode of the Redis service to connect.");
 
-    static final ConfigOption<String> HOST =
+    public static final ConfigOption<String> HOST =
             ConfigOptions.key("host")
                     .stringType()
                     .noDefaultValue()
                     .withDescription("The host of the Redis instance to connect.");
 
-    static final ConfigOption<Integer> PORT =
+    public static final ConfigOption<Integer> PORT =
             ConfigOptions.key("port")
                     .intType()
                     .noDefaultValue()
                     .withDescription("The port of the Redis instance to connect.");
 
-    static final ConfigOption<String> USERNAME =
+    public static final ConfigOption<String> USERNAME =
             ConfigOptions.key("username")
                     .stringType()
                     .noDefaultValue()
                     .withDescription("The username used by the Redis authorization process.");
 
-    static final ConfigOption<String> PASSWORD =
+    public static final ConfigOption<String> PASSWORD =
             ConfigOptions.key("password")
                     .stringType()
                     .noDefaultValue()
                     .withDescription("The password used by the Redis authorization process.");
 
-    static final ConfigOption<Integer> DB_NUM =
+    public static final ConfigOption<Integer> DB_NUM =
             ConfigOptions.key("dbNum")
                     .intType()
                     .noDefaultValue()
                     .withDescription(
                             "The No. of the Redis database to connect. Not supported in cluster mode.");
 
-    enum RedisMode {
+    public static final ConfigOption<String> KEY_FIELDS =
+            ConfigOptions.key("keyFields")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription(
+                            "A comma-separated list of field names in the input table containing "
+                                    + "the key values used to derive Redis keys. Used in lookup source.");
+
+    /** Supported Redis deployment modes. */
+    public enum RedisMode {
         STANDALONE,
         MASTER_SLAVE,
         CLUSTER,

@@ -41,7 +41,7 @@ public abstract class SumAggFunc<IN_T>
         return Types.POJO(SumAccumulator.class);
     }
 
-    /** JavaDoc. */
+    /** Accumulator for sum aggregation functions. */
     public static class SumAccumulator<T> {
         public T value;
     }
