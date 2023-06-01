@@ -265,7 +265,7 @@ def _sliding_window_func(
                 all_reach_end = False
                 rows_in_window = df_copy.iloc[left_idx:right_idx]
 
-            if agg_field_descriptor in filter_ast_map:
+            if agg_field_descriptor in filter_ast_map and rows_in_window.shape[0] > 0:
                 # Filter the rows in the window
                 rows_in_window = rows_in_window[
                     rows_in_window.apply(

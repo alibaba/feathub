@@ -104,7 +104,7 @@ try:
     install_requires = [
         "scikit-learn",
         "ply>=3.11",
-        "pandas>=1.1.5",
+        "pandas>=1.1.5,<2.0",
         "numpy~=1.21.4",
         "kubernetes~=24.2",
         "python-dateutil~=2.8",
@@ -135,11 +135,17 @@ try:
         package_data=PACKAGE_DATA,
         license="https://www.apache.org/licenses/LICENSE-2.0",
         author="FeatHub Authors",
-        python_requires=">=3.6",
+        python_requires=">=3.7",
         install_requires=install_requires,
         extras_require=extras_require,
         tests_require=["pytest==4.4.1"],
         zip_safe=True,
+        classifiers=[
+            "License :: OSI Approved :: Apache Software License",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+        ],
     )
 finally:
     if in_feathub_source:

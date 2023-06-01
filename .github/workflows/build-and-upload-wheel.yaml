@@ -30,12 +30,7 @@ jobs:
       - name: Set up python 3.7
         uses: actions/setup-python@v4
         with:
-          python-version: '3.7'
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v1
-        with:
-          version: '3.17.3'
-          repo-token: ${{ secrets.FETCH_RELEASE_DATA }}
+          python-version: 3.7
       - name: Build Feathub Wheel
         env:
           NIGHTLY_BUILD: ${{ inputs.is_nightly }}

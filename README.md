@@ -211,7 +211,7 @@ engines, connectors, expression language, and more.
 
 You need the following to run FeatHub installed using pip:
 - Unix-like operating system (e.g. Linux, Mac OS X)
-- Python 3.7
+- Python 3.7/3.8/3.9
 
 ### Install FeatHub Nightly Build
 
@@ -273,7 +273,7 @@ Spark cluster.
 You need the following to build FeatHub from source:
 - Unix-like operating system (e.g. Linux, Mac OS X)
 - x86_64 architecture
-- Python 3.7
+- Python 3.7/3.8/3.9
 - Java 8
 - Maven >= 3.1.1
 
@@ -297,11 +297,6 @@ $ docker image pull confluentinc/cp-kafka:5.4.3
 ```bash
 $ ulimit -n 1024
 ```
-
-4. Make sure protoc 3.17 is installed in your development environment. You can
-   follow the instructions in this
-   [README](https://github.com/protocolbuffers/protobuf#protocol-compiler-installation)
-   to install protoc.
 
 ### Build and Install FeatHub from Source
 <!-- TODO: Add instruction to install "./python[all]" after the dependency confliction in PyFlink and PySpark is resolved. -->

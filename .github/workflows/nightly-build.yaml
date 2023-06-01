@@ -11,11 +11,15 @@ on:
         default: false
 jobs:
   build-and-test:
+    strategy:
+      matrix:
+        python_version: ['3.7', '3.8', '3.9']
     uses: ./.github/workflows/build-and-test.yaml
     # Don't do this in forks unless manually triggered
     if: github.repository == 'alibaba/feathub' || github.event_name == 'workflow_dispatch'
     with:
       debug_enabled: ${{ inputs.debug_enabled || false }}
+      python_version: ${{ matrix.python_version }}
   build-and-upload-wheel:
     uses: ./.github/workflows/build-and-upload-wheel.yaml
     # Don't do this in forks unless manually triggered
@@ -25,11 +29,15 @@ jobs:
       is_nightly: true
     needs: build-and-test
   run-e2e-examples:
+    strategy:
+      matrix:
+        python_version: [ '3.7', '3.8', '3.9']
     uses: ./.github/workflows/run-e2e-examples.yaml
     # Don't do this in forks unless manually triggered
     if: github.repository == 'alibaba/feathub' || github.event_name == 'workflow_dispatch'
     with:
       debug_enabled: ${{ inputs.debug_enabled || false }}
+      python_version: ${{ matrix.python_version }}
     needs: build-and-upload-wheel
   publish-wheel:
     uses: ./.github/workflows/publish-wheel.yaml
