@@ -13,8 +13,8 @@
 #  limitations under the License.
 import logging
 import os
-from datetime import timedelta, datetime
-from typing import Optional, Union, Dict, Tuple
+from datetime import datetime
+from typing import Optional, Union, Dict, Tuple, Sequence
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -30,7 +30,6 @@ from feathub.common.exceptions import (
     FeathubException,
     FeathubConfigurationException,
 )
-from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.sql_feature_view import SqlFeatureView
 from feathub.feature_views.transforms.join_transform import JoinTransform
@@ -54,7 +53,12 @@ from feathub.processors.flink.job_submitter.flink_session_cluster_job_submitter 
 from feathub.processors.flink.table_builder.flink_table_builder import (
     FlinkTableBuilder,
 )
-from feathub.processors.processor import Processor
+from feathub.processors.processor import (
+    Processor,
+)
+from feathub.processors.materialization_descriptor import (
+    MaterializationDescriptor,
+)
 from feathub.processors.processor_job import ProcessorJob
 from feathub.registries.local_registry import LocalRegistry
 from feathub.registries.registry import Registry
@@ -194,34 +198,39 @@ class FlinkProcessor(Processor):
 
     def materialize_features(
         self,
-        feature_descriptor: Union[str, TableDescriptor],
-        sink: FeatureTable,
-        ttl: Optional[timedelta] = None,
-        start_datetime: Optional[datetime] = None,
-        end_datetime: Optional[datetime] = None,
-        allow_overwrite: bool = False,
+        materialization_descriptors: Sequence[MaterializationDescriptor],
     ) -> ProcessorJob:
-        if ttl is not None or not allow_overwrite:
-            raise RuntimeError("Unsupported operation.")
+        resolved_materialization_descriptor = []
+        join_tables = {}
+        for materialization_descriptor in materialization_descriptors:
+            if (
+                materialization_descriptor.ttl is not None
+                or not materialization_descriptor.allow_overwrite
+            ):
+                raise RuntimeError("Unsupported operation.")
 
-        feature_descriptor = self._resolve_table_descriptor(feature_descriptor)
+            resolved_feature_descriptor = self._resolve_table_descriptor(
+                materialization_descriptor.feature_descriptor
+            )
+            resolved_materialization_descriptor.append(
+                MaterializationDescriptor(
+                    feature_descriptor=resolved_feature_descriptor,
+                    sink=materialization_descriptor.sink,
+                    ttl=materialization_descriptor.ttl,
+                    start_datetime=materialization_descriptor.start_datetime,
+                    end_datetime=materialization_descriptor.end_datetime,
+                    allow_overwrite=materialization_descriptor.allow_overwrite,
+                )
+            )
 
-        # Get the tables to join in order to compute the feature if we are using a local
-        # registry.
-        join_tables = (
-            self._get_join_tables(feature_descriptor)
-            if self.registry.registry_type == LocalRegistry.REGISTRY_TYPE
-            else {}
-        )
+            if self.registry.registry_type == LocalRegistry.REGISTRY_TYPE:
+                # Get the tables to join in order to compute the feature if we are using
+                # a local registry.
+                join_tables.update(self._get_join_tables(resolved_feature_descriptor))
 
         return self.flink_job_submitter.submit(
-            features=feature_descriptor,
-            keys=None,
-            start_datetime=start_datetime,
-            end_datetime=end_datetime,
-            sink=sink,
+            materialization_descriptors=resolved_materialization_descriptor,
             local_registry_tables=join_tables,
-            allow_overwrite=allow_overwrite,
         )
 
     def _get_table_env(

@@ -19,7 +19,10 @@ import pandas as pd
 
 from feathub.common.exceptions import FeathubException
 from feathub.feature_tables.feature_table import FeatureTable
-from feathub.processors.spark.spark_job import SparkJob
+from feathub.processors.materialization_descriptor import (
+    MaterializationDescriptor,
+)
+from feathub.processors.processor_job import ProcessorJob
 from feathub.processors.spark.spark_types_utils import (
     to_feathub_schema,
 )
@@ -110,14 +113,18 @@ class SparkTable(Table):
         sink: FeatureTable,
         ttl: Optional[timedelta] = None,
         allow_overwrite: bool = False,
-    ) -> SparkJob:
+    ) -> ProcessorJob:
         return self._spark_processor.materialize_features(
-            feature_descriptor=self._feature,
-            sink=sink,
-            ttl=ttl,
-            allow_overwrite=allow_overwrite,
-            start_datetime=self.start_datetime,
-            end_datetime=self.end_datetime,
+            materialization_descriptors=[
+                MaterializationDescriptor(
+                    feature_descriptor=self._feature,
+                    sink=sink,
+                    ttl=ttl,
+                    allow_overwrite=allow_overwrite,
+                    start_datetime=self.start_datetime,
+                    end_datetime=self.end_datetime,
+                )
+            ]
         )
 
     def __eq__(self, other: typing.Any) -> bool:

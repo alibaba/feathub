@@ -20,8 +20,8 @@ from typing import Optional, List, Union, Dict
 from pyflink.table import (
     StreamTableEnvironment,
     Table as NativeFlinkTable,
-    TableResult,
     SqlDialect,
+    StatementSet,
 )
 from pyflink.table.catalog import HiveCatalog
 from pyflink.table.types import DataType
@@ -31,7 +31,6 @@ from feathub.feature_tables.sinks.hive_sink import HiveSink
 from feathub.feature_tables.sources.hive_source import HiveSource
 from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_env
 from feathub.processors.flink.flink_types_utils import to_flink_sql_type
-from feathub.table.table_descriptor import TableDescriptor
 
 
 def _get_hive_connector_jars() -> list:
@@ -128,12 +127,12 @@ def get_table_from_hive_source(
     return table
 
 
-def insert_into_hive_sink(
+def add_hive_sink_to_statement_set(
     t_env: StreamTableEnvironment,
+    statement_set: StatementSet,
     features_table: NativeFlinkTable,
-    features_desc: TableDescriptor,
     sink: HiveSink,
-) -> TableResult:
+) -> None:
     add_jar_to_t_env(t_env, *_get_hive_connector_jars())
     hive_catalog_name = _get_or_register_hive_catalog(
         t_env,
@@ -153,6 +152,5 @@ def insert_into_hive_sink(
         processor_specific_props=sink.processor_specific_props,
     )
 
-    result = features_table.execute_insert(sink.table)
+    statement_set.add_insert(sink.table, features_table)
     t_env.use_catalog(catalog)
-    return result

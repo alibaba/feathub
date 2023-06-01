@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from concurrent.futures import Future
-from typing import Optional, Callable
+from concurrent.futures import Future, Executor
+from time import sleep
+from typing import Optional, Callable, Sequence
 
 from feathub.processors.processor_job import ProcessorJob
 
@@ -48,3 +49,31 @@ class SparkJob(ProcessorJob):
                 cancel_future.set_exception(job_future.exception())
 
         return job_future_callback
+
+
+class CombinedSparkJob(ProcessorJob):
+    def __init__(self, spark_jobs: Sequence[SparkJob], executor: Executor):
+        super().__init__()
+        self.spark_jobs = spark_jobs
+        self._executor = executor
+
+    def cancel(self) -> Future:
+        def cancel_all_spark_jobs() -> None:
+            cancel_futures = []
+            for spark_job in self.spark_jobs:
+                cancel_futures.append(spark_job.cancel())
+
+            # Keep polling cancel future until all cancel futures are done.
+            while not all([future.done() for future in cancel_futures]):
+                sleep(0.1)
+
+        return self._executor.submit(cancel_all_spark_jobs)
+
+    def wait(self, timeout_ms: Optional[int] = None) -> None:
+        def wait_spark_jobs() -> None:
+            # Keep polling job future until all futures are done.
+            while not all([job._job_future.done() for job in self.spark_jobs]):
+                sleep(0.1)
+
+        future = self._executor.submit(wait_spark_jobs)
+        future.result(timeout_ms)

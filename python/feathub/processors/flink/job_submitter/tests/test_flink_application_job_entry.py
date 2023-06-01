@@ -16,7 +16,7 @@ import os.path
 import tempfile
 import unittest
 from datetime import datetime
-from typing import Optional, List, Dict, Union
+from typing import Optional, List, Dict
 
 import cloudpickle
 import pandas
@@ -35,6 +35,9 @@ from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
 )
 from feathub.processors.flink.job_submitter.flink_application_cluster_job_entry import (
     run_job,
+)
+from feathub.processors.materialization_descriptor import (
+    MaterializationDescriptor,
 )
 from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
@@ -61,7 +64,7 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
         sink_path = tempfile.NamedTemporaryFile(dir=self.temp_dir, suffix=".csv").name
         sink = FileSystemSink(sink_path, "csv")
         feathub_config_path = self._prepare_feathub_job_config(
-            file_source, None, None, None, sink, {}
+            file_source, None, None, sink, {}
         )
         run_job(feathub_config_path)
 
@@ -125,7 +128,6 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
             feature_view,
             None,
             None,
-            None,
             sink,
             join_table={"dim_feature_view": dim_feature_view},
         )
@@ -145,7 +147,6 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
     def _prepare_feathub_job_config(
         self,
         features: TableDescriptor,
-        keys: Union[pd.DataFrame, TableDescriptor, None],
         start_datetime: Optional[datetime],
         end_datetime: Optional[datetime],
         sink: FeatureTable,
@@ -153,13 +154,16 @@ class FlinkApplicationJobEntryTest(unittest.TestCase):
     ) -> str:
         path = tempfile.NamedTemporaryFile(dir=self.temp_dir, suffix=".txt").name
         job_descriptor = FeathubJobDescriptor(
-            features=features,
-            keys=keys,
-            start_datetime=start_datetime,
-            end_datetime=end_datetime,
-            sink=sink,
+            materialization_descriptors=[
+                MaterializationDescriptor(
+                    feature_descriptor=features,
+                    sink=sink,
+                    start_datetime=start_datetime,
+                    end_datetime=end_datetime,
+                    allow_overwrite=True,
+                )
+            ],
             local_registry_tables=join_table,
-            allow_overwrite=True,
             props={},
         )
 

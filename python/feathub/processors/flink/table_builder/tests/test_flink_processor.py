@@ -85,9 +85,13 @@ from feathub.processors.flink.table_builder.flink_table_builder import FlinkTabl
 from feathub.processors.flink.table_builder.tests.test_flink_sql_feature_view import (
     FlinkSqlFeatureViewITTest,
 )
+from feathub.processors.materialization_descriptor import (
+    MaterializationDescriptor,
+)
 from feathub.registries.local_registry import LocalRegistry
 from feathub.table.schema import Schema
 from feathub.tests.test_get_features import GetFeaturesITTest
+from feathub.tests.test_materialize_features import MaterializeFeaturesITTest
 
 
 # TODO: move this file to python/feathub/processors/flink/tests folder after
@@ -177,16 +181,25 @@ class FlinkProcessorTest(unittest.TestCase):
 
         mock_table_builder = Mock(spec=FlinkTableBuilder)
         mock_table_builder.build.return_value = mock_table
-        mock_table_builder.t_env = Mock()
+        mock_t_env = Mock()
+        mock_statement_set = Mock()
+        mock_t_env.create_statement_set.return_value = mock_statement_set
+        mock_table_builder.t_env = mock_t_env
         mock_table_builder.class_loader = get_flink_context_class_loader()
         processor.flink_table_builder = mock_table_builder
         source = FileSystemSource("source", "/path", "csv", Schema([], []))
         sink = FileSystemSink("/path", "csv")
 
-        processor.materialize_features(source, sink, allow_overwrite=True)
+        processor.materialize_features(
+            materialization_descriptors=[
+                MaterializationDescriptor(
+                    feature_descriptor=source, sink=sink, allow_overwrite=True
+                )
+            ]
+        )
         mock_table_builder.build.assert_called_once()
         self.assertEqual(source, mock_table_builder.build.call_args[1]["features"])
-        mock_table.execute_insert.assert_called_once()
+        mock_statement_set.add_insert.assert_called_once()
 
     def test_to_pandas_with_kubernetes_application_mode(self):
         processor = FlinkProcessor(
@@ -246,10 +259,21 @@ class FlinkProcessorTest(unittest.TestCase):
         sink = FileSystemSink("/path", "csv")
         mock_submitter = MagicMock(spec=FlinkJobSubmitter)
         processor.flink_job_submitter = mock_submitter
-        processor.materialize_features(feature_view, sink, allow_overwrite=True)
+        processor.materialize_features(
+            materialization_descriptors=[
+                MaterializationDescriptor(
+                    feature_descriptor=feature_view, sink=sink, allow_overwrite=True
+                )
+            ]
+        )
         mock_submitter.submit.assert_called_once()
 
-        self.assertEqual(feature_view, mock_submitter.submit.call_args[1]["features"])
+        self.assertEqual(
+            feature_view,
+            mock_submitter.submit.call_args[1]["materialization_descriptors"][
+                0
+            ].feature_descriptor,
+        )
 
     def test_materialize_joined_feature_application_mode(self):
         processor = FlinkProcessor(
@@ -307,7 +331,13 @@ class FlinkProcessorTest(unittest.TestCase):
         sink = FileSystemSink("/path", "csv")
         mock_submitter = MagicMock(spec=FlinkJobSubmitter)
         processor.flink_job_submitter = mock_submitter
-        processor.materialize_features(feature_view, sink, allow_overwrite=True)
+        processor.materialize_features(
+            materialization_descriptors=[
+                MaterializationDescriptor(
+                    feature_descriptor=feature_view, sink=sink, allow_overwrite=True
+                )
+            ]
+        )
         mock_submitter.submit.assert_called_once()
 
         self.assertEqual(
@@ -355,7 +385,13 @@ class FlinkProcessorTest(unittest.TestCase):
 
         with patch.object(flink_table, "flink_table_to_pandas") as to_pandas_method:
             to_pandas_method.return_value = expected_df
-            processor.materialize_features(source, sink, allow_overwrite=True)
+            processor.materialize_features(
+                materialization_descriptors=[
+                    MaterializationDescriptor(
+                        feature_descriptor=source, sink=sink, allow_overwrite=True
+                    )
+                ]
+            )
 
             self.assertTrue(
                 pd.Series([7]).equals(
@@ -417,6 +453,7 @@ class FlinkProcessorITTest(
     FlinkSqlFeatureViewITTest,
     GetFeaturesITTest,
     MySQLSourceSinkITTest,
+    MaterializeFeaturesITTest,
 ):
     __test__ = True
 

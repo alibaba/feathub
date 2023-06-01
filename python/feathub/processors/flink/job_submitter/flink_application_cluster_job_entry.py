@@ -20,6 +20,7 @@ from pyflink.table import (
     StreamTableEnvironment,
 )
 
+from feathub.common.exceptions import FeathubException
 from feathub.processors.flink.flink_class_loader_utils import (
     get_flink_context_class_loader,
 )
@@ -29,8 +30,11 @@ from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
 from feathub.processors.flink.table_builder.flink_table_builder import (
     FlinkTableBuilder,
 )
-from feathub.processors.flink.table_builder.source_sink_utils import insert_into_sink
+from feathub.processors.flink.table_builder.source_sink_utils import (
+    add_sink_to_statement_set,
+)
 from feathub.registries.registry import Registry
+from feathub.table.table_descriptor import TableDescriptor
 
 logger = logging.getLogger(__file__)
 
@@ -65,20 +69,30 @@ def run_job(feathub_job_descriptor_path: str) -> None:
         registry=registry,
     )
 
-    native_flink_table = flink_table_builder.build(
-        features=feathub_job_descriptor.features,
-        keys=feathub_job_descriptor.keys,
-        start_datetime=feathub_job_descriptor.start_datetime,
-        end_datetime=feathub_job_descriptor.end_datetime,
-    )
+    statement_set = t_env.create_statement_set()
+    for (
+        materialization_descriptor
+    ) in feathub_job_descriptor.materialization_descriptors:
+        feature_descriptor = materialization_descriptor.feature_descriptor
+        if not isinstance(feature_descriptor, TableDescriptor):
+            raise FeathubException(
+                f"The FeatureDescriptor is unresolved: {feature_descriptor}."
+            )
+        native_flink_table = flink_table_builder.build(
+            features=feature_descriptor,
+            keys=None,
+            start_datetime=materialization_descriptor.start_datetime,
+            end_datetime=materialization_descriptor.end_datetime,
+        )
+        add_sink_to_statement_set(
+            t_env=t_env,
+            statement_set=statement_set,
+            features_table=native_flink_table,
+            features_desc=feature_descriptor,
+            sink=materialization_descriptor.sink,
+        )
 
-    table_result = insert_into_sink(
-        t_env,
-        native_flink_table,
-        feathub_job_descriptor.features,
-        feathub_job_descriptor.sink,
-    )
-    table_result.wait()
+    statement_set.execute().wait()
 
 
 if __name__ == "__main__":

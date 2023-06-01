@@ -16,11 +16,11 @@ import os
 from typing import List, Tuple, Optional
 
 from pyflink.table import (
-    TableResult,
     StreamTableEnvironment,
     Table as NativeFlinkTable,
     TableDescriptor as NativeFlinkTableDescriptor,
     expressions as native_flink_expr,
+    StatementSet,
 )
 
 from feathub.common import types
@@ -138,12 +138,13 @@ def get_table_from_redis_source(
     return t_env.from_descriptor(table_descriptor_builder.build())
 
 
-def insert_into_redis_sink(
+def add_redis_sink_to_statement_set(
     t_env: StreamTableEnvironment,
+    statement_set: StatementSet,
     features_table: NativeFlinkTable,
     features_desc: TableDescriptor,
     sink: RedisSink,
-) -> TableResult:
+) -> None:
     if features_desc.keys is None:
         raise FeathubException("Tables to be materialized to Redis must have keys.")
 
@@ -200,7 +201,7 @@ def insert_into_redis_sink(
             "password", sink.password
         )
 
-    return features_table.execute_insert(redis_sink_descriptor_builder.build())
+    statement_set.add_insert(redis_sink_descriptor_builder.build(), features_table)
 
 
 def _get_redis_connector_jars() -> list:

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import (
     Dict,
     Optional,
@@ -74,7 +74,13 @@ from feathub.processors.local.time_utils import (
     append_and_sort_unix_time_column,
     append_unix_time_column,
 )
-from feathub.processors.processor import Processor
+from feathub.processors.processor import (
+    Processor,
+)
+from feathub.processors.materialization_descriptor import (
+    MaterializationDescriptor,
+)
+from feathub.processors.processor_job import ProcessorJob
 from feathub.processors.type_utils import cast_series_dtype
 from feathub.registries.registry import Registry
 from feathub.table.schema import Schema
@@ -177,30 +183,33 @@ class LocalProcessor(Processor):
 
     def materialize_features(
         self,
-        feature_descriptor: Union[str, TableDescriptor],
-        sink: FeatureTable,
-        ttl: Optional[timedelta] = None,
-        start_datetime: Optional[datetime] = None,
-        end_datetime: Optional[datetime] = None,
-        allow_overwrite: bool = False,
-    ) -> LocalJob:
-        if ttl is not None or not allow_overwrite:
-            raise RuntimeError("Unsupported operation.")
-        feature_descriptor = self._resolve_table_descriptor(feature_descriptor)
+        materialization_descriptors: Sequence[MaterializationDescriptor],
+    ) -> ProcessorJob:
+        for materialization_descriptor in materialization_descriptors:
+            if (
+                materialization_descriptor.ttl is not None
+                or not materialization_descriptor.allow_overwrite
+            ):
+                raise RuntimeError("Unsupported operation.")
+            feature_descriptor = self._resolve_table_descriptor(
+                materialization_descriptor.feature_descriptor
+            )
 
-        features_df = self.get_table(
-            feature_descriptor=feature_descriptor,
-            keys=None,
-            start_datetime=start_datetime,
-            end_datetime=end_datetime,
-        ).to_pandas()
+            features_df = self.get_table(
+                feature_descriptor=feature_descriptor,
+                keys=None,
+                start_datetime=materialization_descriptor.start_datetime,
+                end_datetime=materialization_descriptor.end_datetime,
+            ).to_pandas()
 
-        return self.materialize_dataframe(
-            features=feature_descriptor,
-            features_df=features_df,
-            sink=sink,
-            allow_overwrite=allow_overwrite,
-        )
+            self.materialize_dataframe(
+                features=feature_descriptor,
+                features_df=features_df,
+                sink=materialization_descriptor.sink,
+                allow_overwrite=materialization_descriptor.allow_overwrite,
+            )
+
+        return LocalJob()
 
     def materialize_dataframe(
         self,

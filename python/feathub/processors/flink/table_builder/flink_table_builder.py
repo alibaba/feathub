@@ -136,6 +136,7 @@ class FlinkTableBuilder:
         keys: Union[pd.DataFrame, TableDescriptor, None] = None,
         start_datetime: Optional[datetime] = None,
         end_datetime: Optional[datetime] = None,
+        clear_built_tables: bool = True,
     ) -> NativeFlinkTable:
         """
         Convert the given features to native Flink table.
@@ -157,10 +158,23 @@ class FlinkTableBuilder:
                              include features whose timestamp < end_datetime. If any
                              field (e.g. minute) is not specified in the end_datetime,
                              we assume this field has the maximum possible value.
+        :param clear_built_tables: Whether to clear the intermediate tables after
+                                   building the Flink table. Set it to false when you
+                                   want to build and materialize multiple tables in one
+                                   Flink job. If it is false, user should call
+                                   clear_built_tables after all tables are built.
         :return: The native Flink table that represents the given features.
         """
         with self.class_loader:
-            return self._build(features, keys, start_datetime, end_datetime)
+            native_flink_table = self._build(
+                features, keys, start_datetime, end_datetime
+            )
+            if clear_built_tables:
+                self.clear_built_tables()
+            return native_flink_table
+
+    def clear_built_tables(self) -> None:
+        self._built_tables.clear()
 
     def _build(
         self,
@@ -189,8 +203,6 @@ class FlinkTableBuilder:
 
         if EVENT_TIME_ATTRIBUTE_NAME in table.get_schema().get_field_names():
             table = table.drop_columns(native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME))
-
-        self._built_tables.clear()
 
         return table
 

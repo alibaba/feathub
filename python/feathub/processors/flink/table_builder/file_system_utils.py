@@ -16,7 +16,7 @@ from pyflink.table import (
     StreamTableEnvironment,
     Table as NativeFlinkTable,
     TableDescriptor as NativeFlinkTableDescriptor,
-    TableResult,
+    StatementSet,
 )
 
 from feathub.common.exceptions import FeathubException
@@ -73,9 +73,12 @@ def get_table_from_file_source(
     return t_env.from_descriptor(descriptor_builder.build())
 
 
-def insert_into_file_sink(
-    t_env: StreamTableEnvironment, table: NativeFlinkTable, sink: FileSystemSink
-) -> TableResult:
+def add_file_sink_to_statement_set(
+    t_env: StreamTableEnvironment,
+    statement_set: StatementSet,
+    table: NativeFlinkTable,
+    sink: FileSystemSink,
+) -> None:
     path = sink.path
     # TODO: Remove this check after FLINK-28513 is resolved.
     if sink.data_format == DataFormat.CSV and path.startswith("s3://"):
@@ -97,4 +100,4 @@ def insert_into_file_sink(
     for k, v in flink_format_config.items():
         descriptor_builder.option(k, v)
 
-    return table.execute_insert(descriptor_builder.build())
+    statement_set.add_insert(descriptor_builder.build(), table)

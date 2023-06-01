@@ -17,13 +17,11 @@ import os
 import tempfile
 import uuid
 from concurrent.futures import ThreadPoolExecutor, Future, Executor
-from datetime import datetime
 from subprocess import Popen
-from typing import Dict, Optional, List, Union
+from typing import Dict, Optional, List, Sequence
 
 import cloudpickle
 import kubernetes.watch
-import pandas as pd
 from kubernetes.client import (
     CoreV1Api,
     AppsV1Api,
@@ -35,7 +33,6 @@ from kubernetes.config import load_kube_config
 from pyflink.find_flink_home import _find_flink_home  # noqa
 
 from feathub.common.exceptions import FeathubException
-from feathub.feature_tables.feature_table import FeatureTable
 from feathub.processors.flink.flink_processor_config import (
     FlinkProcessorConfig,
     KUBERNETES_IMAGE_CONFIG,
@@ -49,6 +46,9 @@ from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
 )
 from feathub.processors.flink.job_submitter.flink_job_submitter import (
     FlinkJobSubmitter,
+)
+from feathub.processors.materialization_descriptor import (
+    MaterializationDescriptor,
 )
 from feathub.processors.processor_job import ProcessorJob
 from feathub.table.table_descriptor import TableDescriptor
@@ -95,22 +95,12 @@ class FlinkKubernetesApplicationClusterJobSubmitter(FlinkJobSubmitter):
 
     def submit(
         self,
-        features: TableDescriptor,
-        keys: Union[pd.DataFrame, TableDescriptor, None],
-        start_datetime: Optional[datetime],
-        end_datetime: Optional[datetime],
-        sink: FeatureTable,
+        materialization_descriptors: Sequence[MaterializationDescriptor],
         local_registry_tables: Dict[str, TableDescriptor],
-        allow_overwrite: bool,
     ) -> "FlinkApplicationClusterJob":
         job_descriptor = FeathubJobDescriptor(
-            features=features,
-            keys=keys,
-            start_datetime=start_datetime,
-            end_datetime=end_datetime,
-            sink=sink,
+            materialization_descriptors=materialization_descriptors,
             local_registry_tables=local_registry_tables,
-            allow_overwrite=allow_overwrite,
             props=self.processor_config.original_props,
         )
 

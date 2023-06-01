@@ -40,6 +40,7 @@ from feathub.feature_views.transforms.tests.test_python_udf_transform import (
 from feathub.processors.spark.spark_processor import SparkProcessor
 from feathub.registries.local_registry import LocalRegistry
 from feathub.tests.test_get_features import GetFeaturesITTest
+from feathub.tests.test_materialize_features import MaterializeFeaturesITTest
 from feathub.tests.test_online_features import OnlineFeaturesITTest
 
 
@@ -90,6 +91,7 @@ class SparkProcessorITTest(
     JoinTransformITTest,
     GetFeaturesITTest,
     DerivedFeatureViewITTest,
+    MaterializeFeaturesITTest,
 ):
     __test__ = True
 

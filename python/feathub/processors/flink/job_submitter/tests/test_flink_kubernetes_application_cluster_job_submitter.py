@@ -31,6 +31,9 @@ from feathub.processors.flink.job_submitter.feathub_job_descriptor import (
 from feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster_job_submitter import (  # noqa
     FlinkKubernetesApplicationClusterJobSubmitter,
 )
+from feathub.processors.materialization_descriptor import (
+    MaterializationDescriptor,
+)
 from feathub.table.schema import Schema
 
 
@@ -94,7 +97,16 @@ class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
             "Popen",
             return_value=mock_popen_return,
         ) as mock_method:
-            self.submitter.submit(source, None, None, None, sink, {}, True)
+            self.submitter.submit(
+                materialization_descriptors=[
+                    MaterializationDescriptor(
+                        feature_descriptor=source,
+                        sink=sink,
+                        allow_overwrite=True,
+                    )
+                ],
+                local_registry_tables={},
+            )
             core_v1_api = self.submitter.kube_core_v1_api
             core_v1_api.create_namespaced_config_map.assert_called_once()
             create_config_map_call_args = (
@@ -102,14 +114,15 @@ class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
             )
             binary_data = create_config_map_call_args[1]["body"].binary_data
             expected_job_descriptor = FeathubJobDescriptor(
-                source,
-                None,
-                None,
-                None,
-                sink,
-                {},
-                True,
-                self.submitter.processor_config.original_props,
+                materialization_descriptors=[
+                    MaterializationDescriptor(
+                        feature_descriptor=source,
+                        sink=sink,
+                        allow_overwrite=True,
+                    )
+                ],
+                local_registry_tables={},
+                props=self.submitter.processor_config.original_props,
             )
             self.assertEqual(
                 expected_job_descriptor,
@@ -159,7 +172,16 @@ class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
             "Popen",
             return_value=mock_popen_return,
         ) as mock_method:
-            self.submitter.submit(source, None, None, None, sink, {}, True)
+            self.submitter.submit(
+                materialization_descriptors=[
+                    MaterializationDescriptor(
+                        feature_descriptor=source,
+                        sink=sink,
+                        allow_overwrite=True,
+                    )
+                ],
+                local_registry_tables={},
+            )
             mock_method.assert_called_once()
             popen_call_args = mock_method.call_args
             args = popen_call_args[1]["args"]
@@ -185,7 +207,14 @@ class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
             return_value=mock_popen_return,
         ):
             self.submitter.submit(
-                source, None, None, None, sink, {"table": table}, True
+                materialization_descriptors=[
+                    MaterializationDescriptor(
+                        feature_descriptor=source,
+                        sink=sink,
+                        allow_overwrite=True,
+                    )
+                ],
+                local_registry_tables={"table": table},
             )
             core_v1_api = self.submitter.kube_core_v1_api
             core_v1_api.create_namespaced_config_map.assert_called_once()
@@ -194,14 +223,15 @@ class FlinkKubernetesApplicationClusterJobSubmitterTest(unittest.TestCase):
             )
             binary_data = create_config_map_call_args[1]["body"].binary_data
             expected_job_descriptor = FeathubJobDescriptor(
-                source,
-                None,
-                None,
-                None,
-                sink,
-                {"table": table},
-                True,
-                self.submitter.processor_config.original_props,
+                [
+                    MaterializationDescriptor(
+                        feature_descriptor=source,
+                        sink=sink,
+                        allow_overwrite=True,
+                    )
+                ],
+                local_registry_tables={"table": table},
+                props=self.submitter.processor_config.original_props,
             )
             self.assertEqual(
                 expected_job_descriptor,

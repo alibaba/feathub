@@ -12,9 +12,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from pyflink.table import (
-    TableResult,
     Table as NativeFlinkTable,
     TableDescriptor as NativeFlinkTableDescriptor,
+    StatementSet,
 )
 
 from feathub.processors.flink.table_builder.source_sink_utils_common import (
@@ -22,9 +22,12 @@ from feathub.processors.flink.table_builder.source_sink_utils_common import (
 )
 
 
-def insert_into_print_sink(table: NativeFlinkTable) -> TableResult:
-    return table.execute_insert(
+def add_print_sink_to_statement_set(
+    statement_set: StatementSet, table: NativeFlinkTable
+) -> None:
+    statement_set.add_insert(
         NativeFlinkTableDescriptor.for_connector("print")
         .schema(get_schema_from_table(table))
-        .build()
+        .build(),
+        table,
     )

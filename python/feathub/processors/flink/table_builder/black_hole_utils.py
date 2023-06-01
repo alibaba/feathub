@@ -12,13 +12,15 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from pyflink.table import (
-    TableResult,
     Table as NativeFlinkTable,
     TableDescriptor as NativeFlinkTableDescriptor,
+    StatementSet,
 )
 
 
-def insert_into_black_hole_sink(table: NativeFlinkTable) -> TableResult:
-    return table.execute_insert(
-        NativeFlinkTableDescriptor.for_connector("blackhole").build()
+def add_black_hole_sink_to_statement_set(
+    statement_set: StatementSet, table: NativeFlinkTable
+) -> None:
+    statement_set.add_insert(
+        NativeFlinkTableDescriptor.for_connector("blackhole").build(), table
     )

@@ -53,6 +53,7 @@ from feathub.processors.local.local_processor import (
 )
 from feathub.processors.spark.tests.test_spark_processor import SparkProcessorITTest
 from feathub.tests.test_get_features import GetFeaturesITTest
+from feathub.tests.test_materialize_features import MaterializeFeaturesITTest
 from feathub.tests.test_online_features import OnlineFeaturesITTest
 
 
@@ -99,6 +100,7 @@ class LocalProcessorITTest(
     SlidingWindowTransformITTest,
     DerivedFeatureViewITTest,
     SlidingFeatureViewITTest,
+    MaterializeFeaturesITTest,
 ):
     __test__ = True
 
