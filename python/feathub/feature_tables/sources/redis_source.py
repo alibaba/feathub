@@ -114,12 +114,20 @@ class RedisSource(FeatureTable):
         self.namespace = namespace
         self.key_expr = key_expr
 
-        if NAMESPACE_KEYWORD not in key_expr or FEATURE_NAME_KEYWORD not in key_expr:
+        if NAMESPACE_KEYWORD not in key_expr:
             raise FeathubException(
-                f"key_expr {key_expr} should contain {NAMESPACE_KEYWORD} and "
-                f"{FEATURE_NAME_KEYWORD} in order to guarantee the uniqueness of "
-                f"feature keys in Redis."
+                f"key_expr {key_expr} should contain {NAMESPACE_KEYWORD} in order "
+                f"to guarantee the uniqueness of feature keys in Redis."
             )
+
+        if FEATURE_NAME_KEYWORD not in key_expr:
+            feature_names = [x for x in schema.field_names if x not in keys]
+            if len(feature_names) > 1:
+                raise FeathubException(
+                    "In order to guarantee the uniqueness of feature keys in Redis, "
+                    f"key_expr {key_expr} should contain {FEATURE_NAME_KEYWORD},"
+                    f" or the input table should contain only one feature field."
+                )
 
         if KEYS_KEYWORD not in key_expr and any(key not in key_expr for key in keys):
             raise FeathubException(

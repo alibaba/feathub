@@ -19,7 +19,6 @@ from feathub.feature_tables.sinks.sink import Sink
 from feathub.feature_tables.sources.redis_source import (
     RedisMode,
     NAMESPACE_KEYWORD,
-    FEATURE_NAME_KEYWORD,
 )
 
 
@@ -81,11 +80,10 @@ class RedisSink(Sink):
         self.db_num = db_num
         self.key_expr = key_expr
 
-        if NAMESPACE_KEYWORD not in key_expr or FEATURE_NAME_KEYWORD not in key_expr:
+        if NAMESPACE_KEYWORD not in key_expr:
             raise FeathubException(
-                f"key_expr {key_expr} should contain {NAMESPACE_KEYWORD} and "
-                f"{FEATURE_NAME_KEYWORD} in order to guarantee the uniqueness of "
-                f"feature keys in Redis."
+                f"key_expr {key_expr} should contain {NAMESPACE_KEYWORD} in order "
+                f"to guarantee the uniqueness of feature keys in Redis."
             )
 
         if mode == RedisMode.CLUSTER and db_num != 0:
