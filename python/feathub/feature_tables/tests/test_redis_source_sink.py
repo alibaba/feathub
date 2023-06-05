@@ -673,7 +673,7 @@ class RedisSourceSinkStandaloneModeITTest(ABC, FeathubITTestBase):
             self.redis_container.get_client(),
         )
 
-    def test_illegal_key_expr(self):
+    def test_key_expr_without_namespace(self):
         try:
             RedisSink(
                 namespace="test_namespace",
@@ -687,9 +687,80 @@ class RedisSourceSinkStandaloneModeITTest(ABC, FeathubITTestBase):
         except FeathubException as err:
             self.assertEqual(
                 str(err),
-                "key_expr __FEATURE_NAME__ should contain __NAMESPACE__ and "
-                "__FEATURE_NAME__ in order to guarantee the uniqueness of "
-                "feature keys in Redis.",
+                "key_expr __FEATURE_NAME__ should contain __NAMESPACE__ in order "
+                "to guarantee the uniqueness of feature keys in Redis.",
+            )
+
+    def test_key_expr_without_feature_name(self):
+        input_data = pd.DataFrame(
+            [
+                ["Alex", "ItemA", "2022-01-01 08:01:00"],
+                ["Emma", "ItemB", "2022-01-01 08:02:00"],
+                ["Alex", "ItemB", "2022-01-03 08:03:00"],
+            ],
+            columns=["name", "item", "time"],
+        )
+
+        schema = (
+            Schema.new_builder()
+            .column("name", types.String)
+            .column("item", types.String)
+            .column("time", types.String)
+            .build()
+        )
+
+        try:
+            RedisSource(
+                name="redis_source",
+                keys=["name"],
+                schema=schema,
+                host="127.0.0.1",
+                key_expr="CONCAT_WS(__NAMESPACE__, __KEYS__)",
+            )
+            self.fail("FeathubException should be raised.")
+        except FeathubException as err:
+            self.assertEqual(
+                str(err),
+                "In order to guarantee the uniqueness of feature keys in Redis, "
+                "key_expr CONCAT_WS(__NAMESPACE__, __KEYS__) should contain "
+                "__FEATURE_NAME__, or the input table should contain only one "
+                "feature field.",
+            )
+
+        # Initialization of RedisSource can pass when there is only one feature field.
+        RedisSource(
+            name="redis_source",
+            keys=["name", "time"],
+            schema=schema,
+            host="127.0.0.1",
+            key_expr="CONCAT_WS(__NAMESPACE__, __KEYS__)",
+        )
+
+        source = self.create_file_source(
+            df=input_data,
+            keys=["name"],
+            schema=schema,
+            data_format="csv",
+        )
+
+        sink = RedisSink(
+            namespace="test_namespace",
+            host="127.0.0.1",
+            key_expr="CONCAT_WS(__NAMESPACE__, __KEYS__)",
+        )
+
+        try:
+            self.client.materialize_features(
+                feature_descriptor=source, sink=sink, allow_overwrite=True
+            )
+            self.fail("FeathubException should be raised.")
+        except FeathubException as err:
+            self.assertEqual(
+                str(err),
+                "In order to guarantee the uniqueness of feature keys in Redis, "
+                "key_expr CONCAT_WS(__NAMESPACE__, __KEYS__) should contain "
+                "__FEATURE_NAME__, or the input table should contain only one "
+                "feature field.",
             )
 
     def test_redis_source_join_standalone_mode(self):

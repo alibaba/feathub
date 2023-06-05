@@ -170,6 +170,13 @@ def add_redis_sink_to_statement_set(
         if x.name not in features_desc.keys
     ]
 
+    if FEATURE_NAME_KEYWORD not in sink.key_expr and len(feature_names) > 1:
+        raise FeathubException(
+            "In order to guarantee the uniqueness of feature keys in Redis, "
+            f"key_expr {sink.key_expr} should contain {FEATURE_NAME_KEYWORD},"
+            f" or the input table should contain only one feature field."
+        )
+
     features_table, _ = append_physical_key_columns_per_feature(
         features_table,
         sink.key_expr,
