@@ -57,8 +57,6 @@ class HiveSource(FeatureTable):
         hive_catalog_conf_dir: str,
         schema: Schema,
         keys: Optional[List[str]] = None,
-        timestamp_field: Optional[str] = None,
-        timestamp_format: str = "epoch",
         processor_specific_props: Optional[Dict[str, str]] = None,
     ):
         """
@@ -75,12 +73,6 @@ class HiveSource(FeatureTable):
         :param keys: Optional. The names of fields in this feature view that are
                      necessary to interpret a row of this table. If it is not None, it
                      must be a superset of keys of any feature in this table.
-        :param timestamp_field: Optional. If it is not None, it is the name of the field
-                                whose values show the time when the corresponding row
-                                is generated.
-        :param timestamp_format: The format of the timestamp field. See TableDescriptor
-                                 for valid format values. Only effective when the
-                                 `timestamp_field` is not None.
         :param processor_specific_props: Extra properties to be passthrough to the
                                          processor. The available configurations are
                                          different for different processors.
@@ -97,8 +89,7 @@ class HiveSource(FeatureTable):
             },
             keys=keys,
             schema=schema,
-            timestamp_field=timestamp_field,
-            timestamp_format=timestamp_format,
+            timestamp_field=None,
         )
         self.name = name
         self.table = table
@@ -106,6 +97,9 @@ class HiveSource(FeatureTable):
         self.hive_catalog_conf_dir = hive_catalog_conf_dir
         self.database = database
         self.processor_specific_props = processor_specific_props
+
+    def is_bounded(self) -> bool:
+        return False
 
     @append_metadata_to_json
     def to_json(self) -> Dict:
@@ -116,8 +110,6 @@ class HiveSource(FeatureTable):
             "schema": None if self.schema is None else self.schema.to_json(),
             "keys": self.keys,
             "hive_catalog_conf_dir": self.hive_catalog_conf_dir,
-            "timestamp_field": self.timestamp_field,
-            "timestamp_format": self.timestamp_format,
             "processor_specific_props": self.processor_specific_props,
         }
 
@@ -127,12 +119,10 @@ class HiveSource(FeatureTable):
             name=json_dict["name"],
             database=json_dict["database"],
             table=json_dict["table"],
-            schema=from_json(json_dict["name"])
-            if json_dict["name"] is not None
+            schema=from_json(json_dict["schema"])
+            if json_dict["schema"] is not None
             else None,
             keys=json_dict["keys"],
             hive_catalog_conf_dir=json_dict["hive_catalog_conf_dir"],
-            timestamp_field=json_dict["timestamp_field"],
-            timestamp_format=json_dict["timestamp_format"],
             processor_specific_props=json_dict["processor_specific_props"],
         )
