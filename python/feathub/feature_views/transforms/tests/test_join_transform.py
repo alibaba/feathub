@@ -327,3 +327,46 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
         self.assertListEqual(["name"], built_feature_view_2.keys)
         self.assertListEqual(["name"], built_feature_view_3.keys)
         self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_join_right_table_without_timestamp(self):
+        df_1 = self.input_data.copy()
+        source = self.create_file_source(df_1)
+        df_2 = pd.DataFrame(
+            [
+                ["Alex", 100.0, "2022-01-01,09:01:00"],
+                ["Emma", 400.0, "2022-01-01,09:02:00"],
+                ["Alex", 200.0, "2022-01-02,07:03:00"],
+                ["Emma", 300.0, "2022-01-02,09:04:00"],
+                ["Jack", 500.0, "2022-01-03,09:05:00"],
+                ["Alex", 450.0, "2022-01-03,09:06:00"],
+            ],
+            columns=["name", "avg_cost", "time"],
+        )
+        source_2 = self.create_file_source(
+            df_2,
+            schema=Schema(["name", "avg_cost", "time"], [String, Float64, String]),
+            timestamp_field=None,
+            keys=["name"],
+        )
+        feature_view = DerivedFeatureView(
+            name="feature_view_2",
+            source=source,
+            features=[
+                Feature(
+                    name="cost",
+                    transform="cost",
+                ),
+                "distance",
+                f"{source_2.name}.avg_cost",
+            ],
+            keep_source_fields=False,
+        )
+
+        [_, feature_view] = self.client.build_features([source_2, feature_view])
+
+        with self.assertRaises(FeathubException) as cm:
+            self.client.get_features(feature_view).to_pandas()
+
+        message_key_words = {"join", "timestamp", "field"}
+        for word in message_key_words:
+            self.assertIn(word, cm.exception.args[0].lower())

@@ -33,6 +33,12 @@ from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_
 from feathub.processors.flink.flink_types_utils import to_flink_sql_type
 
 
+DEFAULT_PROPS = {
+    "streaming-source.enable": "true",
+    "streaming-source.partition-order": "create-time",
+}
+
+
 def _get_hive_connector_jars() -> list:
     lib_dir = find_jar_lib()
     jar_patterns = [
@@ -83,12 +89,17 @@ def _create_table_if_not_exists(
     schema_sql = ", ".join(field_name_type)
 
     if processor_specific_props:
-        property_sql = ", ".join(
-            f"'{key}' = '{value}'" for key, value in processor_specific_props.items()
-        )
-        property_sql = f" TBLPROPERTIES({property_sql})"
+        processor_specific_props = {
+            **DEFAULT_PROPS,
+            **processor_specific_props,
+        }
     else:
-        property_sql = ""
+        processor_specific_props = DEFAULT_PROPS
+
+    property_sql = ", ".join(
+        f"'{key}' = '{value}'" for key, value in processor_specific_props.items()
+    )
+    property_sql = f" TBLPROPERTIES({property_sql})"
 
     create_table_statement = (
         f"CREATE TABLE IF NOT EXISTS {table} ({schema_sql}){property_sql};"
