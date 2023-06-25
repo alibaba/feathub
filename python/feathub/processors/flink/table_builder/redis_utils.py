@@ -196,6 +196,7 @@ def add_redis_sink_to_statement_set(
         .option("host", sink.host)
         .option("port", str(sink.port))
         .option("dbNum", str(sink.db_num))
+        .option("enableHashPartialUpdate", str(sink.enable_hash_partial_update))
     )
 
     if sink.username is not None:

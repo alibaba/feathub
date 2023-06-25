@@ -33,6 +33,7 @@ class RedisSink(Sink):
         db_num: int = 0,
         namespace: str = "default",
         key_expr: str = 'CONCAT_WS(":", __NAMESPACE__, __KEYS__, __FEATURE_NAME__)',
+        enable_hash_partial_update: bool = False,
     ):
         """
         :param host: The host of the Redis instance to connect.
@@ -60,6 +61,9 @@ class RedisSink(Sink):
                          If not explicitly specified, the key would be a combination of
                          the namespace, all key field values, and the name of the
                          feature.
+        :param enable_hash_partial_update: If true, map-typed data (or hash in Redis)
+                                           would be partially updated instead of
+                                           completely overridden by new data.
         """
         super().__init__(
             name="",
@@ -79,6 +83,7 @@ class RedisSink(Sink):
         self.password = password
         self.db_num = db_num
         self.key_expr = key_expr
+        self.enable_hash_partial_update = enable_hash_partial_update
 
         if NAMESPACE_KEYWORD not in key_expr:
             raise FeathubException(
@@ -102,6 +107,7 @@ class RedisSink(Sink):
             "password": self.password,
             "db_num": self.db_num,
             "key_expr": self.key_expr,
+            "enable_hash_partial_update": self.enable_hash_partial_update,
         }
 
     @classmethod
@@ -115,4 +121,5 @@ class RedisSink(Sink):
             password=json_dict["password"],
             db_num=json_dict["db_num"],
             key_expr=json_dict["key_expr"],
+            enable_hash_partial_update=json_dict["enable_hash_partial_update"],
         )

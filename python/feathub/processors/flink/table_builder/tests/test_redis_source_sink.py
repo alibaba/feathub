@@ -67,6 +67,7 @@ class RedisSourceSinkTest(unittest.TestCase):
                 "port": "6379",
                 "password": "123456",
                 "dbNum": "3",
+                "enableHashPartialUpdate": "False",
             }
             self.assertEquals(
                 expected_options, dict(flink_table_descriptor.get_options())

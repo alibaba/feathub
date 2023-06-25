@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.DB_NUM;
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.ENABLE_HASH_PARTIAL_UPDATE;
 import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.HOST;
 import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.KEY_FIELDS;
 import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.PASSWORD;
@@ -79,6 +80,7 @@ public class RedisDynamicTableFactory
         options.add(USERNAME);
         options.add(PASSWORD);
         options.add(KEY_FIELDS);
+        options.add(ENABLE_HASH_PARTIAL_UPDATE);
         return options;
     }
 }
