@@ -38,6 +38,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.ENABLE_HASH_PARTIAL_UPDATE;
+
 /**
  * A {@link org.apache.flink.streaming.api.functions.sink.SinkFunction} that writes to a Redis
  * database.
@@ -57,6 +59,8 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
 
     private final DataType[] fieldTypes;
 
+    private final boolean enableHashPartialUpdate;
+
     private transient JedisClient client;
 
     public RedisSinkFunction(ReadableConfig config, ResolvedSchema schema) {
@@ -65,6 +69,7 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
         this.fieldTypes = schema.getColumnDataTypes().toArray(new DataType[0]);
         this.valueFieldIndices = getValueFieldIndices(schema);
         this.keyFieldIndices = getKeyFieldIndices(schema, valueFieldIndices);
+        this.enableHashPartialUpdate = config.get(ENABLE_HASH_PARTIAL_UPDATE);
 
         Preconditions.checkArgument(
                 schema.getColumnCount() % 2 == 0,
@@ -89,17 +94,23 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
             int valueFieldIndex = valueFieldIndices[i];
             DataType dataType = fieldTypes[valueFieldIndex];
             if (dataType instanceof KeyValueDataType) {
-                Set<String> oldKeys = client.hkeys(key);
                 Map<String, String> newMap =
                         ConversionUtils.toMap(
                                 data.getMap(valueFieldIndex), (KeyValueDataType) dataType);
-                Set<String> keysToRemove = new HashSet<>(oldKeys);
-                keysToRemove.removeAll(newMap.keySet());
-                if (keysToRemove.equals(oldKeys)) {
-                    client.del(key);
-                } else {
-                    client.hdel(key, keysToRemove.toArray(new String[0]));
+
+                if (!enableHashPartialUpdate) {
+                    Set<String> oldKeys = client.hkeys(key);
+                    Set<String> keysToRemove = new HashSet<>(oldKeys);
+                    keysToRemove.removeAll(newMap.keySet());
+                    if (!keysToRemove.isEmpty()) {
+                        if (keysToRemove.equals(oldKeys)) {
+                            client.del(key);
+                        } else {
+                            client.hdel(key, keysToRemove.toArray(new String[0]));
+                        }
+                    }
                 }
+
                 client.hmset(key, newMap);
             } else if (dataType instanceof CollectionDataType) {
                 List<String> oldList = client.lrange(key, 0, -1);

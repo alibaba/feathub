@@ -293,6 +293,55 @@ def _test_redis_sink_update_entry(
     redis_client.close()
 
 
+def _test_redis_sink_update_entry_enable_hash_partial_update(
+    self: FeathubITTestBase,
+    host: str,
+    port: int,
+    mode: str,
+    redis_client: Union[Redis, RedisCluster],
+):
+    input_data = pd.DataFrame(
+        [[1, {"key1": False, "key2": True}], [1, {"key2": False, "key3": True}]],
+        columns=["id", "val"],
+    )
+
+    schema = (
+        Schema.new_builder()
+        .column("id", types.Int64)
+        .column("val", types.MapType(types.String, types.Bool))
+        .build()
+    )
+
+    source = self.create_file_source(
+        input_data,
+        keys=["id"],
+        schema=schema,
+        timestamp_field=None,
+        data_format="json",
+    )
+
+    sink = RedisSink(
+        namespace="test_namespace",
+        mode=mode,
+        host=host,
+        port=port,
+        enable_hash_partial_update=True,
+    )
+
+    self.client.materialize_features(
+        features=source,
+        sink=sink,
+        allow_overwrite=True,
+    ).wait(30000)
+
+    self.assertEquals(
+        redis_client.hgetall("test_namespace:1:val"),
+        {b"key1": b"false", b"key2": b"false", b"key3": b"true"},
+    )
+
+    redis_client.close()
+
+
 def _test_redis_sink_custom_key(
     self: FeathubITTestBase,
     host: str,
@@ -660,6 +709,19 @@ class RedisSourceSinkStandaloneModeITTest(ABC, FeathubITTestBase):
             self.redis_container.get_client(),
         )
 
+    def test_redis_sink_update_entry_enable_hash_partial_update_standalone_mode(self):
+        _test_redis_sink_update_entry_enable_hash_partial_update(
+            self,
+            "127.0.0.1",
+            int(
+                self.redis_container.get_exposed_port(
+                    self.redis_container.port_to_expose
+                )
+            ),
+            "standalone",
+            self.redis_container.get_client(),
+        )
+
     def test_redis_sink_custom_key_standalone_mode(self):
         _test_redis_sink_custom_key(
             self,
@@ -834,6 +896,15 @@ class RedisSourceSinkClusterModeITTest(ABC, FeathubITTestBase):
 
     def test_redis_sink_update_entry_cluster_mode(self):
         _test_redis_sink_update_entry(
+            self,
+            "127.0.0.1",
+            7000,
+            "cluster",
+            self.redis_cluster_container.get_client(),
+        )
+
+    def test_redis_sink_update_entry_enable_hash_partial_update_cluster_mode(self):
+        _test_redis_sink_update_entry_enable_hash_partial_update(
             self,
             "127.0.0.1",
             7000,

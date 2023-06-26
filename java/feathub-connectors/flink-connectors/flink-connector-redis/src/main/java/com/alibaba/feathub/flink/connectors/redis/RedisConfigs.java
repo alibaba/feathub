@@ -66,6 +66,14 @@ public class RedisConfigs {
                             "A comma-separated list of field names in the input table containing "
                                     + "the key values used to derive Redis keys. Used in lookup source.");
 
+    public static final ConfigOption<Boolean> ENABLE_HASH_PARTIAL_UPDATE =
+            ConfigOptions.key("enableHashPartialUpdate")
+                    .booleanType()
+                    .defaultValue(false)
+                    .withDescription(
+                            "If true, map-typed data (or hash in Redis) would be partially updated "
+                                    + "instead of completely overridden by new data.");
+
     /** Supported Redis deployment modes. */
     public enum RedisMode {
         STANDALONE,
