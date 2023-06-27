@@ -31,6 +31,7 @@ class HiveSink(Sink):
         table: str,
         hive_catalog_conf_dir: str,
         processor_specific_props: Optional[Dict[str, str]] = None,
+        keep_timestamp_field: bool = True,
     ):
         """
         :param database: The database to write to.
@@ -44,6 +45,9 @@ class HiveSink(Sink):
         :param processor_specific_props: Extra properties to be passthrough to the
                                          processor. The available configurations are
                                          different for different processors.
+        :param keep_timestamp_field: True if the timestamp field of the feature table
+                                     should be persisted to the external system through
+                                     the sink.
         """
         super().__init__(
             name="",
@@ -54,6 +58,7 @@ class HiveSink(Sink):
                 ),
                 "database": database,
             },
+            keep_timestamp_field=keep_timestamp_field,
         )
         self.database = database
         self.table = table
@@ -67,6 +72,7 @@ class HiveSink(Sink):
             "table": self.table,
             "hive_catalog_conf_dir": self.hive_catalog_conf_dir,
             "processor_specific_props": self.processor_specific_props,
+            "keep_timestamp_field": self.keep_timestamp_field,
         }
 
     @classmethod
@@ -76,4 +82,5 @@ class HiveSink(Sink):
             table=json_dict["table"],
             hive_catalog_conf_dir=json_dict["hive_catalog_conf_dir"],
             processor_specific_props=json_dict["processor_specific_props"],
+            keep_timestamp_field=json_dict["keep_timestamp_field"],
         )

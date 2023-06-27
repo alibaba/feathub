@@ -173,7 +173,10 @@ def lookup_join(
     """
     Lookup join the right table to the left table.
     """
-    left = _append_processing_time_attribute_if_not_exist(t_env, left)
+    is_processing_time_attribute_appended = False
+    if PROCESSING_TIME_ATTRIBUTE_NAME not in left.get_schema().get_field_names():
+        is_processing_time_attribute_appended = True
+        left = _append_processing_time_attribute(t_env, left)
 
     t_env.create_temporary_view("left_table", left)
     t_env.create_temporary_view("right_table", right)
@@ -193,18 +196,20 @@ def lookup_join(
     t_env.drop_temporary_view("left_table")
     t_env.drop_temporary_view("right_table")
 
+    if is_processing_time_attribute_appended:
+        result_table = result_table.drop_columns(
+            native_flink_expr.col(PROCESSING_TIME_ATTRIBUTE_NAME)
+        )
+
     return result_table
 
 
 # TODO: figure out why Flink SQL requires a processing time attribute for lookup join
 #  and see if there is space for improvement on Flink API.
-def _append_processing_time_attribute_if_not_exist(
+def _append_processing_time_attribute(
     t_env: StreamTableEnvironment,
     table: NativeFlinkTable,
 ) -> NativeFlinkTable:
-    if PROCESSING_TIME_ATTRIBUTE_NAME in table.get_schema().get_field_names():
-        return table
-
     tmp_table_name = generate_random_table_name("tmp_table")
 
     t_env.create_temporary_view(tmp_table_name, table)

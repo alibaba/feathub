@@ -41,7 +41,6 @@ from feathub.feature_tables.sources.redis_source import (
     KEY_COLUMN_PREFIX,
 )
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
-from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_env
 from feathub.processors.flink.flink_types_utils import to_flink_schema
 from feathub.processors.flink.table_builder.flink_sql_expr_utils import (
@@ -80,7 +79,7 @@ def append_physical_key_columns_per_feature(
     table: NativeFlinkTable,
     key_expr: str,
     namespace: str,
-    keys: List[str],
+    keys: Sequence[str],
     feature_names: List[str],
 ) -> Tuple[NativeFlinkTable, List[str]]:
     """
@@ -273,21 +272,16 @@ def add_redis_sink_to_statement_set(
     t_env: StreamTableEnvironment,
     statement_set: StatementSet,
     features_table: NativeFlinkTable,
-    features_desc: TableDescriptor,
+    keys: Sequence[str],
     sink: RedisSink,
 ) -> None:
-    if features_desc.keys is None:
+    if keys is None:
         raise FeathubException("Tables to be materialized to Redis must have keys.")
 
     add_jar_to_t_env(t_env, *_get_redis_connector_jars())
 
-    if EVENT_TIME_ATTRIBUTE_NAME in features_table.get_schema().get_field_names():
-        features_table = features_table.drop_columns(
-            native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME)
-        )
-
     if KEYS_KEYWORD not in sink.key_expr and any(
-        key not in sink.key_expr for key in features_desc.keys
+        key not in sink.key_expr for key in keys
     ):
         raise FeathubException(
             f"key_expr {sink.key_expr} does not contain {KEYS_KEYWORD} and all key "
@@ -296,9 +290,7 @@ def add_redis_sink_to_statement_set(
         )
 
     feature_names = [
-        x.name
-        for x in features_desc.get_output_features()
-        if x.name not in features_desc.keys
+        x for x in features_table.get_schema().get_field_names() if x not in keys
     ]
 
     if FEATURE_NAME_KEYWORD not in sink.key_expr and len(feature_names) > 1:
@@ -312,12 +304,12 @@ def add_redis_sink_to_statement_set(
         features_table,
         sink.key_expr,
         sink.namespace,
-        features_desc.keys,
+        keys,
         feature_names,
     )
 
     features_table = features_table.drop_columns(
-        *[native_flink_expr.col(x) for x in features_desc.keys]
+        *[native_flink_expr.col(x) for x in keys]
     )
 
     redis_sink_descriptor_builder = (

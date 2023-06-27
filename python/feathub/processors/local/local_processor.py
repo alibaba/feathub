@@ -36,6 +36,7 @@ from feathub.feature_tables.sinks.black_hole_sink import BlackHoleSink
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
 from feathub.feature_tables.sinks.print_sink import PrintSink
+from feathub.feature_tables.sinks.sink import Sink
 from feathub.feature_tables.sources.datagen_source import DataGenSource
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
@@ -92,7 +93,7 @@ def _is_spark_supported_source(source: FeatureTable) -> bool:
     return isinstance(source, (FileSystemSource, DataGenSource))
 
 
-def _is_spark_supported_sink(sink: FeatureTable) -> bool:
+def _is_spark_supported_sink(sink: Sink) -> bool:
     return isinstance(
         sink,
         (
@@ -216,7 +217,7 @@ class LocalProcessor(Processor):
         self,
         features: TableDescriptor,
         features_df: pd.DataFrame,
-        sink: FeatureTable,
+        sink: Sink,
         allow_overwrite: bool = False,
     ) -> LocalJob:
 
@@ -328,7 +329,7 @@ class LocalProcessor(Processor):
         self,
         df: pd.DataFrame,
         features: TableDescriptor,
-        sink: FeatureTable,
+        sink: Sink,
         allow_overwrite: bool = False,
     ) -> LocalJob:
         try:

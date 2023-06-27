@@ -23,6 +23,7 @@ from feathub.feature_tables.sinks.black_hole_sink import BlackHoleSink
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
 from feathub.feature_tables.sinks.print_sink import PrintSink
+from feathub.feature_tables.sinks.sink import Sink
 from feathub.feature_tables.sources.datagen_source import DataGenSource
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
@@ -74,7 +75,7 @@ def insert_into_sink(
     executor: Executor,
     dataframe: NativeSparkDataFrame,
     features_desc: TableDescriptor,
-    sink: FeatureTable,
+    sink: Sink,
     allow_overwrite: bool,
 ) -> Future:
     """

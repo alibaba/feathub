@@ -16,7 +16,7 @@ from datetime import timedelta, datetime
 from typing import List, Union, Optional
 
 from feathub.common.exceptions import FeathubException
-from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sinks.sink import Sink
 from feathub.processors.materialization_descriptor import (
     MaterializationDescriptor,
 )
@@ -40,7 +40,7 @@ class MaterializationGroup:
     def materialize_features(
         self,
         feature_descriptor: Union[str, TableDescriptor],
-        sink: FeatureTable,
+        sink: Sink,
         ttl: Optional[timedelta] = None,
         start_datetime: Optional[datetime] = None,
         end_datetime: Optional[datetime] = None,

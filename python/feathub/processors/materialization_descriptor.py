@@ -17,7 +17,7 @@ from __future__ import annotations
 from datetime import timedelta, datetime
 from typing import Union, Optional, Any
 
-from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sinks.sink import Sink
 from feathub.table.table_descriptor import TableDescriptor
 
 
@@ -29,7 +29,7 @@ class MaterializationDescriptor:
     def __init__(
         self,
         feature_descriptor: Union[str, TableDescriptor],
-        sink: FeatureTable,
+        sink: Sink,
         ttl: Optional[timedelta] = None,
         start_datetime: Optional[datetime] = None,
         end_datetime: Optional[datetime] = None,

@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 
 from feathub.common.config import flatten_dict
 from feathub.common.utils import deprecated_alias
-from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sinks.sink import Sink
 from feathub.materialization_group import MaterializationGroup
 from feathub.processors.processor import Processor
 from feathub.registries.registry import Registry
@@ -88,7 +88,7 @@ class FeathubClient:
     def materialize_features(
         self,
         feature_descriptor: Union[str, TableDescriptor],
-        sink: FeatureTable,
+        sink: Sink,
         ttl: Optional[timedelta] = None,
         start_datetime: Optional[datetime] = None,
         end_datetime: Optional[datetime] = None,
