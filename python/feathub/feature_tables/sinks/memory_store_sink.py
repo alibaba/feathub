@@ -22,14 +22,22 @@ class MemoryStoreSink(Sink):
     A sink corresponding to a table in an online feature store.
     """
 
-    def __init__(self, table_name: str):
+    def __init__(
+        self,
+        table_name: str,
+        keep_timestamp_field: bool = True,
+    ):
         """
         :param table_name: The name of a table in the feature store.
+        :param keep_timestamp_field: True if the timestamp field of the feature table
+                                     should be persisted to the external system through
+                                     the sink.
         """
         super().__init__(
             name="",
             system_name="memory",
             table_uri={"table_name": table_name},
+            keep_timestamp_field=keep_timestamp_field,
         )
         self.table_name = table_name
 
@@ -37,8 +45,12 @@ class MemoryStoreSink(Sink):
     def to_json(self) -> Dict:
         return {
             "table_name": self.table_name,
+            "keep_timestamp_field": self.keep_timestamp_field,
         }
 
     @classmethod
     def from_json(cls, json_dict: Dict) -> "MemoryStoreSink":
-        return MemoryStoreSink(table_name=json_dict["table_name"])
+        return MemoryStoreSink(
+            table_name=json_dict["table_name"],
+            keep_timestamp_field=json_dict["keep_timestamp_field"],
+        )

@@ -98,6 +98,11 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
                         ConversionUtils.toMap(
                                 data.getMap(valueFieldIndex), (KeyValueDataType) dataType);
 
+                if (newMap == null || newMap.isEmpty()) {
+                    client.del(key);
+                    continue;
+                }
+
                 if (!enableHashPartialUpdate) {
                     Set<String> oldKeys = client.hkeys(key);
                     Set<String> keysToRemove = new HashSet<>(oldKeys);
@@ -113,10 +118,16 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
 
                 client.hmset(key, newMap);
             } else if (dataType instanceof CollectionDataType) {
-                List<String> oldList = client.lrange(key, 0, -1);
                 List<String> newList =
                         ConversionUtils.toList(
                                 data.getArray(valueFieldIndex), (CollectionDataType) dataType);
+
+                if (newList == null || newList.isEmpty()) {
+                    client.del(key);
+                    continue;
+                }
+
+                List<String> oldList = client.lrange(key, 0, -1);
                 int[] subListInfo = getLongestCommonSubList(oldList, newList);
                 int oldStartIndex = subListInfo[0];
                 int newStartIndex = subListInfo[1];
@@ -145,7 +156,12 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
                     }
                 }
             } else {
-                client.set(key, ConversionUtils.toString(data, valueFieldIndex, dataType));
+                String value = ConversionUtils.toString(data, valueFieldIndex, dataType);
+                if (value == null) {
+                    client.del(key);
+                } else {
+                    client.set(key, value);
+                }
             }
         }
 

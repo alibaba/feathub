@@ -27,6 +27,7 @@ class KafkaSink(Sink):
         producer_props: Optional[Dict[str, str]] = None,
         key_data_format_props: Optional[Dict[str, Any]] = None,
         value_data_format_props: Optional[Dict[str, Any]] = None,
+        keep_timestamp_field: bool = True,
     ):
         """
         :param bootstrap_server: Comma separated list of Kafka brokers.
@@ -45,11 +46,15 @@ class KafkaSink(Sink):
                                            Kafka message key.
         :param value_data_format_props: Optional. The properties of the format for
                                              Kafka message value.
+        :param keep_timestamp_field: True if the timestamp field of the feature table
+                                     should be persisted to the external system through
+                                     the sink.
         """
         super().__init__(
             name="",
             system_name="kafka",
             table_uri={"bootstrap_server": bootstrap_server, "topic": topic},
+            keep_timestamp_field=keep_timestamp_field,
         )
         self.bootstrap_server = bootstrap_server
         self.topic = topic
@@ -73,6 +78,7 @@ class KafkaSink(Sink):
             "producer_props": self.producer_props,
             "key_data_format_props": self.key_format_props,
             "value_data_format_props": self.value_format_props,
+            "keep_timestamp_field": self.keep_timestamp_field,
         }
 
     @classmethod
@@ -85,4 +91,5 @@ class KafkaSink(Sink):
             producer_props=json_dict["producer_props"],
             key_data_format_props=json_dict["key_data_format_props"],
             value_data_format_props=json_dict["value_data_format_props"],
+            keep_timestamp_field=json_dict["keep_timestamp_field"],
         )

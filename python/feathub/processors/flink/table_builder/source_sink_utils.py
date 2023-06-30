@@ -13,6 +13,7 @@
 #  limitations under the License.
 
 from pyflink.table import (
+    expressions as native_flink_expr,
     StreamTableEnvironment,
     Table as NativeFlinkTable,
     StatementSet,
@@ -27,6 +28,7 @@ from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sinks.mysql_sink import MySQLSink
 from feathub.feature_tables.sinks.print_sink import PrintSink
 from feathub.feature_tables.sinks.redis_sink import RedisSink
+from feathub.feature_tables.sinks.sink import Sink
 from feathub.feature_tables.sources.datagen_source import DataGenSource
 from feathub.feature_tables.sources.file_system_source import FileSystemSource
 from feathub.feature_tables.sources.hive_source import HiveSource
@@ -93,11 +95,16 @@ def add_sink_to_statement_set(
     statement_set: StatementSet,
     features_table: NativeFlinkTable,
     features_desc: TableDescriptor,
-    sink: FeatureTable,
+    sink: Sink,
 ) -> None:
     """
     Add an insert operation of the flink table to the given statement set.
     """
+
+    if not sink.keep_timestamp_field and features_desc.timestamp_field is not None:
+        features_table = features_table.drop_columns(
+            native_flink_expr.col(features_desc.timestamp_field),
+        )
 
     if isinstance(sink, FileSystemSink):
         add_file_sink_to_statement_set(t_env, statement_set, features_table, sink)
@@ -109,7 +116,7 @@ def add_sink_to_statement_set(
         add_print_sink_to_statement_set(statement_set, features_table)
     elif isinstance(sink, RedisSink):
         add_redis_sink_to_statement_set(
-            t_env, statement_set, features_table, features_desc, sink
+            t_env, statement_set, features_table, features_desc.keys, sink
         )
     elif isinstance(sink, HiveSink):
         add_hive_sink_to_statement_set(t_env, statement_set, features_table, sink)

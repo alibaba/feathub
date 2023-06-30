@@ -18,7 +18,7 @@ from typing import Optional, Union
 import pandas as pd
 
 from feathub.common.exceptions import FeathubException
-from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sinks.sink import Sink
 from feathub.processors.materialization_descriptor import (
     MaterializationDescriptor,
 )
@@ -110,7 +110,7 @@ class SparkTable(Table):
 
     def execute_insert(
         self,
-        sink: FeatureTable,
+        sink: Sink,
         ttl: Optional[timedelta] = None,
         allow_overwrite: bool = False,
     ) -> ProcessorJob:

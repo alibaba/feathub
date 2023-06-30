@@ -32,6 +32,7 @@ from feathub.feature_tables.sources.redis_source import (
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.transforms.join_transform import JoinTransform
+from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
 from feathub.online_stores.conversion_utils import to_python_object
 from feathub.table.schema import Schema
 from feathub.tests.feathub_it_test_base import FeathubITTestBase
@@ -81,6 +82,7 @@ def _generate_test_data():
                 1,
                 1,
                 datetime(2022, 1, 1, 0, 0, 0).strftime("%Y-%m-%d %H:%M:%S"),
+                datetime(2022, 1, 1, 0, 0, 0).strftime("%Y-%m-%d %H:%M:%S"),
                 {"key": True},
                 [1.0, 2.0],
                 {"key": {"key": True}},
@@ -89,6 +91,7 @@ def _generate_test_data():
             [
                 2,
                 2,
+                datetime(2022, 1, 1, 0, 0, 1).strftime("%Y-%m-%d %H:%M:%S"),
                 datetime(2022, 1, 1, 0, 0, 1).strftime("%Y-%m-%d %H:%M:%S"),
                 {"key": False},
                 [2.0, 3.0],
@@ -99,34 +102,50 @@ def _generate_test_data():
                 3,
                 3,
                 datetime(2022, 1, 1, 0, 0, 2).strftime("%Y-%m-%d %H:%M:%S"),
+                datetime(2022, 1, 1, 0, 0, 2).strftime("%Y-%m-%d %H:%M:%S"),
                 {"key": True},
                 [3.0, 4.0],
                 {"key": {"key": True}},
                 {"key": [3.0, 4.0]},
             ],
+            [
+                4,
+                None,
+                datetime(2022, 1, 1, 0, 0, 3).strftime("%Y-%m-%d %H:%M:%S"),
+                None,
+                None,
+                None,
+                None,
+                None,
+            ],
         ],
-        columns=["id", "val", "ts", "map", "list", "nested_map", "nested_list"],
+        # ts is the table's timestamp field, while ts2 is not.
+        columns=["id", "val", "ts", "ts2", "map", "list", "nested_map", "nested_list"],
     )
 
     redis_data = [
         (b"test_namespace:1:val", b"1"),
         (b"test_namespace:1:ts", b"2022-01-01 00:00:00"),
+        (b"test_namespace:1:ts2", b"2022-01-01 00:00:00"),
         (b"test_namespace:1:map", {b"key": b"true"}),
         (b"test_namespace:1:list", [b"1.0", b"2.0"]),
         (b"test_namespace:1:nested_map", {b"key": b'{"key":"true"}'}),
         (b"test_namespace:1:nested_list", {b"key": b'["1.0","2.0"]'}),
         (b"test_namespace:2:val", b"2"),
         (b"test_namespace:2:ts", b"2022-01-01 00:00:01"),
+        (b"test_namespace:2:ts2", b"2022-01-01 00:00:01"),
         (b"test_namespace:2:map", {b"key": b"false"}),
         (b"test_namespace:2:list", [b"2.0", b"3.0"]),
         (b"test_namespace:2:nested_map", {b"key": b'{"key":"false"}'}),
         (b"test_namespace:2:nested_list", {b"key": b'["2.0","3.0"]'}),
         (b"test_namespace:3:val", b"3"),
         (b"test_namespace:3:ts", b"2022-01-01 00:00:02"),
+        (b"test_namespace:3:ts2", b"2022-01-01 00:00:02"),
         (b"test_namespace:3:map", {b"key": b"true"}),
         (b"test_namespace:3:list", [b"3.0", b"4.0"]),
         (b"test_namespace:3:nested_map", {b"key": b'{"key":"true"}'}),
         (b"test_namespace:3:nested_list", {b"key": b'["3.0","4.0"]'}),
+        (b"test_namespace:4:ts", b"2022-01-01 00:00:03"),
     ]
 
     schema = (
@@ -134,6 +153,7 @@ def _generate_test_data():
         .column("id", types.Int64)
         .column("val", types.Int64)
         .column("ts", types.String)
+        .column("ts2", types.String)
         .column("map", types.MapType(types.String, types.Bool))
         .column("list", types.Float64Vector)
         .column(
@@ -154,9 +174,6 @@ def _test_redis_sink(
     mode: str,
     redis_client: Union[Redis, RedisCluster],
 ):
-    # TODO: Fix the bug that in flink processor when column "val"
-    #  contains None, all values in this column are saved as None
-    #  to Redis.
     dataframe_data, redis_data, schema = _generate_test_data()
 
     source = self.create_file_source(
@@ -181,7 +198,7 @@ def _test_redis_sink(
 
     if not isinstance(redis_client, RedisCluster):
         # Cluster client do not scan all nodes in the KEYS command
-        self.assertEquals(len(redis_client.keys("*")), dataframe_data.shape[0] * 6)
+        self.assertEquals(len(redis_client.keys("*")), len(redis_data))
 
     for data in redis_data:
         feature_name = data[0].decode("utf-8").split(":")[-1]
@@ -351,9 +368,6 @@ def _test_redis_sink_custom_key(
     mode: str,
     redis_client: Union[Redis, RedisCluster],
 ):
-    # TODO: Fix the bug that in flink processor when column "val"
-    #  contains None, all values in this column are saved as None
-    #  to Redis.
     input_data = pd.DataFrame(
         [
             [1, 1, [1.0, 2.0]],
@@ -406,6 +420,62 @@ def _test_redis_sink_custom_key(
     redis_client.close()
 
 
+def _test_redis_sink_not_keep_timestamp(
+    self: FeathubITTestBase,
+    host: str,
+    port: int,
+    mode: str,
+    redis_client: Union[Redis, RedisCluster],
+):
+    dataframe_data, redis_data, schema = _generate_test_data()
+
+    redis_data = [x for x in redis_data if not x[0].endswith(b"ts")]
+
+    source = self.create_file_source(
+        dataframe_data,
+        keys=["id"],
+        schema=schema,
+        timestamp_field="ts",
+        timestamp_format="%Y-%m-%d %H:%M:%S",
+        data_format="json",
+    )
+
+    sink = RedisSink(
+        namespace="test_namespace",
+        mode=mode,
+        host=host,
+        port=port,
+        keep_timestamp_field=False,
+    )
+
+    self.client.materialize_features(
+        feature_descriptor=source, sink=sink, allow_overwrite=True
+    ).wait(30000)
+
+    if not isinstance(redis_client, RedisCluster):
+        # Cluster client do not scan all nodes in the KEYS command
+        self.assertEquals(len(redis_client.keys("*")), len(redis_data))
+
+    for data in redis_data:
+        feature_name = data[0].decode("utf-8").split(":")[-1]
+        field_type = schema.get_field_type(feature_name)
+        keys = data[0].decode("utf-8").split(":")[1]
+
+        if isinstance(field_type, types.VectorType):
+            actual_result: Any = redis_client.lrange(data[0], 0, -1)
+        elif isinstance(field_type, types.MapType):
+            actual_result = redis_client.hgetall(data[0])
+        else:
+            actual_result = redis_client.get(data[0])
+
+        self.assertEquals(
+            dataframe_data[feature_name][int(keys) - 1],
+            to_python_object(actual_result, field_type),
+        )
+
+    redis_client.close()
+
+
 def _test_redis_source_join(
     self: FeathubITTestBase,
     host: str,
@@ -434,7 +504,7 @@ def _test_redis_source_join(
     )
 
     input_data = pd.DataFrame(
-        [[1], [2], [3]],
+        [[1], [2], [3], [4]],
         columns=["id"],
     )
 
@@ -455,6 +525,7 @@ def _test_redis_source_join(
             "id",
             f"{redis_source.name}.val",
             f"{redis_source.name}.ts",
+            f"{redis_source.name}.ts2",
             f"{redis_source.name}.map",
             f"{redis_source.name}.list",
             f"{redis_source.name}.nested_map",
@@ -757,6 +828,96 @@ def _test_redis_source_join_filter_map_key(
     redis_client.close()
 
 
+def _test_python_udf_on_redis_source_join(
+    self: FeathubITTestBase,
+    host: str,
+    port: int,
+    mode: str,
+    redis_client: Union[Redis, RedisCluster],
+):
+    redis_client.set("test_namespace:Alex:ItemA:cost", "100")
+    redis_client.set("test_namespace:Alex:ItemB:cost", "300")
+    redis_client.set("test_namespace:Emma:ItemA:cost", "400")
+    redis_client.set("test_namespace:Emma:ItemB:cost", "250")
+
+    redis_source = RedisSource(
+        name="redis_source",
+        namespace="test_namespace",
+        mode=mode,
+        host=host,
+        port=port,
+        keys=["name", "item"],
+        schema=(
+            Schema.new_builder()
+            .column("name", types.String)
+            .column("item", types.String)
+            .column("cost", types.Int64)
+            .build()
+        ),
+    )
+
+    input_data = pd.DataFrame(
+        [
+            ["Alex", "ItemA", "2022-01-01 08:01:00"],
+            ["Emma", "ItemB", "2022-01-01 08:02:00"],
+            ["Alex", "ItemB", "2022-01-03 08:03:00"],
+        ],
+        columns=["name", "item", "time"],
+    )
+
+    schema = (
+        Schema.new_builder()
+        .column("name", types.String)
+        .column("item", types.String)
+        .column("time", types.String)
+        .build()
+    )
+    source = self.create_file_source(
+        df=input_data,
+        keys=["item", "name"],
+        schema=schema,
+        data_format="csv",
+    )
+
+    feature_view = DerivedFeatureView(
+        name="feature_view",
+        source=source,
+        features=[
+            "name",
+            "item",
+            f"{redis_source.name}.cost",
+            Feature(
+                name="twice_cost",
+                dtype=types.Int64,
+                transform=PythonUdfTransform(lambda row: row["cost"] * 2),
+            ),
+        ],
+        keep_source_fields=False,
+    )
+
+    [_, built_feature_view] = self.client.build_features([redis_source, feature_view])
+
+    result_df = (
+        self.client.get_features(feature_descriptor=built_feature_view)
+        .to_pandas()
+        .sort_values(by=["name"])
+        .reset_index(drop=True)
+    )
+
+    expected_result = pd.DataFrame(
+        [
+            ["2022-01-01 08:01:00", "Alex", "ItemA", 100, 200],
+            ["2022-01-03 08:03:00", "Alex", "ItemB", 300, 600],
+            ["2022-01-01 08:02:00", "Emma", "ItemB", 250, 500],
+        ],
+        columns=["time", "name", "item", "cost", "twice_cost"],
+    )
+
+    self.assertTrue(result_df.equals(expected_result))
+
+    redis_client.close()
+
+
 class RedisSourceSinkStandaloneModeITTest(ABC, FeathubITTestBase):
     redis_container: RedisContainer
 
@@ -820,6 +981,19 @@ class RedisSourceSinkStandaloneModeITTest(ABC, FeathubITTestBase):
 
     def test_redis_sink_custom_key_standalone_mode(self):
         _test_redis_sink_custom_key(
+            self,
+            "127.0.0.1",
+            int(
+                self.redis_container.get_exposed_port(
+                    self.redis_container.port_to_expose
+                )
+            ),
+            "standalone",
+            self.redis_container.get_client(),
+        )
+
+    def test_redis_sink_not_keep_timestamp_standalone_mode(self):
+        _test_redis_sink_not_keep_timestamp(
             self,
             "127.0.0.1",
             int(
@@ -960,6 +1134,19 @@ class RedisSourceSinkStandaloneModeITTest(ABC, FeathubITTestBase):
             self.redis_container.get_client(),
         )
 
+    def test_python_udf_on_redis_source_join_standalone_mode(self):
+        _test_python_udf_on_redis_source_join(
+            self,
+            "127.0.0.1",
+            int(
+                self.redis_container.get_exposed_port(
+                    self.redis_container.port_to_expose
+                )
+            ),
+            "standalone",
+            self.redis_container.get_client(),
+        )
+
     def _test_redis_source_join_custom_key_derived_feature_view_standalone_mode(
         self,
     ):
@@ -1021,6 +1208,15 @@ class RedisSourceSinkClusterModeITTest(ABC, FeathubITTestBase):
             self.redis_cluster_container.get_client(),
         )
 
+    def test_redis_sink_not_keep_timestamp_cluster_mode(self):
+        _test_redis_sink_not_keep_timestamp(
+            self,
+            "127.0.0.1",
+            7000,
+            "cluster",
+            self.redis_cluster_container.get_client(),
+        )
+
     def test_redis_sink_custom_key_cluster_mode(self):
         _test_redis_sink_custom_key(
             self,
@@ -1050,6 +1246,15 @@ class RedisSourceSinkClusterModeITTest(ABC, FeathubITTestBase):
 
     def test_redis_source_join_filter_map_key_cluster_mode(self):
         _test_redis_source_join_filter_map_key(
+            self,
+            "127.0.0.1",
+            7000,
+            "cluster",
+            self.redis_cluster_container.get_client(),
+        )
+
+    def test_python_udf_on_redis_source_join_cluster_mode(self):
+        _test_python_udf_on_redis_source_join(
             self,
             "127.0.0.1",
             7000,

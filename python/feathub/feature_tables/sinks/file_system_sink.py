@@ -25,11 +25,15 @@ class FileSystemSink(Sink):
         path: str,
         data_format: str,
         data_format_props: Optional[Dict[str, Any]] = None,
+        keep_timestamp_field: bool = True,
     ) -> None:
         """
         :param path: The path to directory of files to write to.
         :param data_format: The format of the data that are written to the file.
         :param data_format_props: The properties of the data format.
+        :param keep_timestamp_field: True if the timestamp field of the feature table
+                                     should be persisted to the external system through
+                                     the sink.
         """
         super().__init__(
             name="",
@@ -37,6 +41,7 @@ class FileSystemSink(Sink):
             table_uri={"path": path},
             data_format=data_format,
             data_format_props=data_format_props,
+            keep_timestamp_field=keep_timestamp_field,
         )
         self.path = path
 
@@ -46,6 +51,7 @@ class FileSystemSink(Sink):
             "path": self.path,
             "data_format": self.data_format,
             "data_format_props": self.data_format_props,
+            "keep_timestamp_field": self.keep_timestamp_field,
         }
 
     @classmethod
@@ -54,4 +60,5 @@ class FileSystemSink(Sink):
             path=json_dict["path"],
             data_format=json_dict["data_format"],
             data_format_props=json_dict["data_format_props"],
+            keep_timestamp_field=json_dict["keep_timestamp_field"],
         )

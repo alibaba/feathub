@@ -18,7 +18,7 @@ from typing import Optional
 
 import pandas as pd
 
-from feathub.feature_tables.feature_table import FeatureTable
+from feathub.feature_tables.sinks.sink import Sink
 from feathub.processors.processor_job import ProcessorJob
 from feathub.table.schema import Schema
 
@@ -60,7 +60,7 @@ class Table(ABC):
     @abstractmethod
     def execute_insert(
         self,
-        sink: FeatureTable,
+        sink: Sink,
         ttl: Optional[timedelta] = None,
         allow_overwrite: bool = False,
     ) -> ProcessorJob:
