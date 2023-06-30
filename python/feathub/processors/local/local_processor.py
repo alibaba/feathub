@@ -30,6 +30,7 @@ from feathub.common.config import TIMEZONE_CONFIG
 from feathub.common.exceptions import FeathubException, FeathubTransformationException
 from feathub.common.types import to_numpy_dtype
 from feathub.dsl.expr_parser import ExprParser
+from feathub.dsl.expr_utils import is_id
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_tables.sinks.black_hole_sink import BlackHoleSink
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
@@ -444,7 +445,7 @@ class LocalProcessor(Processor):
         if isinstance(features, str):
             features = self.registry.get_features(name=features)
         elif isinstance(features, FeatureView) and features.is_unresolved():
-            features = self.registry.get_features(name=features.name)
+            features = self.registry.build_features([features])[0]
 
         return features
 
@@ -465,6 +466,12 @@ class LocalProcessor(Processor):
         if not isinstance(join_transform, JoinTransform):
             raise RuntimeError(f"Feature '{feature.name}' should use JoinTransform.")
 
+        if not is_id(join_transform.expr):
+            raise FeathubException(
+                "It is not supported to use Feathub expression in JoinTransform for "
+                "local processor."
+            )
+
         join_descriptor = descriptors_by_names[join_transform.table_name]
         if (
             join_descriptor.timestamp_field is None
@@ -476,7 +483,7 @@ class LocalProcessor(Processor):
         join_timestamp_field = join_descriptor.timestamp_field
         join_timestamp_format = join_descriptor.timestamp_format
         join_df = table_by_names[join_transform.table_name].df
-        join_feature = join_descriptor.get_feature(join_transform.feature_name)
+        join_feature = join_descriptor.get_feature(join_transform.expr)
         if join_feature.keys is None:
             raise FeathubException(
                 f"The Feature {join_feature} to join must have keys."
@@ -508,7 +515,7 @@ class LocalProcessor(Processor):
                         break
                 if not keys_match:
                     continue
-                joined_value = join_row[join_transform.feature_name]
+                joined_value = join_row[join_transform.expr]
                 joined_timestamp = join_timestamp
             result.append(joined_value)
 

@@ -28,6 +28,7 @@ from feathub.dsl.ast import (
     IsOp,
     NullNode,
     CaseOp,
+    BracketOp,
 )
 from feathub.processors.spark.ast_evaluator.functions import evaluate_function
 
@@ -103,3 +104,8 @@ class SparkAstEvaluator(AbstractAstEvaluator):
             eval_result = eval_result + f"ELSE {default} "
         eval_result = eval_result + "END"
         return eval_result
+
+    def eval_bracket_op(self, ast: BracketOp, variables: Optional[Dict]) -> Any:
+        left_val = self.eval(ast.left_child, variables)
+        right_val = self.eval(ast.right_child, variables)
+        return f"{left_val}[{right_val}]"

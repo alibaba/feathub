@@ -74,6 +74,17 @@ public class RedisConfigs {
                             "If true, map-typed data (or hash in Redis) would be partially updated "
                                     + "instead of completely overridden by new data.");
 
+    public static final ConfigOption<String> HASH_FIELDS =
+            ConfigOptions.key("hashFields")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription(
+                            "A json string representing a Map<String, List<String>> containing the Redis"
+                                    + "hash that needs to be acquired when looking up map values. Keys of the "
+                                    + "map represents the map-typed column names, and the value to each key is a list"
+                                    + "containing the hashes needs to be acquired. If a map-typed column does not "
+                                    + "appear in the map, all hashes corresponding to the map would be acquired.");
+
     /** Supported Redis deployment modes. */
     public enum RedisMode {
         STANDALONE,

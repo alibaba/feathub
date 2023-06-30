@@ -16,6 +16,7 @@ from abc import ABC
 import pandas as pd
 from dateutil.tz import tz
 
+from feathub.common import types
 from feathub.common.types import Float64, String, Int64, Bool, VectorType, MapType
 from feathub.common.utils import to_unix_timestamp
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
@@ -524,4 +525,54 @@ class ExpressionTransformITTest(ABC, FeathubITTestBase):
             ],
         )
         result_df = self.client.get_features(feature_view_1).to_pandas()
+        self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_bracket(self):
+        input_data = pd.DataFrame(
+            [
+                ["Alex", "a", 0],
+                ["Emma", "b", 1],
+                ["Jack", "c", 2],
+            ],
+            columns=["id", "str_val", "int_val"],
+        )
+
+        source = self.create_file_source(
+            df=input_data.copy(),
+            schema=(
+                Schema.new_builder()
+                .column("id", types.String)
+                .column("str_val", types.String)
+                .column("int_val", types.Int64)
+                .build()
+            ),
+            timestamp_field=None,
+            data_format="json",
+        )
+
+        features = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                Feature(
+                    name="value_a",
+                    transform="MAP(str_val, int_val)['a']",
+                ),
+            ],
+            keep_source_fields=True,
+        )
+
+        result_df = (
+            self.client.get_features(features)
+            .to_pandas()
+            .sort_values(by=["id"])
+            .reset_index(drop=True)
+        )
+
+        expected_result_df = input_data.copy()
+        expected_result_df["value_a"] = expected_result_df.apply(
+            lambda row: 0 if row["str_val"] == "a" else None,
+            axis=1,
+        )
+
         self.assertTrue(expected_result_df.equals(result_df))

@@ -91,7 +91,7 @@ class SlidingFeatureViewTest(unittest.TestCase):
         feature_1 = Feature(
             name="feature_1",
             dtype=types.Float32,
-            transform=JoinTransform(table_name="t1", feature_name="f1"),
+            transform=JoinTransform(table_name="t1", expr="f1"),
         )
 
         with self.assertRaises(FeathubException):

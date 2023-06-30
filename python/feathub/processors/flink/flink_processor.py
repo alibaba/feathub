@@ -300,7 +300,7 @@ class FlinkProcessor(Processor):
         if isinstance(features, str):
             features = self.registry.get_features(name=features)
         elif isinstance(features, FeatureView) and features.is_unresolved():
-            features = self.registry.get_features(name=features.name)
+            features = self.registry.build_features([features])[0]
 
         return features
 

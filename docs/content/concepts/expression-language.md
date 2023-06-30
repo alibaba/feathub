@@ -52,6 +52,12 @@ Comparison functions take numeric values as inputs and outputs a boolean value.
 | bool1 OR bool2  | Returns TRUE if bool1 is TRUE or bool2 is TRUE. |
 | bool1 AND bool2 | Returns TRUE if bool1 and bool2 are both TRUE.  |
 
+## Collection Functions
+
+| Function          | Description                                                  |
+| ----------------- | ------------------------------------------------------------ |
+| map ‘[’ value ‘]’ | Returns the value specified by key value in map.             |
+
 ## Type Conversion Functions
 
 | Function             | Description                                                                               |

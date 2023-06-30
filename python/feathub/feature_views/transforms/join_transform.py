@@ -13,7 +13,7 @@
 # limitations under the License.
 from typing import Dict
 
-from feathub.common.utils import append_metadata_to_json
+from feathub.common.utils import append_metadata_to_json, deprecated_alias
 from feathub.feature_views.transforms.transformation import Transformation
 
 
@@ -22,29 +22,35 @@ class JoinTransform(Transformation):
     Derives feature values by joining parent table with a feature from another table.
     """
 
+    @deprecated_alias(feature_name="expr")
     def __init__(
         self,
         table_name: str,
-        feature_name: str,
+        expr: str,
     ):
         """
         :param table_name: The name of a Source or FeatureView table.
-        :param feature_name: The feature name.
+        :param expr: The feature expr. it should be in either of the following
+                     formats:
+                     1. {feature_name}, which refers to a feature in the host table
+                     2. {map_feature_name}[{literal_key_value}], which refers to a
+                        static lookup of a map feature in the host table with the
+                        given name
         """
         super().__init__()
         self.table_name = table_name
-        self.feature_name = feature_name
+        self.expr = expr
 
     @append_metadata_to_json
     def to_json(self) -> Dict:
         return {
             "table_name": self.table_name,
-            "feature_name": self.feature_name,
+            "expr": self.expr,
         }
 
     @classmethod
     def from_json(cls, json_dict: Dict) -> "JoinTransform":
         return JoinTransform(
             table_name=json_dict["table_name"],
-            feature_name=json_dict["feature_name"],
+            expr=json_dict["expr"],
         )

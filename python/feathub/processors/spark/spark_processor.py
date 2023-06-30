@@ -159,7 +159,7 @@ class SparkProcessor(Processor):
         if isinstance(features, str):
             features = self._registry.get_features(name=features)
         elif isinstance(features, FeatureView) and features.is_unresolved():
-            features = self._registry.get_features(name=features.name)
+            features = self._registry.build_features([features])[0]
 
         return features
 

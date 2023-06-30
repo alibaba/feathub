@@ -134,7 +134,7 @@ class RegistryTestBase(ABC, unittest.TestCase):
             self.fail("RuntimeError should be raised.")
         except RuntimeError as err:
             self.assertTrue(
-                "Table 'feature_view' is not found in the cache or registry" in str(err)
+                "Table 'source' is not found in the cache or registry" in str(err)
             )
 
         # build_features() should fail because 'source' is not built or registered.

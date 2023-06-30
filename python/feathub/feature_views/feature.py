@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Union, Optional, Dict, Sequence
+from typing import Union, Optional, Dict, Sequence, Collection
 import json
 
 from feathub.common.exceptions import FeathubException
@@ -25,6 +25,17 @@ from feathub.feature_views.transforms.sliding_window_transform import (
 from feathub.feature_views.transforms.transformation import Transformation
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
+
+
+def get_default_feature_name(disallowed_names: Collection[str]) -> str:
+    """
+    Returns a default name for a feature. Values in the disallowed_names would
+    not be returned.
+    """
+    index = 0
+    while f"_{index}" in disallowed_names:
+        index += 1
+    return f"_{index}"
 
 
 class Feature:

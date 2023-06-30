@@ -16,6 +16,7 @@ import pandas as pd
 from typing import Optional, List, Dict, Union
 
 from feathub.common.exceptions import FeathubException
+from feathub.dsl.expr_utils import is_id
 from feathub.feature_service.feature_service import FeatureService
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_tables.sources.mysql_source import MySQLSource
@@ -121,6 +122,12 @@ class LocalFeatureService(FeatureService):
         if not isinstance(join_transform, JoinTransform):
             raise RuntimeError(f"Feature '{feature.name}' should use JoinTransform.")
 
+        if not is_id(join_transform.expr):
+            raise FeathubException(
+                "It is not supported to use Feathub expression in JoinTransform when "
+                "getting online features."
+            )
+
         source = self.registry.get_features(join_transform.table_name)
 
         if isinstance(source, MemoryStoreSource):
@@ -130,9 +137,7 @@ class LocalFeatureService(FeatureService):
 
         if isinstance(source, RedisSource) or isinstance(source, MySQLSource):
             client = self._get_online_store_client(source)
-            return client.get(
-                input_data=input_df, feature_names=[join_transform.feature_name]
-            )
+            return client.get(input_data=input_df, feature_names=[join_transform.expr])
 
         raise RuntimeError(f"Unsupported source {source.to_json()}.")
 

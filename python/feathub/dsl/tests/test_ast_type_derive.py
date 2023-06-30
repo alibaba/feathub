@@ -13,7 +13,7 @@
 #  limitations under the License.
 import unittest
 
-from feathub.common.exceptions import FeathubExpressionException
+from feathub.common.exceptions import FeathubExpressionException, FeathubException
 from feathub.common.types import (
     Int32,
     Bool,
@@ -24,11 +24,13 @@ from feathub.common.types import (
     Bytes,
     Timestamp,
     DType,
+    Int64Vector,
+    MapType,
 )
 from feathub.dsl.expr_parser import ExprParser
 
 
-class AstTypeDeriverTest(unittest.TestCase):
+class AstTypeDeriveTest(unittest.TestCase):
     def setUp(self) -> None:
         self.expr_parser = ExprParser()
 
@@ -154,6 +156,24 @@ class AstTypeDeriverTest(unittest.TestCase):
         self.assertEqual(
             Float32, ast.eval_dtype({"a": Int32, "b": Int64, "c": Float32})
         )
+
+    def test_bracket_op_result_type(self):
+        ast = self.expr_parser.parse("a['key1']")
+        self.assertEqual(
+            Int32,
+            ast.eval_dtype({"a": MapType(String, Int32)}),
+        )
+        self.assertEqual(
+            Float32,
+            ast.eval_dtype({"a": MapType(String, Float32)}),
+        )
+
+        with self.assertRaises(FeathubExpressionException):
+            ast.eval_dtype({"a": MapType(Int32, Float32)})
+
+        ast = self.expr_parser.parse("a[0]")
+        with self.assertRaises(FeathubException):
+            ast.eval_dtype({"a": Int64Vector})
 
     def _to_sql_type(self, dtype: DType) -> str:
         if dtype == Int32:

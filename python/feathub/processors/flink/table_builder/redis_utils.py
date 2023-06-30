@@ -12,8 +12,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import glob
+import json
 import os
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Sequence
 
 from pyflink.table import (
     StreamTableEnvironment,
@@ -25,6 +26,12 @@ from pyflink.table import (
 
 from feathub.common import types
 from feathub.common.exceptions import FeathubException
+from feathub.dsl.expr_utils import (
+    is_id,
+    is_static_map_lookup_op,
+    get_static_map_lookup_variable_and_key,
+    get_var_name,
+)
 from feathub.feature_tables.sinks.redis_sink import RedisSink
 from feathub.feature_tables.sources.redis_source import (
     NAMESPACE_KEYWORD,
@@ -39,6 +46,10 @@ from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_
 from feathub.processors.flink.flink_types_utils import to_flink_schema
 from feathub.processors.flink.table_builder.flink_sql_expr_utils import (
     to_flink_sql_expr,
+)
+from feathub.processors.flink.table_builder.join_utils import (
+    JoinFieldDescriptor,
+    lookup_join,
 )
 from feathub.processors.flink.table_builder.source_sink_utils_common import (
     get_schema_from_table,
@@ -96,9 +107,125 @@ def append_physical_key_columns_per_feature(
     return table, physical_key_column_names
 
 
+def optimize_redis_source_lookup_map(
+    t_env: StreamTableEnvironment,
+    table: NativeFlinkTable,
+    table_descriptor: TableDescriptor,
+    join_field_descriptors: Dict[str, JoinFieldDescriptor],
+) -> NativeFlinkTable:
+    """
+    If the right table of a lookup join is a RedisSource, the right table would
+    be optimized such that if only designated keys of a map-typed feature is used
+    in the join, the RedisSource would only lookup these key fields from the
+    Redis hash, instead of reading all hash fields.
+    """
+    if not isinstance(table_descriptor, RedisSource):
+        return table
+
+    fully_acquired_field_names = set()
+    hash_fields: Dict[str, List[str]] = dict()
+    for descriptor in join_field_descriptors.values():
+        if is_id(descriptor.field_expr):
+            fully_acquired_field_names.add(get_var_name(descriptor.field_expr))
+        elif is_static_map_lookup_op(descriptor.field_expr):
+            variable, key = get_static_map_lookup_variable_and_key(
+                descriptor.field_expr
+            )
+            if not isinstance(key, str):
+                return table
+            if variable not in hash_fields:
+                hash_fields[variable] = []
+            hash_fields[variable].append(key)
+        else:
+            return table
+
+    for field_name in fully_acquired_field_names:
+        hash_fields.pop(field_name, None)
+
+    if not hash_fields:
+        return table
+
+    return get_table_from_redis_source(
+        t_env,
+        table_descriptor,
+        {"hashFields": json.dumps(hash_fields)},
+    )
+
+
+def lookup_join_redis_source(
+    t_env: StreamTableEnvironment,
+    left_table: NativeFlinkTable,
+    right_table: NativeFlinkTable,
+    right_table_descriptor: TableDescriptor,
+    join_field_descriptors: Dict[str, JoinFieldDescriptor],
+    redis_source: RedisSource,
+    keys: Sequence[str],
+) -> NativeFlinkTable:
+    """
+    Lookup join the right table to the left table. The right table should be
+    derived from a Redis source.
+
+    :param t_env: The table environment.
+    :param left_table: The left table.
+    :param right_table: The right table.
+    :param right_table_descriptor: The right table descriptor.
+    :param join_field_descriptors: The join descriptors containing the features
+                                   to be joined from the right table.
+    :param redis_source: The Redis source that the right table is derived from.
+    :param keys: The keys used to join.
+    :return: The joined table.
+    """
+    left_table, physical_keys = append_physical_key_columns_per_feature(
+        table=left_table,
+        key_expr=redis_source.key_expr,
+        namespace=redis_source.namespace,
+        keys=redis_source.keys,
+        feature_names=[
+            x for x in redis_source.schema.field_names if x not in redis_source.keys
+        ],
+    )
+
+    right_table = optimize_redis_source_lookup_map(
+        t_env,
+        right_table,
+        right_table_descriptor,
+        join_field_descriptors,
+    )
+
+    select_dict = {
+        **{
+            field_name: to_flink_sql_expr(join_field_descriptor.field_expr)
+            for (
+                field_name,
+                join_field_descriptor,
+            ) in join_field_descriptors.items()
+        },
+        **{x: f"`{x}`" for x in physical_keys},
+    }
+
+    right_table = right_table.select(
+        *[
+            native_flink_expr.call_sql(field_expr).alias(field_name)
+            for field_name, field_expr in select_dict.items()
+        ]
+    )
+
+    joined_table = lookup_join(
+        t_env,
+        left_table,
+        right_table,
+        list(keys) + physical_keys,
+    )
+
+    return joined_table.drop_columns(
+        *[native_flink_expr.col(field_name) for field_name in physical_keys]
+    )
+
+
 def get_table_from_redis_source(
     t_env: StreamTableEnvironment,
     source: RedisSource,
+    extra_props: Optional[Dict[str, str]] = None,
 ) -> NativeFlinkTable:
     if source.keys is None:
         raise FeathubException("Redis Tables must have keys.")
@@ -134,6 +261,10 @@ def get_table_from_redis_source(
         table_descriptor_builder = table_descriptor_builder.option(
             "password", source.password
         )
+
+    if extra_props is not None:
+        for key, value in extra_props.items():
+            table_descriptor_builder = table_descriptor_builder.option(key, value)
 
     return t_env.from_descriptor(table_descriptor_builder.build())
 

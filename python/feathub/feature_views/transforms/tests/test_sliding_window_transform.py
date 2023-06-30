@@ -1544,7 +1544,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                         [200.0, 200.0],
                         2,
                     ],
-                    ["Alex", to_epoch_millis("2022-01-01 09:04:59.999"), [], 0],
+                    ["Alex", to_epoch_millis("2022-01-01 09:04:59.999"), None, 0],
                 ],
                 columns=[
                     "name",
@@ -1601,7 +1601,7 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                         [200.0, 200.0],
                         2,
                     ],
-                    ["Alex", to_epoch_millis("2022-01-01 09:04:59.999"), [], 0],
+                    ["Alex", to_epoch_millis("2022-01-01 09:04:59.999"), None, 0],
                 ],
                 columns=[
                     "name",

@@ -50,7 +50,7 @@ import java.util.Map;
  * Redis-supported data types and backwards.
  */
 public class ConversionUtils {
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     public static String toString(RowData data, int index, DataType dataType)
             throws JsonProcessingException {

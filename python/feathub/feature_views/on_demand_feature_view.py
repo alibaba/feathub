@@ -64,11 +64,13 @@ class OnDemandFeatureView(FeatureView):
     ):
         """
         :param name: The unique identifier of this feature view in the registry.
-        :param features: A list of features to be joined onto this feature view.
-                         If a feature is a string, it should be either in the format
-                         {table_name}.{feature_name}, which refers to a feature in the
-                         table with the given name, or in the format {feature_name},
-                         which refers to a feature in the source table.
+        :param features: A list of features to be computed in this feature view. If a
+                         feature is a string, it should be in either of the following
+                         formats:
+                         1. {feature_name}, which refers to a feature in the table with
+                            the given name
+                         2. {table_name}.{feature_name}, which refers to a feature in
+                            the source table
         :param request_schema: The schema of the request expected by the
                                OnDemandFeatureView.
         :param keep_source_fields: True iff all fields in the source table should be

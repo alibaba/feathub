@@ -27,7 +27,7 @@ def _value_counts(inputs: Sequence[Any]) -> Any:
 
 def _collect_list(inputs: Sequence[Any]) -> Any:
     if len(inputs) <= 0:
-        return []
+        return None
     return list(inputs)
 
 

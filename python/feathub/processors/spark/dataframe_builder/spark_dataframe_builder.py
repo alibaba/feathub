@@ -16,6 +16,7 @@ from typing import Dict, Tuple, List, Sequence, Union, Optional
 
 import pandas as pd
 
+from feathub.dsl.expr_utils import is_id
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from pyspark.sql import DataFrame as NativeSparkDataFrame, functions
 from pyspark.sql import SparkSession
@@ -269,6 +270,11 @@ class SparkDataFrameBuilder:
                     )
 
                 join_transform = feature.transform
+                if not is_id(join_transform.expr):
+                    raise FeathubException(
+                        "It is not supported to use Feathub expression in JoinTransform"
+                        " for spark processor."
+                    )
                 right_table_descriptor = descriptors_by_names[join_transform.table_name]
                 if right_table_descriptor.timestamp_field is None:
                     raise FeathubException(
@@ -289,9 +295,9 @@ class SparkDataFrameBuilder:
                 ] = JoinFieldDescriptor.from_field_name(EVENT_TIME_ATTRIBUTE_NAME)
 
                 join_field_descriptors[
-                    join_transform.feature_name
+                    join_transform.expr
                 ] = JoinFieldDescriptor.from_table_descriptor_and_field_name(
-                    right_table_descriptor, join_transform.feature_name
+                    right_table_descriptor, join_transform.expr
                 )
             else:
                 raise RuntimeError(

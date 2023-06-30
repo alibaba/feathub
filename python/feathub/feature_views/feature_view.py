@@ -51,11 +51,7 @@ class FeatureView(TableDescriptor, ABC):
         :param source: The source dataset used to derive this feature view. If it is a
                        string, it should refer to the name of a table descriptor in the
                        registry.
-        :param features: A list of features to be joined onto this feature view.
-                         If a feature is a string, it should be either in the format
-                         {table_name}.{feature_name}, which refers to a feature in the
-                         table with the given name, or in the format {feature_name},
-                         which refers to a feature in the source table.
+        :param features: A list of features to be computed in this feature view.
         :param keep_source_fields: True iff all fields in the source table should be
                                    included in this table. The feature in the source
                                    will be overwritten by the feature in this feature

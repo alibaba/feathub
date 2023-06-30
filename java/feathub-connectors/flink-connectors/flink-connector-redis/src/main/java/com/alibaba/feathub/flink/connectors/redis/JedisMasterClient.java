@@ -67,6 +67,11 @@ public class JedisMasterClient implements JedisClient {
     }
 
     @Override
+    public List<String> hmget(String key, String... fields) {
+        return jedis.hmget(key, fields);
+    }
+
+    @Override
     public void rpush(String key, String... string) {
         commands.add(commandObjects.rpush(key, string));
     }

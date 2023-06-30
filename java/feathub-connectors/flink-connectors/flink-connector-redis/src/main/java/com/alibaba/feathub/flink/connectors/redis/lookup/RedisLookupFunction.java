@@ -29,6 +29,8 @@ import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.KeyValueDataType;
 import org.apache.flink.util.Preconditions;
 
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.type.TypeReference;
+
 import com.alibaba.feathub.flink.connectors.redis.ConversionUtils;
 import com.alibaba.feathub.flink.connectors.redis.JedisClient;
 
@@ -37,9 +39,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.alibaba.feathub.flink.connectors.redis.ConversionUtils.OBJECT_MAPPER;
+import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.HASH_FIELDS;
 import static com.alibaba.feathub.flink.connectors.redis.RedisConfigs.KEY_FIELDS;
 
 /**
@@ -75,6 +80,8 @@ public class RedisLookupFunction extends LookupFunction {
 
     private final DataType[] fieldDataTypes;
 
+    private final String[][] hashFields;
+
     private transient JedisClient client;
 
     private transient RowData.FieldGetter[] logicalKeyGetters;
@@ -87,6 +94,23 @@ public class RedisLookupFunction extends LookupFunction {
         this.featureFieldIndices = getFeatureFieldIndices(schema, config);
         this.physicalKeyFieldIndices = getPhysicalKeyFieldIndices(schema, featureFieldIndices);
         this.fieldDataTypes = schema.getColumnDataTypes().toArray(new DataType[0]);
+        if (config.get(HASH_FIELDS) == null) {
+            this.hashFields = null;
+        } else {
+            try {
+                TypeReference<HashMap<String, List<String>>> typeRef =
+                        new TypeReference<HashMap<String, List<String>>>() {};
+                HashMap<String, List<String>> map =
+                        OBJECT_MAPPER.readValue(config.get(HASH_FIELDS), typeRef);
+                this.hashFields = new String[schema.getColumnCount()][];
+                for (Map.Entry<String, List<String>> entry : map.entrySet()) {
+                    this.hashFields[schema.getColumnNames().indexOf(entry.getKey())] =
+                            entry.getValue().toArray(new String[0]);
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     @Override
@@ -135,7 +159,16 @@ public class RedisLookupFunction extends LookupFunction {
                         ConversionUtils.fromList(redisData, (CollectionDataType) valueType);
                 result.setField(valueFieldIndex, flinkSqlData);
             } else if (valueType instanceof KeyValueDataType) {
-                Map<String, String> redisData = client.hgetAll(key);
+                Map<String, String> redisData;
+                if (hashFields == null || hashFields[valueFieldIndex] == null) {
+                    redisData = client.hgetAll(key);
+                } else {
+                    redisData = new HashMap<>();
+                    List<String> values = client.hmget(key, hashFields[valueFieldIndex]);
+                    for (int j = 0; j < hashFields[valueFieldIndex].length; j++) {
+                        redisData.put(hashFields[valueFieldIndex][j], values.get(j));
+                    }
+                }
                 MapData flinkSqlData =
                         ConversionUtils.fromMap(redisData, (KeyValueDataType) valueType);
                 result.setField(valueFieldIndex, flinkSqlData);
