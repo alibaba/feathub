@@ -60,7 +60,6 @@ from feathub.processors.flink.table_builder.join_utils import (
     full_outer_join_on_key_with_default_value,
     temporal_join,
     JoinFieldDescriptor,
-    lookup_join,
 )
 from feathub.processors.flink.table_builder.over_window_utils import (
     evaluate_over_window_transform,
@@ -71,7 +70,7 @@ from feathub.processors.flink.table_builder.python_udf_utils import (
 )
 from feathub.processors.flink.table_builder.redis_utils import (
     get_redis_source,
-    append_physical_key_columns_per_feature,
+    lookup_join_redis_source,
 )
 from feathub.processors.flink.table_builder.sliding_window_utils import (
     evaluate_sliding_window_transform,
@@ -166,11 +165,13 @@ class FlinkTableBuilder:
         :return: The native Flink table that represents the given features.
         """
         with self.class_loader:
-            native_flink_table = self._build(
-                features, keys, start_datetime, end_datetime
-            )
-            if clear_built_tables:
-                self.clear_built_tables()
+            try:
+                native_flink_table = self._build(
+                    features, keys, start_datetime, end_datetime
+                )
+            finally:
+                if clear_built_tables:
+                    self.clear_built_tables()
             return native_flink_table
 
     def clear_built_tables(self) -> None:
@@ -391,9 +392,9 @@ class FlinkTableBuilder:
                     ] = JoinFieldDescriptor.from_field_name(EVENT_TIME_ATTRIBUTE_NAME)
 
                 right_table_join_field_descriptors[
-                    join_transform.feature_name
-                ] = JoinFieldDescriptor.from_table_descriptor_and_field_name(
-                    right_table_descriptor, join_transform.feature_name
+                    feature.name
+                ] = JoinFieldDescriptor.from_table_descriptor_and_feature(
+                    right_table_descriptor, feature
                 )
             else:
                 raise FeathubTransformationException(
@@ -413,23 +414,14 @@ class FlinkTableBuilder:
             #  Redis lookup source can directly process key_expr and remove the
             #  following codes.
             if redis_source is not None:
-                tmp_table, physical_keys = append_physical_key_columns_per_feature(
-                    table=tmp_table,
-                    key_expr=redis_source.key_expr,
-                    namespace=redis_source.namespace,
-                    keys=redis_source.keys,
-                    feature_names=[
-                        x
-                        for x in redis_source.schema.field_names
-                        if x not in redis_source.keys
-                    ],
-                )
-
-                tmp_table = lookup_join(
-                    self.t_env,
-                    tmp_table,
-                    right_table,
-                    list(keys) + physical_keys,
+                tmp_table = lookup_join_redis_source(
+                    t_env=self.t_env,
+                    left_table=tmp_table,
+                    right_table=right_table,
+                    right_table_descriptor=right_table_descriptor,
+                    join_field_descriptors=right_table_join_field_descriptors,
+                    redis_source=redis_source,
+                    keys=keys,
                 )
                 continue
 
@@ -441,8 +433,10 @@ class FlinkTableBuilder:
 
             right_table = right_table.select(
                 *[
-                    native_flink_expr.col(right_table_field)
-                    for right_table_field in right_table_join_field_descriptors.keys()
+                    native_flink_expr.call_sql(
+                        to_flink_sql_expr(descriptor.field_expr)
+                    ).alias(name)
+                    for name, descriptor in right_table_join_field_descriptors.items()
                 ]
             )
 

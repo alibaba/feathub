@@ -25,6 +25,8 @@ from feathub.common.types import (
     Bool,
     get_type_by_name,
     from_python_type,
+    MapType,
+    VectorType,
 )
 from feathub.dsl.built_in_func import get_builtin_func_def
 
@@ -277,6 +279,45 @@ class IsOp(AbstractBinaryOp):
             "node_type": "IsOp",
             "left_child": self.left_child.to_json(),
             "is_not": self.is_not,
+        }
+
+
+class BracketOp(AbstractBinaryOp):
+    def __init__(self, left_child: ExprAST, right_child: ExprAST) -> None:
+        super().__init__(
+            node_type="BracketOp", left_child=left_child, right_child=right_child
+        )
+
+    def eval_dtype(self, variable_types: Dict[str, DType]) -> DType:
+        left_child_type = self.left_child.eval_dtype(variable_types)
+        right_child_type = self.right_child.eval_dtype(variable_types)
+
+        if isinstance(left_child_type, MapType):
+            if right_child_type != left_child_type.key_dtype:
+                raise FeathubExpressionException(
+                    f"Map key type {left_child_type.key_dtype} does not match "
+                    f"with expected {right_child_type}."
+                )
+            return left_child_type.value_dtype
+
+        # TODO: Support parsing expression based on data types.
+        if isinstance(left_child_type, VectorType):
+            # Suppose parsing an expression "a[b]" into Flink SQL. If "a" is a map, it
+            # should be parsed into "a[b]". If "a" is a list, it should be parsed into
+            # "a[b + 1]". The parse result depends on the data type, but Feathub
+            # has not uniform AbstractAstEvaluator#eval and ExprAST#eval_dtype, so
+            # the parsing process cannot get type information yet.
+            raise FeathubException(
+                "Getting element from list by index is not supported yet."
+            )
+
+        raise FeathubExpressionException(f"{right_child_type} is not subscriptable.")
+
+    def to_json(self) -> Dict:
+        return {
+            "node_type": "BracketOp",
+            "left_child": self.left_child.to_json(),
+            "right_child": self.right_child.to_json(),
         }
 
 

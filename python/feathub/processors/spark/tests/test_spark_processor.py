@@ -158,3 +158,6 @@ class SparkProcessorITTest(
 
     def test_protobuf_all_types(self):
         pass
+
+    def test_join_transform_with_map_lookup(self):
+        pass

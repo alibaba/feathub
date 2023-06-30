@@ -65,6 +65,11 @@ public class JedisClusterClient implements JedisClient {
     }
 
     @Override
+    public List<String> hmget(String key, String... fields) {
+        return jedis.hmget(key, fields);
+    }
+
+    @Override
     public void rpush(String key, String... string) {
         pipeline.rpush(key, string);
     }

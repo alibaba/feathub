@@ -14,12 +14,15 @@
 
 from __future__ import annotations
 
-from typing import Union, Dict, Sequence, Optional, List
+from typing import Union, Dict, Sequence, Optional, List, cast
 
 from feathub.common.exceptions import FeathubException
+from feathub.common.types import DType
 from feathub.common.utils import from_json, append_metadata_to_json
-from feathub.dsl.expr_utils import get_variables
-from feathub.feature_views.feature import Feature
+from feathub.dsl.ast import BracketOp
+from feathub.dsl.expr_parser import ExprParser
+from feathub.dsl.expr_utils import get_variables, is_id, is_static_map_lookup_op
+from feathub.feature_views.feature import Feature, get_default_feature_name
 from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
 from feathub.feature_views.transforms.join_transform import JoinTransform
@@ -27,6 +30,9 @@ from feathub.feature_views.transforms.over_window_transform import OverWindowTra
 from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
 from feathub.registries.registry import Registry
 from feathub.table.table_descriptor import TableDescriptor
+
+
+_parser = ExprParser()
 
 
 class DerivedFeatureView(FeatureView):
@@ -50,14 +56,20 @@ class DerivedFeatureView(FeatureView):
         :param source: The source dataset used to derive this feature view. If it is a
                        string, it should refer to the name of a table descriptor in the
                        registry.
-        :param features: A list of features to be computed from the source table. If a
-                         feature is a string, it should be either in the format
-                         {table_name}.{feature_name}, which refers to a feature in the
-                         table with the given name, or in the format {feature_name},
-                         which refers to a feature in the source table. For any feature
-                         computed by ExpressionTransform or OverWindowTransform, its
-                         expression can only depend on the features specified earlier in
-                         this list and the features in the source table.
+        :param features: A list of features to be computed in this feature view. If a
+                         feature is a string, it should be in either of the following
+                         formats:
+                         1. {feature_name}, which refers to a feature in the table with
+                            the given name
+                         2. {table_name}.{feature_name}, which refers to a feature in
+                            the source table
+                         3. {table_name}.{map_feature_name}[{literal_key_value}], which
+                            refers to a static lookup of a map feature in the table with
+                            the given name
+                         For any feature computed by ExpressionTransform or
+                         OverWindowTransform, its expression can only depend on the
+                         features specified earlier in this list and the features in the
+                         source table.
         :param keep_source_fields: True iff all features in the source table should be
                                    included in this table. The feature in the source
                                    will be overwritten by the feature in this feature
@@ -98,12 +110,19 @@ class DerivedFeatureView(FeatureView):
                 feature_descriptors=[self.source], force_update=force_update
             )[0]
 
+        existing_feature_names = {x.name for x in source.get_output_features()}
+
         features = []
         for feature in self.features:
             if isinstance(feature, str):
                 feature = self._get_feature_from_feature_str(
-                    feature, registry, source, force_update
+                    feature,
+                    registry,
+                    source,
+                    force_update,
+                    get_default_feature_name(existing_feature_names),
                 )
+                existing_feature_names.add(feature.name)
             features.append(feature)
 
         self._validate(features, source)
@@ -158,6 +177,7 @@ class DerivedFeatureView(FeatureView):
         registry: Registry,
         source: TableDescriptor,
         force_update: bool,
+        default_feature_name: str,
     ) -> Feature:
         parts = feature_str.split(".")
         if len(parts) == 1:
@@ -171,28 +191,45 @@ class DerivedFeatureView(FeatureView):
             return feature
         elif len(parts) == 2:
             join_table_name = parts[0]
-            join_feature_name = parts[1]
             table_desc = registry.get_features(
                 name=join_table_name, force_update=force_update
             )
-            join_feature = table_desc.get_feature(feature_name=join_feature_name)
-            if join_feature.keys is None:
-                raise RuntimeError(
-                    f"Feature '{join_feature_name}' in the remote table "
-                    f"'{join_table_name}' does not have keys specified."
+            if is_id(parts[1]):
+                join_feature_name = parts[1]
+                join_feature = table_desc.get_feature(feature_name=join_feature_name)
+                if join_feature.keys is None:
+                    raise RuntimeError(
+                        f"Feature '{join_feature_name}' in the remote table "
+                        f"'{join_table_name}' does not have keys specified."
+                    )
+                return Feature(
+                    name=join_feature_name,
+                    dtype=join_feature.dtype,
+                    transform=JoinTransform(join_table_name, join_feature_name),
+                    keys=join_feature.keys,
                 )
-            return Feature(
-                name=join_feature_name,
-                dtype=join_feature.dtype,
-                transform=JoinTransform(join_table_name, join_feature_name),
-                keys=join_feature.keys,
-            )
-        else:
-            raise FeathubException(
-                "Invalid string format. If a feature is a string, it should be either "
-                "in the format {table_name}.{feature_name} or in the "
-                "format {feature_name}."
-            )
+            elif is_static_map_lookup_op(parts[1]):
+                join_feature_expr = parts[1]
+                variable_types: Dict[str, Optional[DType]] = {
+                    f.name: f.dtype for f in table_desc.get_output_features()
+                }
+                feature_type = cast(
+                    BracketOp, _parser.parse(join_feature_expr)
+                ).right_child.eval_dtype(variable_types)
+                return Feature(
+                    name=default_feature_name,
+                    dtype=feature_type,
+                    transform=JoinTransform(join_table_name, join_feature_expr),
+                    keys=table_desc.keys,
+                )
+
+        raise FeathubException(
+            "Invalid string format. If a feature is a string, it should be in either "
+            "of the following formats."
+            " 1. {feature_name}"
+            " 2. {table_name}.{feature_name}"
+            " 3. {table_name}.{map_feature_name}[{literal_key_value}]"
+        )
 
     @append_metadata_to_json
     def to_json(self) -> Dict:

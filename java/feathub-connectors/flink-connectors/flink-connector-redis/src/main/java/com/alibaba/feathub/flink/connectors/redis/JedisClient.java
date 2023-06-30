@@ -38,6 +38,8 @@ public interface JedisClient {
 
     void hmset(String key, Map<String, String> hash);
 
+    List<String> hmget(String key, String... fields);
+
     void rpush(String key, String... string);
 
     String get(String key);

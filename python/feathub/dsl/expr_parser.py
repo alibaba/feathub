@@ -33,6 +33,7 @@ from feathub.dsl.ast import (
     CaseOp,
     IsOp,
     NullNode,
+    BracketOp,
 )
 from feathub.dsl.expr_lexer_rules import ExprLexerRules
 
@@ -114,8 +115,14 @@ class ExprParser:
         p[0] = ValueNode(p[1])
 
     def p_expression_function_call(self, p: yacc.YaccProduction) -> None:
-        """expression : ID LPAREN arglist RPAREN"""
-        p[0] = FuncCallOp(p[1], p[3])
+        """
+        expression : ID LPAREN arglist RPAREN
+                   | ID LPAREN RPAREN
+        """
+        if len(p) == 5:
+            p[0] = FuncCallOp(p[1], p[3])
+        else:
+            p[0] = FuncCallOp(p[1], ArgListNode([]))
 
     def p_expression_arglist(self, p: yacc.YaccProduction) -> None:
         """
@@ -187,6 +194,12 @@ class ExprParser:
             p[0] = CaseOp.new_builder().case(p[2], p[4])
         else:
             p[0] = p[1].case(p[3], p[5])
+
+    def p_expression_bracket_op(self, p: yacc.YaccProduction) -> None:
+        """
+        expression : expression LBRACKET expression RBRACKET
+        """
+        p[0] = BracketOp(p[1], p[3])
 
     def p_error(self, p: yacc.YaccProduction) -> None:  # noqa
         if p:
