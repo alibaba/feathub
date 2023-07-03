@@ -16,7 +16,7 @@ from typing import Dict, Tuple, List, Sequence, Union, Optional
 
 import pandas as pd
 
-from feathub.dsl.expr_utils import is_id
+from feathub.dsl.expr_utils import is_id, get_var_name
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from pyspark.sql import DataFrame as NativeSparkDataFrame, functions
 from pyspark.sql import SparkSession
@@ -297,7 +297,7 @@ class SparkDataFrameBuilder:
                 join_field_descriptors[
                     join_transform.expr
                 ] = JoinFieldDescriptor.from_table_descriptor_and_field_name(
-                    right_table_descriptor, join_transform.expr
+                    right_table_descriptor, get_var_name(join_transform.expr)
                 )
             else:
                 raise RuntimeError(

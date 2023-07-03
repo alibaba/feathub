@@ -16,7 +16,7 @@ import pandas as pd
 from typing import Optional, List, Dict, Union
 
 from feathub.common.exceptions import FeathubException
-from feathub.dsl.expr_utils import is_id
+from feathub.dsl.expr_utils import is_id, get_var_name
 from feathub.feature_service.feature_service import FeatureService
 from feathub.feature_tables.feature_table import FeatureTable
 from feathub.feature_tables.sources.mysql_source import MySQLSource
@@ -137,7 +137,9 @@ class LocalFeatureService(FeatureService):
 
         if isinstance(source, RedisSource) or isinstance(source, MySQLSource):
             client = self._get_online_store_client(source)
-            return client.get(input_data=input_df, feature_names=[join_transform.expr])
+            return client.get(
+                input_data=input_df, feature_names=[get_var_name(join_transform.expr)]
+            )
 
         raise RuntimeError(f"Unsupported source {source.to_json()}.")
 

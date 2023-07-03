@@ -54,12 +54,7 @@ def get_var_name(expr: str) -> str:
     Returns the variable name from the feature expression of the
     expression is a single ID.
     """
-    match_result = re.match(VARIABLE_NAME_REGEX, expr)
-    # TODO: Modify configurations to align the format requirement between
-    #  black and flake8 about whitespaces between functions and colons.
-    start_index = match_result.start()
-    end_index = match_result.end()
-    return expr[start_index:end_index]
+    return re.search(VARIABLE_NAME_REGEX, expr)[0]
 
 
 def is_static_map_lookup_op(expr: str) -> bool:

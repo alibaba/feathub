@@ -205,7 +205,7 @@ class DerivedFeatureView(FeatureView):
                 return Feature(
                     name=join_feature_name,
                     dtype=join_feature.dtype,
-                    transform=JoinTransform(join_table_name, join_feature_name),
+                    transform=JoinTransform(join_table_name, f"`{join_feature_name}`"),
                     keys=join_feature.keys,
                 )
             elif is_static_map_lookup_op(parts[1]):

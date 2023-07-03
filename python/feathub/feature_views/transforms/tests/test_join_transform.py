@@ -425,3 +425,61 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
         self.assertIsNone(source.keys)
         self.assertListEqual(["name"], built_feature_view.keys)
         self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_join_field_with_reserved_keyword(self):
+        df_1 = self.input_data.copy()
+        source = self.create_file_source(df_1)
+
+        df_2 = pd.DataFrame(
+            [
+                ["Alex", 100.0, "2022-01-01,09:01:00"],
+                ["Emma", 400.0, "2022-01-01,09:02:00"],
+                ["Alex", 200.0, "2022-01-02,07:03:00"],
+                ["Emma", 300.0, "2022-01-02,09:04:00"],
+                ["Jack", 500.0, "2022-01-03,09:05:00"],
+                ["Alex", 450.0, "2022-01-03,09:06:00"],
+            ],
+            columns=["name", "avg_cost", "timestamp"],
+        )
+        source_2 = self.create_file_source(
+            df_2,
+            schema=Schema(
+                ["name", "avg_cost", "timestamp"],
+                [String, Float64, String],
+            ),
+            timestamp_field="timestamp",
+            timestamp_format="%Y-%m-%d,%H:%M:%S",
+            keys=["name"],
+            data_format="json",
+        )
+        feature_view = DerivedFeatureView(
+            name="feature_view",
+            source=source,
+            features=[
+                "cost",
+                "distance",
+                f"{source_2.name}.avg_cost",
+            ],
+            keep_source_fields=False,
+        )
+
+        [_, built_feature_view] = self.client.build_features([source_2, feature_view])
+
+        expected_result_df = df_1[["name", "time", "cost", "distance"]]
+        expected_result_df["avg_cost"] = pd.Series(
+            [None, None, 200.0, 400.0, None, 200.0]
+        )
+        expected_result_df = expected_result_df.sort_values(
+            by=["name", "time"]
+        ).reset_index(drop=True)
+
+        result_df = (
+            self.client.get_features(feature_descriptor=built_feature_view)
+            .to_pandas()
+            .sort_values(by=["name", "time"])
+            .reset_index(drop=True)
+        )
+
+        self.assertIsNone(source.keys)
+        self.assertListEqual(["name"], built_feature_view.keys)
+        self.assertTrue(expected_result_df.equals(result_df))
