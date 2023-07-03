@@ -132,7 +132,9 @@ class OnDemandFeatureView(FeatureView):
                     feature = Feature(
                         name=join_feature_name,
                         dtype=table_desc.get_feature(join_feature_name).dtype,
-                        transform=JoinTransform(join_table_name, join_feature_name),
+                        transform=JoinTransform(
+                            join_table_name, f"`{join_feature_name}`"
+                        ),
                         keys=table_desc.keys,
                     )
 

@@ -134,6 +134,9 @@ def from_json(json_dict: Dict) -> Any:
     delimiter_index = str(json_dict["class"]).rindex(".")
     module_name = json_dict["class"][:delimiter_index]
 
+    # TODO: Modify configurations to align the format requirement between
+    #  black and flake8 about whitespaces between functions and colons.
+
     # avoid contradict requirements for code format between black and flake8
     class_name_start_index = delimiter_index + 1
     class_name = json_dict["class"][class_name_start_index:]

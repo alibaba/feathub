@@ -119,7 +119,7 @@ class JoinFieldDescriptor:
 
     @staticmethod
     def from_field_name(field_name: str) -> "JoinFieldDescriptor":
-        return JoinFieldDescriptor(field_name)
+        return JoinFieldDescriptor(f"`{field_name}`")
 
     def __eq__(self, other: object) -> bool:
         return (
