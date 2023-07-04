@@ -99,7 +99,9 @@ public class RedisSinkFunction extends RichSinkFunction<RowData> {
                                 data.getMap(valueFieldIndex), (KeyValueDataType) dataType);
 
                 if (newMap == null || newMap.isEmpty()) {
-                    client.del(key);
+                    if (!enableHashPartialUpdate) {
+                        client.del(key);
+                    }
                     continue;
                 }
 

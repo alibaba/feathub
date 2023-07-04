@@ -320,7 +320,11 @@ def _test_redis_sink_update_entry_enable_hash_partial_update(
     redis_client: Union[Redis, RedisCluster],
 ):
     input_data = pd.DataFrame(
-        [[1, {"key1": False, "key2": True}], [1, {"key2": False, "key3": True}]],
+        [
+            [1, {"key1": False, "key2": True}],
+            [1, {"key2": False, "key3": True}],
+            [1, {}],
+        ],
         columns=["id", "val"],
     )
 
