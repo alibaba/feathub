@@ -13,7 +13,13 @@
 #  limitations under the License.
 from typing import Dict, Type, Union
 
-from pyflink.table import DataTypes, Schema as NativeFlinkSchema, TableSchema
+from pyflink.table import (
+    DataTypes,
+    Schema as NativeFlinkSchema,
+    TableSchema,
+    Table as NativeFlinkTable,
+    expressions as native_flink_expr,
+)
 from pyflink.table.types import (
     DataType,
     AtomicType,
@@ -92,6 +98,87 @@ def to_flink_type(feathub_type: DType) -> DataType:
     )
 
 
+def cast_field_type_without_changing_nullability(
+    table: NativeFlinkTable, field_name_and_types: Dict[str, DataType]
+) -> NativeFlinkTable:
+    """
+    Converts given fields in the flink table to the dedicated data types.
+
+    Note that this method would not change the nullability of the fields.
+
+    :param table: the Flink table containing the fields to be casted
+    :param field_name_and_types: a dict containing the names of the fields and the
+                                 target data types to cast.
+    """
+    expressions = []
+    for field_name, field_type in field_name_and_types.items():
+        current_field_type = table.get_schema().get_field_data_type(field_name)
+        field_type = _get_data_type_with_same_nullability(
+            field_type, current_field_type
+        )
+        if field_type == current_field_type:
+            continue
+        expressions.append(
+            native_flink_expr.col(field_name).cast(field_type).alias(field_name)
+        )
+
+    if not expressions:
+        return table
+    return table.add_or_replace_columns(*expressions)
+
+
+def _get_data_type_with_same_nullability(
+    original_type: DataType, reference_type: DataType
+) -> DataType:
+    """
+    Recursively updates the nullability of the original type to be same as the
+    reference type. Original type and reference type should be both atomic type
+    or the same collection type.
+
+    Example:
+
+    (INT, BIGINT NOT NULL) -> INT NOT NULL
+
+    (MAP<STRING NOT NULL, FLOAT NOT NULL>, MAP<STRING NOT NULL, DOUBLE> NOT NULL)
+    -> MAP<STRING NOT NULL, FLOAT> NOT NULL
+
+    :param original_type: DataType whose nullability would be updated.
+    :param reference_type: DataType containing the target nullability.
+    :return: original_type with its nullability aligned with reference_type.
+    """
+    if reference_type == original_type:
+        return reference_type
+
+    if isinstance(reference_type, AtomicType) and isinstance(original_type, AtomicType):
+        return (
+            original_type.nullable()
+            if _is_nullable_flink_type(reference_type)
+            else original_type.not_null()
+        )
+    elif isinstance(reference_type, ArrayType) and isinstance(original_type, ArrayType):
+        element_type = _get_data_type_with_same_nullability(
+            original_type.element_type, reference_type.element_type
+        )
+        return ArrayType(element_type, nullable=_is_nullable_flink_type(reference_type))
+    elif isinstance(reference_type, NativeFlinkMapType) and isinstance(
+        original_type, NativeFlinkMapType
+    ):
+        key_type = _get_data_type_with_same_nullability(
+            original_type.key_type, reference_type.key_type
+        )
+        value_type = _get_data_type_with_same_nullability(
+            original_type.value_type, reference_type.value_type
+        )
+        return NativeFlinkMapType(
+            key_type, value_type, nullable=_is_nullable_flink_type(reference_type)
+        )
+
+    raise FeathubTypeException(
+        f"Flink type combination {original_type} and {reference_type} "
+        f"is not supported by FeatHub."
+    )
+
+
 def to_flink_sql_type(input_type: Union[DType, DataType]) -> str:
     """
     Convert FeatHub DType or Flink DataType to Flink SQL data type.
@@ -133,6 +220,10 @@ def to_feathub_type(flink_type: DataType) -> DType:
         return _map_type_to_feathub_type(flink_type)
 
     raise FeathubTypeException(f"Flink type {flink_type} is not supported by FeatHub.")
+
+
+def _is_nullable_flink_type(flink_type: DataType) -> bool:
+    return flink_type.nullable() == flink_type
 
 
 def _primitive_type_to_flink_type(feathub_type: PrimitiveType) -> DataType:

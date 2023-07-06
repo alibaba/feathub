@@ -176,8 +176,8 @@ class KafkaSource(FeatureTable):
             topic=json_dict["topic"],
             key_format=json_dict["key_format"],
             value_format=json_dict["value_format"],
-            schema=from_json(json_dict["name"])
-            if json_dict["name"] is not None
+            schema=from_json(json_dict["schema"])
+            if json_dict["schema"] is not None
             else None,
             consumer_group=json_dict["consumer_group"],
             keys=json_dict["keys"],

@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from abc import ABC
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Union, Any
 
 import pandas as pd
@@ -25,14 +25,23 @@ from testcontainers.redis import RedisContainer
 
 from feathub.common import types
 from feathub.common.exceptions import FeathubException
+from feathub.common.test_utils import to_epoch_millis
 from feathub.feature_tables.sinks.redis_sink import RedisSink
 from feathub.feature_tables.sources.redis_source import (
     RedisSource,
 )
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
+from feathub.feature_views.sliding_feature_view import (
+    SlidingFeatureView,
+    ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG,
+    SKIP_SAME_WINDOW_OUTPUT_CONFIG,
+)
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
+from feathub.feature_views.transforms.sliding_window_transform import (
+    SlidingWindowTransform,
+)
 from feathub.online_stores.conversion_utils import to_python_object
 from feathub.table.schema import Schema
 from feathub.tests.feathub_it_test_base import FeathubITTestBase
@@ -539,6 +548,115 @@ def _test_redis_source_join(
     )
 
     [_, built_feature_view] = self.client.build_features([redis_source, feature_view])
+
+    result_df = (
+        self.client.get_features(feature_descriptor=built_feature_view)
+        .to_pandas()
+        .sort_values(by=["id"])
+        .reset_index(drop=True)
+    )
+
+    self.assertTrue(result_df.equals(expected_result_df))
+
+    redis_client.close()
+
+
+def _test_redis_source_join_after_sliding_window(
+    self: FeathubITTestBase,
+    host: str,
+    port: int,
+    mode: str,
+    redis_client: Union[Redis, RedisCluster],
+):
+    _, redis_data, schema = _generate_test_data()
+    for data in redis_data:
+        if isinstance(data[1], dict):
+            for key, value in data[1].items():
+                redis_client.hset(data[0], key, value)
+        elif isinstance(data[1], list):
+            redis_client.rpush(data[0], *data[1])
+        else:
+            redis_client.set(data[0], data[1])
+
+    redis_source = RedisSource(
+        name="redis_source",
+        namespace="test_namespace",
+        mode=mode,
+        host=host,
+        port=port,
+        keys=["id"],
+        schema=schema,
+    )
+
+    schema = (
+        Schema.new_builder()
+        .column("id", types.Int64)
+        .column("cost", types.Int64)
+        .column("distance", types.Int64)
+        .column("time", types.String)
+        .build()
+    )
+
+    input_data = pd.DataFrame(
+        [
+            [1, 100, 100, "2022-01-01 08:00:00.001"],
+            [2, 400, 250, "2022-01-01 08:00:00.002"],
+            [1, 300, 200, "2022-01-01 08:00:00.003"],
+            [2, 200, 250, "2022-01-01 08:00:00.004"],
+            [3, 500, 500, "2022-01-01 08:00:00.005"],
+            [1, 600, 800, "2022-01-01 08:00:00.006"],
+        ],
+        columns=["id", "cost", "distance", "time"],
+    )
+
+    source = self.create_file_source(
+        df=input_data,
+        keys=["id"],
+        schema=schema,
+    )
+
+    f_total_cost = Feature(
+        name="total_cost",
+        transform=SlidingWindowTransform(
+            expr="cost",
+            agg_func="SUM",
+            window_size=timedelta(days=1),
+            group_by_keys=["id"],
+            step_size=timedelta(days=1),
+        ),
+    )
+
+    sliding_feature_view = SlidingFeatureView(
+        name="sliding_feature_view",
+        source=source,
+        features=[f_total_cost],
+        extra_props={
+            ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG: False,
+            SKIP_SAME_WINDOW_OUTPUT_CONFIG: False,
+        },
+    )
+
+    feature_view = DerivedFeatureView(
+        name="feature_view",
+        source=sliding_feature_view,
+        features=[
+            "id",
+            "total_cost",
+            f"{redis_source.name}.val",
+        ],
+        keep_source_fields=False,
+    )
+
+    [_, built_feature_view] = self.client.build_features([redis_source, feature_view])
+
+    expected_result_df = pd.DataFrame(
+        [
+            [to_epoch_millis("2022-01-01 23:59:59.999"), 1, 1000, 1],
+            [to_epoch_millis("2022-01-01 23:59:59.999"), 2, 600, 2],
+            [to_epoch_millis("2022-01-01 23:59:59.999"), 3, 500, 3],
+        ],
+        columns=["window_time", "id", "total_cost", "val"],
+    ).reset_index(drop=True)
 
     result_df = (
         self.client.get_features(feature_descriptor=built_feature_view)
@@ -1112,6 +1230,19 @@ class RedisSourceSinkStandaloneModeITTest(ABC, FeathubITTestBase):
             self.redis_container.get_client(),
         )
 
+    def test_redis_source_join_after_sliding_window_standalone_mode(self):
+        _test_redis_source_join_after_sliding_window(
+            self,
+            "127.0.0.1",
+            int(
+                self.redis_container.get_exposed_port(
+                    self.redis_container.port_to_expose
+                )
+            ),
+            "standalone",
+            self.redis_container.get_client(),
+        )
+
     def test_redis_source_join_different_key_order_standalone_mode(self):
         _test_redis_source_join_different_key_order(
             self,
@@ -1232,6 +1363,15 @@ class RedisSourceSinkClusterModeITTest(ABC, FeathubITTestBase):
 
     def test_redis_source_join_cluster_mode(self):
         _test_redis_source_join(
+            self,
+            "127.0.0.1",
+            7000,
+            "cluster",
+            self.redis_cluster_container.get_client(),
+        )
+
+    def test_redis_source_join_after_sliding_window_cluster_mode(self):
+        _test_redis_source_join_after_sliding_window(
             self,
             "127.0.0.1",
             7000,

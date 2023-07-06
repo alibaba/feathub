@@ -25,6 +25,9 @@ from feathub.common.exceptions import FeathubTransformationException
 from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
 from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
+from feathub.processors.flink.flink_types_utils import (
+    cast_field_type_without_changing_nullability,
+)
 from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
 )
@@ -116,6 +119,13 @@ def evaluate_over_window_transform(
                 *_get_over_window_agg_column_list(window_descriptor, agg_descriptors),
             )
         )
+        agg_table = cast_field_type_without_changing_nullability(
+            agg_table,
+            {
+                descriptor.field_name: descriptor.field_data_type
+                for descriptor in agg_descriptors
+            },
+        )
 
         # For rows that do not satisfy the filter predicate, set the feature col
         # to NULL.
@@ -140,6 +150,13 @@ def evaluate_over_window_transform(
         result_table = flink_table.over_window(window.alias("w")).select(
             native_flink_expr.col("*"),
             *_get_over_window_agg_column_list(window_descriptor, agg_descriptors),
+        )
+        result_table = cast_field_type_without_changing_nullability(
+            result_table,
+            {
+                descriptor.field_name: descriptor.field_data_type
+                for descriptor in agg_descriptors
+            },
         )
 
     return result_table
@@ -188,9 +205,7 @@ def _get_over_window_agg_column_list(
             window_descriptor,
             descriptor.agg_func,
             "w",
-        )
-        .cast(descriptor.field_data_type)
-        .alias(descriptor.field_name)
+        ).alias(descriptor.field_name)
         for descriptor in agg_descriptors
     ]
 

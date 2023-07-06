@@ -483,3 +483,96 @@ class JoinTransformITTest(ABC, FeathubITTestBase):
         self.assertIsNone(source.keys)
         self.assertListEqual(["name"], built_feature_view.keys)
         self.assertTrue(expected_result_df.equals(result_df))
+
+    def test_declare_join_key_as_feature(self):
+        df_1 = self.input_data.copy()
+        source = self.create_file_source(df_1)
+        feature_view_1 = DerivedFeatureView(
+            name="feature_view_1",
+            source=source,
+            features=[
+                Feature(
+                    name="cost",
+                    transform="cost",
+                ),
+                Feature(
+                    name="distance",
+                    transform="distance",
+                ),
+            ],
+            keep_source_fields=True,
+        )
+
+        df_2 = pd.DataFrame(
+            [
+                ["Alex", 100.0, "2022-01-01,09:01:00"],
+                ["Emma", 400.0, "2022-01-01,09:02:00"],
+                ["Alex", 200.0, "2022-01-02,07:03:00"],
+                ["Emma", 300.0, "2022-01-02,09:04:00"],
+                ["Jack", 500.0, "2022-01-03,09:05:00"],
+                ["Alex", 450.0, "2022-01-03,09:06:00"],
+            ],
+            columns=["name", "avg_cost", "time"],
+        )
+        source_2 = self.create_file_source(
+            df_2,
+            schema=Schema(["name", "avg_cost", "time"], [String, Float64, String]),
+            timestamp_format="%Y-%m-%d,%H:%M:%S",
+            keys=["name"],
+        )
+        feature_view_2 = DerivedFeatureView(
+            name="feature_view_2",
+            source=feature_view_1,
+            features=[
+                Feature(
+                    name="cost",
+                    transform="cost",
+                ),
+                "distance",
+                f"{source_2.name}.avg_cost",
+            ],
+            keep_source_fields=False,
+        )
+
+        feature_view_3 = DerivedFeatureView(
+            name="feature_view_3",
+            source=feature_view_2,
+            features=[
+                "name",
+                Feature(
+                    name="derived_cost",
+                    transform="avg_cost * distance",
+                ),
+            ],
+            keep_source_fields=True,
+        )
+
+        [_, built_feature_view_2, built_feature_view_3] = self.client.build_features(
+            [source_2, feature_view_2, feature_view_3]
+        )
+
+        expected_result_df = df_1[["name", "time", "cost", "distance"]]
+        expected_result_df["avg_cost"] = pd.Series(
+            [None, None, 200.0, 400.0, None, 200.0]
+        )
+        expected_result_df["derived_cost"] = pd.Series(
+            [None, None, 40000.0, 100000.0, None, 160000.0]
+        )
+        expected_result_df = expected_result_df[
+            ["time", "cost", "distance", "avg_cost", "name", "derived_cost"]
+        ]
+        expected_result_df = expected_result_df.sort_values(
+            by=["name", "time"]
+        ).reset_index(drop=True)
+
+        result_df = (
+            self.client.get_features(feature_descriptor=built_feature_view_3)
+            .to_pandas()
+            .sort_values(by=["name", "time"])
+            .reset_index(drop=True)
+        )
+
+        self.assertIsNone(feature_view_1.keys)
+        self.assertListEqual(["name"], built_feature_view_2.keys)
+        self.assertListEqual(["name"], built_feature_view_3.keys)
+        self.assertTrue(expected_result_df.equals(result_df))
