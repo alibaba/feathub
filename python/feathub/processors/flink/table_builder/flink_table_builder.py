@@ -47,7 +47,11 @@ from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from feathub.processors.flink.flink_class_loader_utils import (
     ClassLoader,
 )
-from feathub.processors.flink.flink_types_utils import to_flink_type, to_flink_schema
+from feathub.processors.flink.flink_types_utils import (
+    to_flink_type,
+    to_flink_schema,
+    cast_field_type_without_changing_nullability,
+)
 from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
     get_default_value_and_type,
@@ -220,7 +224,7 @@ class FlinkTableBuilder:
                     f"{table.get_schema().get_field_names()}."
                 )
         return join_table_on_key(
-            key_table, table, key_table.get_schema().get_field_names()
+            self.t_env, key_table, table, key_table.get_schema().get_field_names()
         )
 
     def _get_table(
@@ -563,6 +567,7 @@ class FlinkTableBuilder:
                 join_keys = list(window_descriptor.group_by_keys)
                 join_keys.append(EVENT_TIME_ATTRIBUTE_NAME)
                 agg_table = full_outer_join_on_key_with_default_value(
+                    self.t_env,
                     agg_table,
                     tmp_agg_table,
                     join_keys,
@@ -702,10 +707,13 @@ class FlinkTableBuilder:
         result_type: DType,
     ) -> NativeFlinkTable:
         result_type = to_flink_type(result_type)
-        return source_table.add_or_replace_columns(
-            native_flink_expr.call_sql(to_flink_sql_expr(transform.expr))
-            .cast(result_type)
-            .alias(result_field_name)
+        table = source_table.add_or_replace_columns(
+            native_flink_expr.call_sql(to_flink_sql_expr(transform.expr)).alias(
+                result_field_name
+            )
+        )
+        return cast_field_type_without_changing_nullability(
+            table, {result_field_name: result_type}
         )
 
     def _range_table_by_time(

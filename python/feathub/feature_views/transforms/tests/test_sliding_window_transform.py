@@ -1261,6 +1261,131 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
                 f"actual: {result_df}",
             )
 
+    def test_join_sliding_feature_with_different_filter(self):
+        df = pd.DataFrame(
+            [
+                ["Alex", 100.0, "2022-01-01 09:01:00"],
+                ["Alex", 200.0, "2022-01-01 09:01:20"],
+                ["Alex", 450.0, "2022-01-01 09:06:00"],
+            ],
+            columns=["name", "cost", "time"],
+        )
+
+        schema = Schema(["name", "cost", "time"], [String, Float64, String])
+        source = self.create_file_source(
+            df, schema=schema, keys=["name"], name="source"
+        )
+
+        df2 = pd.DataFrame(
+            [
+                ["Alex", "2022-01-01 09:01:00"],
+                ["Alex", "2022-01-01 09:02:00"],
+                ["Alex", "2022-01-01 09:05:00"],
+                ["Alex", "2022-01-01 09:07:00"],
+                ["Alex", "2022-01-01 09:09:00"],
+            ]
+        )
+        source2 = self.create_file_source(
+            df2,
+            schema=Schema(["name", "time"], [String, String]),
+            keys=["name"],
+            name="source2",
+        )
+
+        expected_results = {
+            ENABLE_EMPTY_WINDOW_OUTPUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    ["Alex", "2022-01-01 09:01:00", None, None],
+                    ["Alex", "2022-01-01 09:02:00", 300.0, 2],
+                    ["Alex", "2022-01-01 09:05:00", 0.0, 0],
+                    ["Alex", "2022-01-01 09:07:00", 450.0, 1],
+                    ["Alex", "2022-01-01 09:09:00", 0.0, 0],
+                ],
+                columns=["name", "time", "last_2_minute_total_cost", "cnt"],
+            ),
+            DISABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    ["Alex", "2022-01-01 09:01:00", 0.0, 0],
+                    ["Alex", "2022-01-01 09:02:00", 300.0, 2],
+                    ["Alex", "2022-01-01 09:05:00", 0.0, 0],
+                    ["Alex", "2022-01-01 09:07:00", 450.0, 1],
+                    ["Alex", "2022-01-01 09:09:00", 0.0, 0],
+                ],
+                columns=["name", "time", "last_2_minute_total_cost", "cnt"],
+            ),
+            ENABLE_EMPTY_WINDOW_OUTPUT_WITHOUT_SKIP_SAME_WINDOW_OUTPUT: pd.DataFrame(
+                [
+                    ["Alex", "2022-01-01 09:01:00", None, None],
+                    ["Alex", "2022-01-01 09:02:00", 300.0, 2],
+                    ["Alex", "2022-01-01 09:05:00", 0.0, 0],
+                    ["Alex", "2022-01-01 09:07:00", 450.0, 1],
+                    ["Alex", "2022-01-01 09:09:00", 0.0, 0],
+                ],
+                columns=["name", "time", "last_2_minute_total_cost", "cnt"],
+            ),
+        }
+
+        for props in self.get_supported_sliding_window_config():
+            expected_result_df = expected_results.get(props)
+            features = SlidingFeatureView(
+                name="features",
+                source=source,
+                features=[
+                    Feature(
+                        name="last_2_minute_total_cost",
+                        transform=SlidingWindowTransform(
+                            expr="cost",
+                            filter_expr="cost >= 0",
+                            agg_func="SUM",
+                            group_by_keys=["name"],
+                            window_size=timedelta(minutes=2),
+                            step_size=timedelta(minutes=1),
+                        ),
+                    ),
+                    Feature(
+                        name="cnt",
+                        transform=SlidingWindowTransform(
+                            expr="1",
+                            agg_func="COUNT",
+                            group_by_keys=["name"],
+                            window_size=timedelta(minutes=2),
+                            step_size=timedelta(minutes=1),
+                        ),
+                    ),
+                ],
+                extra_props=props.value,
+            )
+
+            joined_feature = DerivedFeatureView(
+                name="joined_feature",
+                source=source2,
+                features=[
+                    "features.last_2_minute_total_cost",
+                    "features.cnt",
+                ],
+                keep_source_fields=True,
+            )
+            self.client.build_features([features])
+
+            built_joined_feature = self.client.build_features([joined_feature])[0]
+
+            expected_result_df = expected_result_df.sort_values(
+                by=["name", "time"]
+            ).reset_index(drop=True)
+
+            result_df = (
+                self.client.get_features(feature_descriptor=built_joined_feature)
+                .to_pandas()
+                .sort_values(by=["name", "time"])
+                .reset_index(drop=True)
+            )
+
+            self.assertTrue(
+                expected_result_df.equals(result_df),
+                f"Failed with props: {props}\nexpected: {expected_result_df}\n"
+                f"actual: {result_df}",
+            )
+
     def test_sliding_feature_join_source(self):
         df = pd.DataFrame(
             [

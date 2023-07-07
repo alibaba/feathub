@@ -39,7 +39,11 @@ from feathub.processors.constants import (
     EVENT_TIME_ATTRIBUTE_NAME,
     PROCESSING_TIME_ATTRIBUTE_NAME,
 )
-from feathub.processors.flink.flink_types_utils import to_flink_type
+from feathub.processors.flink.flink_types_utils import (
+    to_flink_type,
+    cast_field_type_without_changing_nullability,
+    to_flink_sql_type,
+)
 from feathub.processors.flink.table_builder.aggregation_utils import (
     get_default_value_and_type,
     AggregationFieldDescriptor,
@@ -142,26 +146,43 @@ class JoinFieldDescriptor:
 
 
 def join_table_on_key(
-    left: NativeFlinkTable, right: NativeFlinkTable, key_fields: List[str]
+    t_env: StreamTableEnvironment,
+    left: NativeFlinkTable,
+    right: NativeFlinkTable,
+    key_fields: List[str],
 ) -> NativeFlinkTable:
     """
     Join the left and right table on the given key fields.
     """
 
-    right_aliased = _rename_fields(right, key_fields)
-    predicate = _get_join_predicate(left, right_aliased, key_fields)
+    # Use SQL instead of Table API to get around the issue in FLINK-32464.
 
-    return left.join(right_aliased, predicate).select(
-        *[
-            native_flink_expr.col(left_field_name)
-            for left_field_name in left.get_schema().get_field_names()
-        ],
-        *[
-            native_flink_expr.col(right_field_name)
-            for right_field_name in right.get_schema().get_field_names()
-            if right_field_name not in key_fields
-        ],
+    predicate = _get_join_predicate(key_fields)
+    select_statement = ", ".join(
+        [
+            *[
+                f"left_table.`{left_field_name}`"
+                for left_field_name in left.get_schema().get_field_names()
+            ],
+            *[
+                f"right_table.`{right_field_name}`"
+                for right_field_name in right.get_schema().get_field_names()
+                if right_field_name not in key_fields
+            ],
+        ]
     )
+
+    t_env.create_temporary_view("left_table", left)
+    t_env.create_temporary_view("right_table", right)
+
+    result_table = t_env.sql_query(
+        f"SELECT {select_statement} FROM left_table JOIN right_table ON {predicate}"
+    )
+
+    t_env.drop_temporary_view("left_table")
+    t_env.drop_temporary_view("right_table")
+
+    return result_table
 
 
 def lookup_join(
@@ -223,6 +244,7 @@ def _append_processing_time_attribute(
 
 
 def full_outer_join_on_key_with_default_value(
+    t_env: StreamTableEnvironment,
     left: NativeFlinkTable,
     right: NativeFlinkTable,
     key_fields: List[str],
@@ -240,28 +262,44 @@ def full_outer_join_on_key_with_default_value(
                                  NULL.
     :return: The joined table.
     """
-    right_aliased = _rename_fields(right, key_fields)
-    predicate = _get_join_predicate(left, right_aliased, key_fields)
 
-    return left.full_outer_join(right_aliased, predicate).select(
-        *[
-            native_flink_expr.if_then_else(
-                native_flink_expr.col(key).is_not_null,
-                native_flink_expr.col(key),
-                native_flink_expr.col(f"right.{key}"),
-            ).alias(key)
-            for key in key_fields
-        ],
-        *[
-            _field_with_default_value_if_null(left_field_name, field_default_values)
-            for left_field_name in left.get_schema().get_field_names()
-            if left_field_name not in key_fields
-        ],
-        *[
-            _field_with_default_value_if_null(right_field_name, field_default_values)
-            for right_field_name in right.get_schema().get_field_names()
-            if right_field_name not in key_fields
-        ],
+    # Use SQL instead of Table API to get around the issue in FLINK-32464.
+
+    predicate = _get_join_predicate(key_fields)
+
+    select_field_exprs = []
+    for key in key_fields:
+        select_field_exprs.append(
+            f"CASE WHEN left_table.`{key}` IS NOT NULL "
+            f"THEN left_table.`{key}` "
+            f"ELSE right_table.`{key}` "
+            f"END AS `{key}`"
+        )
+    for field_name in left.get_schema().get_field_names():
+        if field_name in key_fields:
+            continue
+        select_field_exprs.append(
+            _field_with_default_value_if_null(field_name, field_default_values)
+        )
+    for field_name in right.get_schema().get_field_names():
+        if field_name in key_fields:
+            continue
+        select_field_exprs.append(
+            _field_with_default_value_if_null(field_name, field_default_values)
+        )
+    select_statement = ", ".join(select_field_exprs)
+
+    t_env.create_temporary_view("left_table", left)
+    t_env.create_temporary_view("right_table", right)
+    table = t_env.sql_query(
+        f"SELECT {select_statement} FROM left_table "
+        f"FULL OUTER JOIN right_table ON {predicate};"
+    )
+    t_env.drop_temporary_view("left_table")
+    t_env.drop_temporary_view("right_table")
+
+    return cast_field_type_without_changing_nullability(
+        table, {key: value[1] for key, value in field_default_values.items()}
     )
 
 
@@ -335,7 +373,7 @@ def temporal_join(
             else:
                 default_value_expr = native_flink_expr.lit(
                     join_field_descriptor.default_value
-                ).cast(join_field_descriptor.field_data_type)
+                )
             result_table = result_table.add_or_replace_columns(
                 native_flink_expr.if_then_else(
                     native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME)
@@ -345,6 +383,9 @@ def temporal_join(
                     native_flink_expr.col(right_field_name),
                     default_value_expr,
                 ).alias(right_field_name)
+            )
+            result_table = cast_field_type_without_changing_nullability(
+                result_table, {right_field_name: join_field_descriptor.field_data_type}
             )
 
     t_env.drop_temporary_view("left_table")
@@ -361,15 +402,10 @@ def _rename_fields(right: NativeFlinkTable, fields: Sequence[str]) -> NativeFlin
     return right_aliased
 
 
-def _get_join_predicate(
-    left: NativeFlinkTable, key_aliased_right: NativeFlinkTable, key_fields: List[str]
-) -> native_flink_expr:
-    predicates = [
-        left.__getattr__(f"{key}") == key_aliased_right.__getattr__(f"right.{key}")
-        for key in key_fields
-    ]
+def _get_join_predicate(key_fields: List[str]) -> str:
+    predicates = [f"left_table.`{key}` = right_table.`{key}`" for key in key_fields]
     if len(predicates) > 1:
-        predicate = native_flink_expr.and_(*predicates)
+        predicate = " AND ".join(predicates)
     else:
         predicate = predicates[0]
     return predicate
@@ -377,17 +413,16 @@ def _get_join_predicate(
 
 def _field_with_default_value_if_null(
     field_name: str, field_default_values: Dict[str, Tuple[Any, DataType]]
-) -> native_flink_expr:
+) -> str:
     if (
         field_name not in field_default_values
         or field_default_values[field_name][0] is None
     ):
-        return native_flink_expr.col(field_name)
+        return f"`{field_name}`"
 
-    return native_flink_expr.if_then_else(
-        native_flink_expr.col(field_name).is_not_null,
-        native_flink_expr.col(field_name),
-        native_flink_expr.lit(field_default_values[field_name][0]).cast(
-            field_default_values[field_name][1]
-        ),
-    ).alias(field_name)
+    return (
+        f"CASE WHEN `{field_name}` IS NOT NULL THEN `{field_name}` ELSE "
+        f"CAST({field_default_values[field_name][0]} AS "
+        f"{to_flink_sql_type(field_default_values[field_name][1])}) END "
+        f"AS `{field_name}`"
+    )
