@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import sys
+import uuid
 import warnings
 from datetime import datetime, timezone, tzinfo
 from string import Template
@@ -186,3 +187,7 @@ def rename_kwargs(
                 stacklevel=3,
             )
             kwargs[new] = kwargs.pop(alias)
+
+
+def generate_random_name(prefix: str) -> str:
+    return f"{prefix}_{str(uuid.uuid4()).replace('-', '')}"

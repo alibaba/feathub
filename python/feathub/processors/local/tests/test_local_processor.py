@@ -144,3 +144,6 @@ class LocalProcessorITTest(
 
     def test_join_transform_with_map_lookup(self):
         pass
+
+    def test_transform_with_zero_window_size(self):
+        pass

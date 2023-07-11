@@ -15,16 +15,14 @@
 from typing import Optional, List, Dict
 
 from feathub.feature_views.feature import Feature
-from feathub.processors.flink.table_builder.source_sink_utils_common import (
-    generate_random_table_name,
-)
+from feathub.common.utils import generate_random_name
 from feathub.table.table_descriptor import TableDescriptor
 
 
 class MockTableDescriptor(TableDescriptor):
     def __init__(
         self,
-        name: str = generate_random_table_name("mock_descriptor"),
+        name: str = generate_random_name("mock_descriptor"),
         keys: Optional[List[str]] = None,
         timestamp_field: Optional[str] = None,
         timestamp_format: str = "epoch",

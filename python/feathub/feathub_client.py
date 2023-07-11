@@ -20,6 +20,7 @@ from feathub.common.config import flatten_dict
 from feathub.common.utils import deprecated_alias
 from feathub.feature_tables.sinks.sink import Sink
 from feathub.materialization_group import MaterializationGroup
+from feathub.metric_stores.metric_store import MetricStore
 from feathub.processors.processor import Processor
 from feathub.registries.registry import Registry
 from feathub.feature_service.feature_service import FeatureService
@@ -40,7 +41,10 @@ class FeathubClient:
         """
         self.props = flatten_dict(props)
         self.registry = Registry.instantiate(props=self.props)
-        self.processor = Processor.instantiate(props=self.props, registry=self.registry)
+        self.metric_store = MetricStore.instantiate(props=self.props)
+        self.processor = Processor.instantiate(
+            props=self.props, registry=self.registry, metric_store=self.metric_store
+        )
         self.feature_service = FeatureService.instantiate(
             props=self.props,
             registry=self.registry,
