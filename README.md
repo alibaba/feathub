@@ -248,15 +248,15 @@ $ python python/feathub/examples/nyc_taxi.py
 You can use the following quickstart guides to compute features in a Flink
 cluster with different deployment modes:
 
-- [Flink Processor Session Mode Quickstart](docs/content/get-started/quickstarts/flink-session-mode.md)
-- [Flink Processor Cli Mode Quickstart](docs/content/get-started/quickstarts/flink-cli-mode.md)
+- [Flink Processor Session Mode Quickstart](docs/content/quickstarts/flink-session-mode.md)
+- [Flink Processor Cli Mode Quickstart](docs/content/quickstarts/flink-cli-mode.md)
 
 #### Quickstart using Spark Processor
 
 You can use the following quickstart guides to compute features in a standalone
 Spark cluster.
 
-- [Spark Processor Client Mode Quickstart](docs/content/get-started/quickstarts/spark-client-mode.md)
+- [Spark Processor Client Mode Quickstart](docs/content/quickstarts/spark-client-mode.md)
 
 ### Examples
 

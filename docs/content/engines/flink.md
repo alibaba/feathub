@@ -34,7 +34,7 @@ Flink cluster. Users need to manually submit the FeatHub job as a Flink job
 using the Flink [CLI tool](https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/cli/#command-line-interface).
 
 A quickstart of how to submit a simple FeatHub job with CLI mode to a standalone Flink 
-cluster can be found in this [document](../get-started/quickstarts/flink-cli-mode.md).
+cluster can be found in this [document](../quickstarts/flink-cli-mode.md).
 
 ### Session mode
 
@@ -55,7 +55,7 @@ the [Flink Docs](https://nightlies.apache.org/flink/flink-docs-master/docs/deplo
 for explanation of session mode. 
 
 A quickstart of how to submit a simple FeatHub job with session mode to a standalone 
-Flink cluster can be found in this [document](../get-started/quickstarts/flink-session-mode.md).
+Flink cluster can be found in this [document](../quickstarts/flink-session-mode.md).
 
 ### Kubernetes Application mode
 

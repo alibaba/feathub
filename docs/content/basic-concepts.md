@@ -1,7 +1,7 @@
 # Basic Concepts
 
 This document describes the basic concepts in FeatHub. Please checkout
-[README](../../../README.md#architecture-overview) for an overview of FeatHub
+[README](../../README.md#architecture-overview) for an overview of FeatHub
 architecture.
 
 ## TableDescriptor - Declarative Definition of Features
@@ -27,7 +27,7 @@ For example, a FileSystemSource can be used as a source by specifying the path, 
 format, and schema. Similarly, a FileSystemSink can be used as a sink by specifying the 
 path and data format.
 
-See [Connectors](../connectors/_index.md) for the list of storage systems from
+See [Connectors](connectors/_index.md) for the list of storage systems from
 which we can construct FeatureTable in FeatHub.
 
 ### FeatureView

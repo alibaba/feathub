@@ -3,7 +3,7 @@
 FeatHub can use `OverWindowTransform` and `SlidingWindowTransform` to describe
 how to derive a feature value by applying FeatHub expression and aggregation
 function on multiple rows. In the following, we provide example usages of these
-window transforms and the supported aggregation functions.
+window transforms and the supported built-in aggregation functions.
 
 ## OverWindowTransform
 
@@ -62,10 +62,10 @@ features = SlidingFeatureView(
 )
 ```
 
-## Aggregation Functions
+# Built-in Aggregation Functions
 
-In the following, we describe the built-in aggregation functions supported by
-FeatHub window transforms.
+The following built-in aggregation functions are supported by the window
+transforms described above.
 
 | Function     | Description                                                  |
 | ------------ | ------------------------------------------------------------ |

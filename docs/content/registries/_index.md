@@ -1,3 +1,3 @@
-# Registries
+# Feature Registries
 
 - [MySQL](mysql.md)

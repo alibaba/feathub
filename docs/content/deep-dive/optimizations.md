@@ -9,9 +9,10 @@ impact on performance for selected use cases.
 
 ## Reusing the Same Data History for Multiple Sliding Window Features
 
-**Target Feature Pattern**: Users want to compute multiple sliding window features
-with slightly different window sizes. For example, they may want to compute the
-number of clicks a user has made in the last 1 hour, 3 hours, and 6 hours.
+**Target Feature Pattern**: Multiple `SlidingWindowTransform` features are
+defined in the same `SlidingFeatureView` and those features only differ in their
+`window_size`. For example, a user may want to compute the count of clicks per
+`user_id` in the last 1 hour, 3 hours, and 6 hours.
 
 A naive Flink job would create a separate operator for each feature, with each
 operator needing to preserve the entire data history of the corresponding window
@@ -26,6 +27,10 @@ to persist 6 hours' worth of data.
 
 This optimization can significantly reduce storage costs and memory usage for
 the Flink job.
+
+See
+[here](https://github.com/flink-extended/feathub-examples/blob/master/flink-sliding-feature-view-benchmark/main.py)
+for an example program that applies this optimization.
 
 
 ## Outputting Sliding Window Features Only When They Change
@@ -42,11 +47,10 @@ total of 21,600 records would be outputted during the 6-hour window.
 
 FeatHub allows the job to output feature values only for those steps where the
 value differs from the previous feature value. This means that FeatHub only
-needs to output 10 records in the example described above. This optimization is
-enabled by default and can be configured using
-`sdk.sliding_feature_view.skip_same_window_output`.
+needs to output 10 records in the example described above. This optimization can
+significantly reduce I/O costs and network bandwidth usage.
 
-This optimization can significantly reduce I/O costs and network bandwidth
-usage.
-
+This optimization is enabled by default. See
+[SlidingFeatureView](../configurations.md#slidingfeatureview) configuration for
+more detail.
 
