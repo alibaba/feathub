@@ -40,7 +40,7 @@ def find_jar_lib() -> str:
     for feathub_module_path in __import__("feathub").__path__:
         lib_dir_path = os.path.join(feathub_module_path, "processors", "flink", "lib")
         if not os.path.exists(lib_dir_path):
-            raise FeathubException(f"Cannot the lib for FeatHub at {lib_dir_path}")
+            raise FeathubException(f"Cannot find the lib for FeatHub at {lib_dir_path}")
         return lib_dir_path
 
     raise FeathubException(

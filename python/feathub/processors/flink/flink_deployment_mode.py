@@ -19,4 +19,3 @@ class DeploymentMode(Enum):
 
     CLI = "cli"
     SESSION = "session"
-    KUBERNETES_APPLICATION = "kubernetes-application"

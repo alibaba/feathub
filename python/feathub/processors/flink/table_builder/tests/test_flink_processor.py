@@ -16,7 +16,7 @@ import shutil
 import tempfile
 import unittest
 from typing import Optional, Dict
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pandas as pd
 from pyflink import java_gateway
@@ -24,9 +24,8 @@ from pyflink.table import Table, TableSchema
 
 from feathub.common.exceptions import (
     FeathubException,
-    FeathubConfigurationException,
 )
-from feathub.common.types import Int32, Int64, String
+from feathub.common.types import Int64, String
 from feathub.feathub_client import FeathubClient
 from feathub.feature_tables.sinks.file_system_sink import FileSystemSink
 from feathub.feature_tables.sinks.memory_store_sink import MemoryStoreSink
@@ -45,8 +44,7 @@ from feathub.feature_tables.tests.test_redis_source_sink import (
     RedisSourceSinkStandaloneModeITTest,
     RedisSourceSinkClusterModeITTest,
 )
-from feathub.feature_views.derived_feature_view import DerivedFeatureView
-from feathub.feature_views.feature import Feature
+
 from feathub.feature_views.tests.test_derived_feature_view import (
     DerivedFeatureViewITTest,
 )
@@ -75,12 +73,7 @@ from feathub.processors.flink.flink_class_loader_utils import (
 )
 from feathub.processors.flink.flink_deployment_mode import DeploymentMode
 from feathub.processors.flink.flink_processor import FlinkProcessor
-from feathub.processors.flink.job_submitter.flink_job_submitter import (
-    FlinkJobSubmitter,
-)
-from feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster_job_submitter import (  # noqa
-    FlinkKubernetesApplicationClusterJobSubmitter,
-)
+
 from feathub.processors.flink.table_builder.flink_table_builder import FlinkTableBuilder
 from feathub.processors.flink.table_builder.tests.test_flink_sql_feature_view import (
     FlinkSqlFeatureViewITTest,
@@ -201,156 +194,6 @@ class FlinkProcessorTest(unittest.TestCase):
         self.assertEqual(source, mock_table_builder.build.call_args[1]["features"])
         mock_statement_set.add_insert.assert_called_once()
 
-    def test_to_pandas_with_kubernetes_application_mode(self):
-        processor = FlinkProcessor(
-            props={
-                "flink_home": "/flink/home",
-                "processor.flink.deployment_mode": "kubernetes-application",
-            },
-            registry=self.registry,
-        )
-        self.assertTrue(
-            isinstance(
-                processor.flink_job_submitter,
-                FlinkKubernetesApplicationClusterJobSubmitter,
-            )
-        )
-        table = processor.get_table(
-            FileSystemSource("source", "path", "csv", Schema([], []))
-        )
-        with self.assertRaises(FeathubException):
-            table.to_pandas()
-
-    def test_table_schema_with_kubernetes_application_mode(self):
-        processor = FlinkProcessor(
-            props={
-                "flink_home": "/flink/home",
-                "processor.flink.deployment_mode": "kubernetes-application",
-            },
-            registry=self.registry,
-        )
-        self.assertTrue(
-            isinstance(
-                processor.flink_job_submitter,
-                FlinkKubernetesApplicationClusterJobSubmitter,
-            )
-        )
-        schema = Schema(["id"], [Int32])
-        table = processor.get_table(FileSystemSource("source", "path", "csv", schema))
-        self.assertEqual(schema, table.get_schema())
-
-    def test_table_execute_insert_with_kubernetes_application_mode(self):
-        processor = FlinkProcessor(
-            props={
-                "flink_home": "flink/home",
-                "processor.flink.deployment_mode": "kubernetes-application",
-            },
-            registry=self.registry,
-        )
-        schema = Schema(["id"], [Int32])
-        source = FileSystemSource("source", "path", "csv", schema)
-        feature_view = DerivedFeatureView(
-            "feature_view",
-            source=source,
-            features=[Feature(name="id", transform="id")],
-        )
-        self.registry.build_features([feature_view])
-
-        sink = FileSystemSink("/path", "csv")
-        mock_submitter = MagicMock(spec=FlinkJobSubmitter)
-        processor.flink_job_submitter = mock_submitter
-        processor.materialize_features(
-            materialization_descriptors=[
-                MaterializationDescriptor(
-                    feature_descriptor=feature_view, sink=sink, allow_overwrite=True
-                )
-            ]
-        )
-        mock_submitter.submit.assert_called_once()
-
-        self.assertEqual(
-            feature_view,
-            mock_submitter.submit.call_args[1]["materialization_descriptors"][
-                0
-            ].feature_descriptor,
-        )
-
-    def test_materialize_joined_feature_application_mode(self):
-        processor = FlinkProcessor(
-            props={
-                "flink_home": "flink/home",
-                "processor.flink.deployment_mode": "kubernetes-application",
-            },
-            registry=self.registry,
-        )
-
-        dim_source = FileSystemSource(
-            "dim_source", "/path", "csv", Schema(["a", "id"], [Int32, Int32])
-        )
-        dim_feature_view = DerivedFeatureView(
-            "dim_feature_view",
-            source=dim_source,
-            features=[Feature(name="a", transform="a", keys=["id"])],
-        )
-
-        dim_source2 = FileSystemSource(
-            "dim_source2", "/path", "csv", Schema(["b", "id"], [Int32, Int32])
-        )
-        dim_feature_view_2 = DerivedFeatureView(
-            "dim_feature_view_2",
-            source=dim_source2,
-            features=[Feature(name="b", transform="b", keys=["id"])],
-        )
-
-        source = FileSystemSource("source", "/path", "csv", Schema(["id"], [Int32]))
-        joined_feature_view = DerivedFeatureView(
-            "joined_feature_view", source, features=["dim_feature_view.a"]
-        )
-
-        source_2 = FileSystemSource("source2", "/path", "csv", Schema(["id"], [Int32]))
-        joined_feature_view_2 = DerivedFeatureView(
-            "joined_feature_view_2", source_2, features=["dim_feature_view_2.b"]
-        )
-
-        feature_view = DerivedFeatureView(
-            "feature_view",
-            source=joined_feature_view,
-            features=["joined_feature_view_2.b"],
-        )
-
-        self.registry.build_features(
-            [
-                dim_feature_view,
-                dim_feature_view_2,
-                joined_feature_view,
-                joined_feature_view_2,
-                feature_view,
-            ]
-        )
-
-        sink = FileSystemSink("/path", "csv")
-        mock_submitter = MagicMock(spec=FlinkJobSubmitter)
-        processor.flink_job_submitter = mock_submitter
-        processor.materialize_features(
-            materialization_descriptors=[
-                MaterializationDescriptor(
-                    feature_descriptor=feature_view, sink=sink, allow_overwrite=True
-                )
-            ]
-        )
-        mock_submitter.submit.assert_called_once()
-
-        self.assertEqual(
-            {
-                "dim_feature_view": self.registry.get_features("dim_feature_view"),
-                "joined_feature_view_2": self.registry.get_features(
-                    "joined_feature_view_2"
-                ),
-                "dim_feature_view_2": self.registry.get_features("dim_feature_view_2"),
-            },
-            mock_submitter.submit.call_args[1]["local_registry_tables"],
-        )
-
     def test_materialize_to_online_store_with_session_mode(self):
         processor = FlinkProcessor(
             props={
@@ -413,26 +256,6 @@ class FlinkProcessorTest(unittest.TestCase):
         self.assertEqual(
             processor.flink_table_builder.t_env.get_config().get("key", None), "value"
         )
-
-    def test_native_config_conflict(self):
-        with self.assertRaises(FeathubConfigurationException):
-            FlinkProcessor(
-                props={
-                    "processor.flink.deployment_mode": "kubernetes-application",
-                    "processor.flink.kubernetes.image": "image1",
-                    "processor.flink.native.kubernetes.container.image": "my_image",
-                },
-                registry=self.registry,
-            )
-
-        with self.assertRaises(FeathubConfigurationException):
-            FlinkProcessor(
-                props={
-                    "processor.flink.deployment_mode": "kubernetes-application",
-                    "processor.flink.native.table.local-time-zone": "Asia/Beijing",
-                },
-                registry=self.registry,
-            )
 
 
 class FlinkProcessorITTest(

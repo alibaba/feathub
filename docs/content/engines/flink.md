@@ -100,24 +100,14 @@ These are the configuration keys accepted by all deployment modes.
 
 | key             | Required | default | type   | Description                                                                              |
 |-----------------|----------|---------|--------|------------------------------------------------------------------------------------------|
-| deployment_mode | optional | session | String | The flink job deployment mode, it could be "cli", "session" or "kubernetes-application". |
+| deployment_mode | optional | session | String | The flink job deployment mode, it could be "cli" or "session". |
 | native.*                | optional | (none)         | String | Any key with the "native" prefix will be forwarded to the Flink job config after the "native" prefix is removed. For example, if the processor config has an entry "native.parallelism.default: 2", then the Flink job config will have an entry "parallelism.default: 2". |
 
 ### Session Mode Configuration
 
 These are the extra configuration keys accepted when deployment_mode = "session":
 
-| key          | Required | default | type    | Description                                                                                                                                |
-|--------------|----------|---------|---------|--------------------------------------------------------------------------------------------------------------------------------------------|
-| master | required | (none)  | String  | The Flink JobManager URL to connect to.                                                                                              |
+| key             | Required | default | type   | Description                                                                              |
+|-----------------|----------|---------|--------|------------------------------------------------------------------------------------------|
+| master          | required | (none)  | String  | The Flink JobManager URL to connect to.                                                 |
 
-### Kubernetes Application Mode Configuration
-
-These are the extra configuration keys accepted when deployment_mode = "kubernetes-application":
-
-| key                    | Required | default        | type   | Description                                                                                                                                                                                                                                                                                                                                                                                        |
-|------------------------|----------|----------------|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| flink_home             | optional | (none)         | String | The path to the Flink distribution. If not specified, it uses the Flink's distribution in PyFlink.                                                                                                                                                                                                                                                                                                 |
-| kubernetes.image       | optional | feathub:latest | String | The docker image to start the JobManager and TaskManager pod.                                                                                                                                                                                                                                                                                                                                      |
-| kubernetes.namespace   | optional | default        | String | The namespace of the Kubernetes cluster to run the Flink job.                                                                                                                                                                                                                                                                                                                                      |
-| kubernetes.config.file | optional | ~/.kube/config | String | The kubernetes config file is used to connector to the Kubernetes cluster.                                                                                                                                                                                                                                                                                                                         |

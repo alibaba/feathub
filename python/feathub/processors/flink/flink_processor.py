@@ -76,8 +76,8 @@ class FlinkProcessor(Processor):
     `deployment_mode` of the FlinkProcessor.
 
     Config keys accepted by all deployment modes:
-        deployment_mode: The flink job deployment mode, it could be "cli", "session", or
-                         "kubernetes-application". Default to "session".
+        deployment_mode: The flink job deployment mode, it could be "cli" or "session".
+                         Default to "session".
         native.*: Any key with the "native" prefix will be forwarded to the Flink job
                   config after the "native" prefix is removed. For example, if the
                   processor config has an entry "native.parallelism.default: 2",
@@ -85,16 +85,6 @@ class FlinkProcessor(Processor):
 
     Extra config keys accepted when deployment_mode = "session":
         master: The Flink JobManager URL to connect to. Required.
-
-    Extra config keys accepted when deployment_mode = "kubernetes-application":
-        flink_home: The path to the Flink distribution. If not specified, it uses the
-                    Flink's distribution in PyFlink.
-        kubernetes.image: The docker image to start the JobManager and TaskManager pod.
-                          Default to "feathub:latest".
-        kubernetes.namespace: The namespace of the Kubernetes cluster to run the Flink
-                              job. Default to "default".
-        kubernetes.config.file: The kubernetes config file is used to connector to
-                                the Kubernetes cluster. Default to "~/.kube/config".
     """
 
     def __init__(self, props: Dict, registry: Registry) -> None:
@@ -162,23 +152,6 @@ class FlinkProcessor(Processor):
                 self.registry,
             )
             self.flink_job_submitter = FlinkSessionClusterJobSubmitter(self)
-        elif self.deployment_mode == DeploymentMode.KUBERNETES_APPLICATION:
-            # Only import FlinkKubernetesApplicationClusterJobSubmitter in
-            # kubernetes-application mode so that kubernetes is not required when the
-            # job is run in cli mode or session mode.
-            from feathub.processors.flink.job_submitter.flink_kubernetes_application_cluster_job_submitter import (  # noqa
-                FlinkKubernetesApplicationClusterJobSubmitter,
-            )
-
-            t_env, class_loader = self._get_table_env()
-            self.flink_table_builder = FlinkTableBuilder(
-                t_env, class_loader, self.registry
-            )
-            self.flink_job_submitter = FlinkKubernetesApplicationClusterJobSubmitter(
-                processor_config=self.config,
-                registry_type=self.registry.registry_type,
-                registry_config=self.registry.config,
-            )
         else:
             raise FeathubException(
                 f"Unsupported deployment mode {self.deployment_mode}."
