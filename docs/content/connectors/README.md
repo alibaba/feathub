@@ -1,7 +1,7 @@
 # Connectors
 
 - [Overview](overview.md)
-- [Formats](formats/_index.md)
+- [Formats](formats)
 - [FileSystem](filesystem.md)
 - [MySql](mysql.md)
 - [Kafka](kafka.md)

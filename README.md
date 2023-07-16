@@ -29,7 +29,7 @@ automatically compiling declarative feature definitions into performant
 distributed ETL jobs using state-of-the-art computation engines of their choice,
 such as Flink or Spark.
 
-Checkout [Documentation](docs/content/_index.md) for guidance on compute
+Checkout [Documentation](docs/content) for guidance on compute
 engines, connectors, expression language, and more.
 
 
@@ -96,7 +96,7 @@ expressions, aggregations, and cross-table joins on existing features, all with
 point-in-time correctness.
 - **Read and write features data**: Read and write feature data into a variety
   of offline, nearline, and online [storage
-systems](docs/content/connectors/_index.md) for both offline training and online
+systems](docs/content/connectors) for both offline training and online
 serving.
 - **Backfill features data**: Process historical data with the given time range
 and/or keys to backfill feature data, whic
@@ -204,7 +204,7 @@ f_lower_case_name = Feature(
 
 ## User Guide
 
-Checkout [Documentation](docs/content/_index.md) for guidance on compute
+Checkout [Documentation](docs/content) for guidance on compute
 engines, connectors, expression language, and more.
 
 ### Prerequisites
@@ -372,7 +372,7 @@ Come join us!
 
 
 ## Additional Resources
-- [Documentation](docs/content/_index.md): Our documentation provides guidance
+- [Documentation](docs/content): Our documentation provides guidance
 on compute engines, connectors, expression language, and more. Check it out if
 you need help getting started or want to learn more about FeatHub.
 - [FeatHub Examples](https://github.com/flink-extended/feathub-examples): This
