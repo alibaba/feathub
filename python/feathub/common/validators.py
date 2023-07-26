@@ -88,3 +88,58 @@ def is_subset(*allowed: T) -> Validator[ITER_T]:
     :param allowed: Allowed values.
     """
     return IsSubSetValidator(*allowed)
+
+
+class ComparableValidator(Validator[T]):
+    def __init__(self, bound: T, is_greater_than: bool, inclusive: bool):
+        self.is_greater_than = is_greater_than
+        self.bound = bound
+        self.inclusive = inclusive
+
+    def ensure_valid(self, name: str, value: T) -> None:
+        if value is None:
+            raise FeathubConfigurationException(
+                f"Value for configuration {name} is not specified."
+            )
+        if (
+            (self.is_greater_than and self.bound > value)  # type: ignore
+            or (not self.is_greater_than and self.bound < value)  # type: ignore
+            or (not self.inclusive and self.bound == value)
+        ):
+            raise FeathubConfigurationException(
+                f"Invalid value {value} of {name}: Value must be "
+                f"{'greater' if self.is_greater_than else 'less'} than "
+                f"{'or equal to' if self.inclusive else ''} {self.bound}."
+            )
+
+
+def lt(upper_bound: T) -> Validator[T]:
+    return ComparableValidator(
+        bound=upper_bound,
+        is_greater_than=False,
+        inclusive=False,
+    )
+
+
+def lt_eq(upper_bound: T) -> Validator[T]:
+    return ComparableValidator(
+        bound=upper_bound,
+        is_greater_than=False,
+        inclusive=True,
+    )
+
+
+def gt(lower_bound: T) -> Validator[T]:
+    return ComparableValidator(
+        bound=lower_bound,
+        is_greater_than=True,
+        inclusive=False,
+    )
+
+
+def gt_eq(lower_bound: T) -> Validator[T]:
+    return ComparableValidator(
+        bound=lower_bound,
+        is_greater_than=True,
+        inclusive=True,
+    )

@@ -11,7 +11,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-import uuid
 from datetime import timedelta
 
 from pyflink.table import (
@@ -28,11 +27,6 @@ from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from feathub.processors.flink.table_builder.time_utils import (
     timedelta_to_flink_sql_interval,
 )
-
-
-def generate_random_table_name(original_table_name: str) -> str:
-    random_sink_name = f"{original_table_name}_{str(uuid.uuid4()).replace('-', '')}"
-    return random_sink_name
 
 
 def get_schema_from_table(table: NativeFlinkTable) -> NativeFlinkSchema:

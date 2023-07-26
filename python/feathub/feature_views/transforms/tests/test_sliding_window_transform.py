@@ -20,6 +20,7 @@ from typing import List
 
 import pandas as pd
 
+from feathub.common.exceptions import FeathubException
 from feathub.common.test_utils import to_epoch_millis, to_epoch
 from feathub.common.types import Int64, String, Float64, Float32
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
@@ -2840,3 +2841,30 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
         result_df = result_df.drop("name", axis=1)
 
         self.assertTrue(expected_result.equals(result_df))
+
+    def test_transform_with_zero_window_size(self):
+        df = self.input_data.copy()
+        source = self.create_file_source(df)
+
+        f_total_cost = Feature(
+            name="total_cost",
+            transform=SlidingWindowTransform(
+                expr="cost",
+                agg_func="SUM",
+                window_size=timedelta(seconds=0),
+                step_size=timedelta(seconds=0),
+            ),
+        )
+
+        features = SlidingFeatureView(
+            name="features",
+            source=source,
+            features=[f_total_cost],
+        )
+
+        with self.assertRaises(FeathubException) as cm:
+            self.client.get_features(feature_descriptor=features).to_pandas()
+        self.assertIn(
+            "Sliding window size 0:00:00 must be a positive value.",
+            cm.exception.args[0],
+        )

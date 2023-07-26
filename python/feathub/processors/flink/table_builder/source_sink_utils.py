@@ -27,6 +27,7 @@ from feathub.feature_tables.sinks.hive_sink import HiveSink
 from feathub.feature_tables.sinks.kafka_sink import KafkaSink
 from feathub.feature_tables.sinks.mysql_sink import MySQLSink
 from feathub.feature_tables.sinks.print_sink import PrintSink
+from feathub.feature_tables.sinks.prometheus_sink import PrometheusSink
 from feathub.feature_tables.sinks.redis_sink import RedisSink
 from feathub.feature_tables.sinks.sink import Sink
 from feathub.feature_tables.sources.datagen_source import DataGenSource
@@ -57,6 +58,9 @@ from feathub.processors.flink.table_builder.mysql_utils import (
 )
 from feathub.processors.flink.table_builder.print_utils import (
     add_print_sink_to_statement_set,
+)
+from feathub.processors.flink.table_builder.prometheus_utils import (
+    add_prometheus_sink_to_statement_set,
 )
 from feathub.processors.flink.table_builder.redis_utils import (
     add_redis_sink_to_statement_set,
@@ -126,5 +130,9 @@ def add_sink_to_statement_set(
         )
     elif isinstance(sink, BlackHoleSink):
         add_black_hole_sink_to_statement_set(statement_set, features_table)
+    elif isinstance(sink, PrometheusSink):
+        add_prometheus_sink_to_statement_set(
+            t_env, statement_set, features_table, features_desc, sink
+        )
     else:
         raise FeathubException(f"Unsupported sink type {type(sink)}.")

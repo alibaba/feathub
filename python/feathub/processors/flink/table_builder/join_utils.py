@@ -48,9 +48,7 @@ from feathub.processors.flink.table_builder.aggregation_utils import (
     get_default_value_and_type,
     AggregationFieldDescriptor,
 )
-from feathub.processors.flink.table_builder.source_sink_utils_common import (
-    generate_random_table_name,
-)
+from feathub.common.utils import generate_random_name
 from feathub.processors.flink.table_builder.time_utils import (
     timedelta_to_flink_sql_interval,
 )
@@ -231,7 +229,7 @@ def _append_processing_time_attribute(
     t_env: StreamTableEnvironment,
     table: NativeFlinkTable,
 ) -> NativeFlinkTable:
-    tmp_table_name = generate_random_table_name("tmp_table")
+    tmp_table_name = generate_random_name("tmp_table")
 
     t_env.create_temporary_view(tmp_table_name, table)
     table = t_env.sql_query(
