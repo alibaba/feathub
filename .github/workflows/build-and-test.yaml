@@ -61,7 +61,7 @@ jobs:
         run: |
           # notebooks should not contain outputs
           jupyter nbconvert --clear-output --inplace docs/examples/*.ipynb
-          if [[ `git status --porcelain` ]]; then
+          if [[ `git status --porcelain docs/examples` ]]; then
             exit 1
           fi
 

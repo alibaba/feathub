@@ -70,6 +70,12 @@
             </exclusions>
         </dependency>
 
+        <dependency>
+            <groupId>com.alibaba.feathub</groupId>
+            <artifactId>flink-connector-prometheus</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Flink format -->
         <dependency>
             <groupId>org.apache.flink</groupId>
