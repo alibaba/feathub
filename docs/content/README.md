@@ -29,5 +29,8 @@ applications.
   - [Hive](connectors/hive.md)
 - [Deep Dive](deep-dive)
 	- [Built-in Optimizations](deep-dive/optimizations.md)
+- [Metric Stores](metric-stores)
+  - [Overview](metric-stores/overview.md)
+  - [Prometheus](metric-stores/prometheus.md)
 - [How To](how-to)
   - [Deploy FeatHub Job on Alibaba Cloud](how-to/deploy-on-alibaba-cloud.md)

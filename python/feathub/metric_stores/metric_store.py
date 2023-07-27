@@ -16,11 +16,13 @@ from abc import ABC, abstractmethod
 from datetime import timedelta
 from typing import Dict, List, Optional, OrderedDict, Tuple, Sequence
 
+from feathub.common.types import Unknown
 from feathub.common.utils import generate_random_name
 from feathub.feature_tables.sinks.sink import Sink
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.sliding_feature_view import SlidingFeatureView
+from feathub.feature_views.transforms.java_udf_transform import JavaUdfTransform
 from feathub.metric_stores.metric import Metric
 from feathub.metric_stores.metric_store_config import (
     MetricStoreConfig,
@@ -32,6 +34,7 @@ from feathub.metric_stores.metric_store_config import (
     METRIC_STORE_REPORT_INTERVAL_SEC_CONFIG,
 )
 from feathub.processors.materialization_descriptor import MaterializationDescriptor
+from feathub.table.schema import Schema
 from feathub.table.table_descriptor import TableDescriptor
 
 
@@ -77,12 +80,8 @@ class MetricStore(ABC):
         return self._metric_store_config.get(METRIC_STORE_NAMESPACE_CONFIG)
 
     @property
-    def report_interval(self) -> timedelta:
-        return timedelta(
-            seconds=self._metric_store_config.get(
-                METRIC_STORE_REPORT_INTERVAL_SEC_CONFIG
-            )
-        )
+    def report_interval_sec(self) -> float:
+        return self._metric_store_config.get(METRIC_STORE_REPORT_INTERVAL_SEC_CONFIG)
 
     def create_metric_materialization_descriptors(
         self,
@@ -203,10 +202,7 @@ class MetricStore(ABC):
             features=metric_features,
         )
 
-        # TODO: Chaining a next sliding window to support report interval throws
-        #  Exceptions. Figure out why and add support for report interval.
-
-        return DerivedFeatureView(
+        derived_feature_view = DerivedFeatureView(
             name=f"{features_desc.name}_filtered_metrics_{window_size_sec}",
             source=sliding_feature_view,
             features=[
@@ -220,6 +216,27 @@ class MetricStore(ABC):
                 for metric_name in metric_name_count_dict.keys()
             ],
             keep_source_fields=False,
+        )
+
+        schema_builder = Schema.new_builder()
+        for feature in derived_feature_view.get_output_features():
+            schema_builder.column(feature.name, feature.dtype)
+
+        return DerivedFeatureView(
+            name=f"{features_desc.name}_periodic_reported_metrics_{window_size_sec}",
+            source=derived_feature_view,
+            features=[
+                Feature(
+                    name="periodic_report",
+                    transform=JavaUdfTransform(
+                        class_name="com.alibaba.feathub.flink.udf."
+                        "PeriodicEmitLastValueOperator",
+                        parameters=[self.report_interval_sec],
+                        schema=schema_builder.build(),
+                    ),
+                    dtype=Unknown,
+                )
+            ],
         )
 
     def _escape_tag_value_str(self, tag_value: str) -> str:

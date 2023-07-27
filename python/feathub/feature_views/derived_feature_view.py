@@ -25,6 +25,7 @@ from feathub.dsl.expr_utils import get_variables, is_id, is_static_map_lookup_op
 from feathub.feature_views.feature import Feature, get_default_feature_name
 from feathub.feature_views.feature_view import FeatureView
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
+from feathub.feature_views.transforms.java_udf_transform import JavaUdfTransform
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
 from feathub.feature_views.transforms.python_udf_transform import PythonUdfTransform
@@ -80,6 +81,21 @@ class DerivedFeatureView(FeatureView):
                             feature view, and only those rows which evaluate to True
                             will be outputted by the feature view.
         """
+        if any(
+            isinstance(feature, Feature)
+            and isinstance(feature.transform, JavaUdfTransform)
+            for feature in features
+        ):
+            if len(features) > 1:
+                raise FeathubException(
+                    "JavaUdfTransform cannot be used with other transformations."
+                )
+            if keep_source_fields or filter_expr:
+                raise FeathubException(
+                    "JavaUdfTransform cannot be used with keeping source fields or "
+                    "filter expression."
+                )
+
         super().__init__(
             name=name,
             source=source,
@@ -87,6 +103,15 @@ class DerivedFeatureView(FeatureView):
             keep_source_fields=keep_source_fields,
         )
         self.filter_expr = filter_expr
+
+    def get_output_fields(self, source_fields: List[str]) -> List[str]:
+        if (
+            len(self.features) == 1
+            and isinstance(self.features[0], Feature)
+            and isinstance(self.features[0].transform, JavaUdfTransform)
+        ):
+            return self.features[0].transform.schema.field_names  # type: ignore
+        return super(DerivedFeatureView, self).get_output_fields(source_fields)
 
     def build(
         self,

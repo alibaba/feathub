@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from typing import Union, Optional, List, Any, Dict, Sequence, Tuple, Set, cast
 
 import pandas as pd
+from pyflink.java_gateway import get_gateway
 from pyflink.table import (
     StreamTableEnvironment,
     Table as NativeFlinkTable,
@@ -35,6 +36,7 @@ from feathub.feature_views.sliding_feature_view import (
 )
 from feathub.feature_views.sql_feature_view import SqlFeatureView
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
+from feathub.feature_views.transforms.java_udf_transform import JavaUdfTransform
 from feathub.feature_views.transforms.join_transform import JoinTransform
 from feathub.feature_views.transforms.over_window_transform import (
     OverWindowTransform,
@@ -279,6 +281,22 @@ class FlinkTableBuilder:
         source_fields = list(source_table.get_schema().get_field_names())
         dependent_features = self._get_dependent_features(feature_view)
         tmp_table = source_table
+
+        if len(feature_view.get_resolved_features()) == 1:
+            transform = feature_view.get_resolved_features()[0].transform
+            if isinstance(transform, JavaUdfTransform):
+                stream = self.t_env.to_data_stream(source_table)
+                JavaUdfUtils = (
+                    get_gateway().jvm.com.alibaba.feathub.flink.udf.JavaUdfUtils
+                )
+                stream._j_data_stream = JavaUdfUtils.evalJavaUdf(
+                    stream._j_data_stream,
+                    transform.class_name,
+                    transform.parameters,
+                )
+                return self.t_env.from_data_stream(
+                    stream, to_flink_schema(transform.schema)
+                )
 
         window_agg_map: Dict[
             OverWindowDescriptor, List[AggregationFieldDescriptor]
