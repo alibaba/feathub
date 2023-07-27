@@ -20,7 +20,6 @@ from typing import List
 
 import pandas as pd
 
-from feathub.common.exceptions import FeathubException
 from feathub.common.test_utils import to_epoch_millis, to_epoch
 from feathub.common.types import Int64, String, Float64, Float32
 from feathub.feature_views.derived_feature_view import DerivedFeatureView
@@ -2862,9 +2861,18 @@ class SlidingWindowTransformITTest(ABC, FeathubITTestBase):
             features=[f_total_cost],
         )
 
-        with self.assertRaises(FeathubException) as cm:
-            self.client.get_features(feature_descriptor=features).to_pandas()
-        self.assertIn(
-            "Sliding window size 0:00:00 must be a positive value.",
-            cm.exception.args[0],
+        expected_result = pd.DataFrame(
+            [
+                [to_epoch_millis("2022-01-01 08:01:00.000"), 100],
+                [to_epoch_millis("2022-01-01 08:02:00.000"), 500],
+                [to_epoch_millis("2022-01-02 08:03:00.000"), 800],
+                [to_epoch_millis("2022-01-02 08:04:00.000"), 1000],
+                [to_epoch_millis("2022-01-03 08:05:00.000"), 1500],
+                [to_epoch_millis("2022-01-03 08:06:00.000"), 2100],
+            ],
+            columns=["window_time", "total_cost"],
         )
+
+        df = self.client.get_features(feature_descriptor=features).to_pandas()
+
+        self.assertTrue(expected_result.equals(df))

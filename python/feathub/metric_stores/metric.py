@@ -16,7 +16,6 @@ from abc import ABC, abstractmethod
 from datetime import timedelta
 from typing import Optional, Dict, OrderedDict, Sequence, Callable
 
-from feathub.common.exceptions import FeathubException
 from feathub.common.utils import append_metadata_to_json
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
 from feathub.feature_views.transforms.sliding_window_transform import (
@@ -40,11 +39,6 @@ class Metric(ABC):
                             computed from all feature values that have been processed
                             since the Feathub job is created.
         """
-        if window_size <= timedelta(seconds=0):
-            raise FeathubException(
-                f"Metric window size {window_size} must be a positive value."
-            )
-
         self.metric_type = metric_type
         self.window_size = window_size
 

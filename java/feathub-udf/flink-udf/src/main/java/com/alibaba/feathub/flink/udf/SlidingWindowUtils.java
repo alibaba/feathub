@@ -40,12 +40,15 @@ import org.apache.flink.table.types.logical.LogicalTypeRoot;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.OutputTag;
 
+import com.alibaba.feathub.flink.udf.processfunction.GlobalWindowKeyedProcessFunction;
 import com.alibaba.feathub.flink.udf.processfunction.SlidingWindowKeyedProcessFunction;
 import com.alibaba.feathub.flink.udf.processfunction.SlidingWindowZeroValuedRowExpiredRowHandler;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -451,6 +454,97 @@ public class SlidingWindowUtils {
             }
         }
         return zeroValuedRow;
+    }
+
+    /**
+     * Apply a global window given {@link Table} and {@link AggregationFieldsDescriptor}. The {@link
+     * AggregationFieldsDescriptor} describes how to compute each field. It includes the field name
+     * and data type of the input and output, and the aggregation function, e.g. SUM, AVG, etc.
+     *
+     * @param tEnv The StreamTableEnvironment of the table.
+     * @param table The input table.
+     * @param windowDescriptor The descriptor of the sliding window to be applied to the input
+     *     table.
+     * @param aggDescriptors The descriptor of the aggregation field in the sliding window.
+     * @param rowTimeFieldName The name of the row time field.
+     * @return The result table.
+     */
+    public static Table applyGlobalWindow(
+            StreamTableEnvironment tEnv,
+            Table table,
+            SlidingWindowDescriptor windowDescriptor,
+            AggregationFieldsDescriptor aggDescriptors,
+            String rowTimeFieldName) {
+        if (windowDescriptor.stepSize != Duration.ZERO
+                || aggDescriptors.getMaxWindowSizeMs() != 0) {
+            throw new RuntimeException("Step size and window size must be 0.");
+        }
+
+        table = populateFilterExprFlag(table, aggDescriptors);
+
+        ResolvedSchema schema = table.getResolvedSchema();
+
+        DataStream<Row> stream =
+                tEnv.toChangelogStream(
+                        table,
+                        Schema.newBuilder().fromResolvedSchema(schema).build(),
+                        ChangelogMode.insertOnly());
+
+        final Map<String, DataType> resultDataTypeMap = new HashMap<>();
+        for (String key : windowDescriptor.groupByKeys) {
+            resultDataTypeMap.put(key, getDataType(schema, key));
+        }
+        for (AggregationFieldsDescriptor.AggregationFieldDescriptor aggDescriptor :
+                aggDescriptors.getAggFieldDescriptors()) {
+            resultDataTypeMap.put(aggDescriptor.fieldName, aggDescriptor.dataType);
+        }
+        resultDataTypeMap.put(rowTimeFieldName, DataTypes.TIMESTAMP_LTZ(3));
+
+        final String[] keyFieldNames = windowDescriptor.groupByKeys.toArray(new String[0]);
+        final List<DataTypes.Field> resultTableFields =
+                getResultTableFields(
+                        resultDataTypeMap, aggDescriptors, rowTimeFieldName, keyFieldNames);
+        final ExternalTypeInfo<Row> resultRowTypeInfo =
+                ExternalTypeInfo.of(
+                        DataTypes.ROW(resultTableFields.toArray(new DataTypes.Field[0])));
+
+        SingleOutputStreamOperator<Row> resultStream =
+                stream.keyBy(
+                                (KeySelector<Row, Row>)
+                                        value ->
+                                                Row.of(
+                                                        windowDescriptor.groupByKeys.stream()
+                                                                .map(value::getField)
+                                                                .toArray()))
+                        .process(
+                                new GlobalWindowKeyedProcessFunction(
+                                        keyFieldNames,
+                                        rowTimeFieldName,
+                                        aggDescriptors,
+                                        resultRowTypeInfo))
+                        .returns(resultRowTypeInfo);
+
+        if (windowDescriptor.groupByKeys.isEmpty()) {
+            resultStream.setParallelism(1);
+        }
+
+        Table resTable =
+                tEnv.fromDataStream(
+                        resultStream,
+                        getResultTableSchema(
+                                resultDataTypeMap,
+                                aggDescriptors,
+                                rowTimeFieldName,
+                                keyFieldNames));
+        for (AggregationFieldsDescriptor.AggregationFieldDescriptor aggregationFieldDescriptor :
+                aggDescriptors.getAggFieldDescriptors()) {
+            resTable =
+                    resTable.addOrReplaceColumns(
+                            $(aggregationFieldDescriptor.fieldName)
+                                    .cast(aggregationFieldDescriptor.dataType)
+                                    .as(aggregationFieldDescriptor.fieldName));
+        }
+        return resTable;
     }
 
     private static List<DataTypes.Field> getResultTableFields(
