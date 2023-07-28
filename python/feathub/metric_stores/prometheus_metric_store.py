@@ -71,7 +71,7 @@ class PrometheusMetricStore(MetricStore):
         - job: The namespace of the metric store.
         - table_name: The name of the sink where the host features would be written to.
         - feature_name: The name of the host feature.
-        - other labels the metric has exposed through Metric#get_tags.
+        - other metric-specific labels exposed through Metric#get_tags.
     """
 
     def __init__(self, props: Dict) -> None:
