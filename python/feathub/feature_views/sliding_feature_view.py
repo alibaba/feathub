@@ -11,6 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from datetime import timedelta
 from typing import Dict, Union, Sequence, Set, Any, Optional, List, OrderedDict, cast
 
 from feathub.common import types
@@ -186,6 +187,9 @@ class SlidingFeatureView(FeatureView):
                 "is forbidden."
             )
 
+        self.step_size = self._get_step_size()
+        self.group_by_keys = self._get_group_by_keys()
+
     @staticmethod
     def _get_window_time_feature(
         timestamp_field: str, timestamp_format: str
@@ -269,6 +273,59 @@ class SlidingFeatureView(FeatureView):
             extra_props={**props, **self.config.original_props},
         )
         return feature_view
+
+    def _get_step_size(self) -> timedelta:
+        """
+        Returns the step size of the sliding window features in the feature view.
+        """
+        step_size_set = set(
+            [
+                feature.transform.step_size
+                for feature in self.features
+                if isinstance(feature, Feature)
+                and isinstance(feature.transform, SlidingWindowTransform)
+            ]
+        )
+
+        if len(step_size_set) < 1:
+            raise FeathubException(
+                "SlidingWindowFeatureView must have at least one feature with "
+                "SlidingWindowTransform."
+            )
+
+        if len(step_size_set) > 1:
+            raise FeathubException(
+                f"SlidingWindowTransforms have different step size " f"{step_size_set}."
+            )
+
+        return step_size_set.pop()
+
+    def _get_group_by_keys(self) -> Sequence[str]:
+        """
+        Returns the group-by keys of the sliding window features in the feature view.
+        """
+        group_by_keys_set = set(
+            [
+                tuple(feature.transform.group_by_keys)
+                for feature in self.features
+                if isinstance(feature, Feature)
+                and isinstance(feature.transform, SlidingWindowTransform)
+            ]
+        )
+
+        if len(group_by_keys_set) < 1:
+            raise FeathubException(
+                "SlidingWindowFeatureView must have at least one feature with "
+                "SlidingWindowTransform."
+            )
+
+        if len(group_by_keys_set) > 1:
+            raise FeathubException(
+                f"SlidingWindowTransforms have different group-by keys "
+                f"{group_by_keys_set}."
+            )
+
+        return group_by_keys_set.pop()
 
     @append_metadata_to_json
     def to_json(self) -> Dict:
@@ -371,11 +428,6 @@ class SlidingFeatureView(FeatureView):
         pre_sliding_features: Set[Feature],
         sliding_features: Set[Feature],
     ) -> None:
-        if len(sliding_features) < 1:
-            raise FeathubException(
-                "SlidingWindowFeatureView must have at least one feature with "
-                "SlidingWindowTransform."
-            )
 
         valid_variables = {
             *[f.name for f in source.get_output_features()],
@@ -411,17 +463,6 @@ class SlidingFeatureView(FeatureView):
         group_by_keys_set = set(
             [tuple(transform.group_by_keys) for transform in sliding_window_transforms]
         )
-        if len(group_by_keys_set) > 1:
-            raise FeathubException(
-                f"SlidingWindowTransforms have different group-by keys "
-                f"{group_by_keys_set}."
-            )
-
-        steps = set([transform.step_size for transform in sliding_window_transforms])
-        if len(steps) > 1:
-            raise FeathubException(
-                f"SlidingWindowTransforms have different step size " f"{steps}."
-            )
 
         # Validate that the per-row transform features are used group-by-keys of
         # SlidingWindowTransform.

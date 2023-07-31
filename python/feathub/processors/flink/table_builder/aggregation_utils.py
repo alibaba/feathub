@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from datetime import timedelta
-from typing import Any, Tuple
+from typing import Any, Tuple, Optional
 
 from pyflink.table.types import DataType, DataTypes
 
@@ -41,12 +41,16 @@ class AggregationFieldDescriptor:
         expr: str,
         agg_func: AggFunc,
         window_size: timedelta,
+        limit: Optional[int],
+        filter_expr: Optional[str],
     ) -> None:
         self.field_name = field_name
         self.field_data_type = field_data_type
         self.expr = expr
         self.agg_func = agg_func
         self.window_size = window_size
+        self.limit = limit
+        self.filter_expr = filter_expr
 
     @staticmethod
     def from_feature(feature: Feature) -> "AggregationFieldDescriptor":
@@ -58,12 +62,19 @@ class AggregationFieldDescriptor:
             raise FeathubException(
                 f"Cannot convert {feature} to AggregationFieldDescriptor."
             )
+        filter_expr = (
+            to_flink_sql_expr(transform.filter_expr)
+            if transform.filter_expr is not None
+            else None
+        )
         return AggregationFieldDescriptor(
             feature.name,
             to_flink_type(feature.dtype),
             to_flink_sql_expr(transform.expr),
             transform.agg_func,
             transform.window_size,
+            transform.limit,
+            filter_expr,
         )
 
 

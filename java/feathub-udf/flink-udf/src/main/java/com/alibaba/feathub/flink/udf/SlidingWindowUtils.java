@@ -40,8 +40,6 @@ import org.apache.flink.table.types.logical.LogicalTypeRoot;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.OutputTag;
 
-import com.alibaba.feathub.flink.udf.aggregation.AggFunc;
-import com.alibaba.feathub.flink.udf.aggregation.AggFuncWithLimit;
 import com.alibaba.feathub.flink.udf.processfunction.SlidingWindowKeyedProcessFunction;
 import com.alibaba.feathub.flink.udf.processfunction.SlidingWindowZeroValuedRowExpiredRowHandler;
 
@@ -56,6 +54,7 @@ import java.util.TimeZone;
 import java.util.stream.Collectors;
 
 import static org.apache.flink.table.api.Expressions.$;
+import static org.apache.flink.table.api.Expressions.callSql;
 
 /** Utility methods to apply sliding windows. */
 public class SlidingWindowUtils {
@@ -77,15 +76,8 @@ public class SlidingWindowUtils {
             SlidingWindowDescriptor windowDescriptor,
             AggregationFieldsDescriptor aggDescriptors,
             String rowTimeFieldName) {
-        if (windowDescriptor.filterExpr != null) {
-            table = table.filter(Expressions.callSql(windowDescriptor.filterExpr));
-        }
 
-        if (windowDescriptor.limit != null) {
-            aggDescriptors =
-                    getAggregationFieldsDescriptorsWithLimit(
-                            aggDescriptors, windowDescriptor.limit);
-        }
+        table = populateFilterExprFlag(table, aggDescriptors);
 
         ResolvedSchema schema = table.getResolvedSchema();
 
@@ -188,24 +180,22 @@ public class SlidingWindowUtils {
         return resultStream.union(lateDataStream);
     }
 
-    // TODO: merge this method into AggregationFieldDescriptor's constructor after FeatHub supports
-    // limit parameter at Feature granularity.
-    // https://github.com/alibaba/feathub/issues/97
-    public static AggregationFieldsDescriptor getAggregationFieldsDescriptorsWithLimit(
-            AggregationFieldsDescriptor descriptors, long limit) {
-        List<AggregationFieldsDescriptor.AggregationFieldDescriptor> list = new ArrayList<>();
-        for (AggregationFieldsDescriptor.AggregationFieldDescriptor descriptor :
-                descriptors.getAggFieldDescriptors()) {
-            AggFunc aggFunc = new AggFuncWithLimit<>(descriptor.aggFuncWithoutRetract, limit);
-            list.add(
-                    new AggregationFieldsDescriptor.AggregationFieldDescriptor(
-                            descriptor.fieldName,
-                            descriptor.dataType,
-                            descriptor.windowSizeMs,
-                            aggFunc,
-                            aggFunc));
+    private static Table populateFilterExprFlag(
+            Table table, AggregationFieldsDescriptor aggDescriptors) {
+        for (AggregationFieldsDescriptor.AggregationFieldDescriptor aggDescriptor :
+                aggDescriptors.getAggFieldDescriptors()) {
+            if (aggDescriptor.filterExpr == null) {
+                continue;
+            }
+
+            table =
+                    table.addOrReplaceColumns(
+                            Expressions.row(
+                                            $(aggDescriptor.fieldName),
+                                            callSql(aggDescriptor.filterExpr))
+                                    .as(aggDescriptor.fieldName));
         }
-        return new AggregationFieldsDescriptor(list);
+        return table;
     }
 
     private static class SlidingWindowPreprocessAggregateFunction
@@ -331,12 +321,6 @@ public class SlidingWindowUtils {
             Row zeroValuedRow,
             boolean skipSameWindowOutput) {
         String[] keyFieldNames = windowDescriptor.groupByKeys.toArray(new String[0]);
-
-        if (windowDescriptor.limit != null) {
-            aggregationFieldsDescriptor =
-                    getAggregationFieldsDescriptorsWithLimit(
-                            aggregationFieldsDescriptor, windowDescriptor.limit);
-        }
 
         final TypeSerializer<Row> rowTypeSerializer =
                 rowDataStream.getType().createSerializer(rowDataStream.getExecutionConfig());

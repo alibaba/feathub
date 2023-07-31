@@ -20,6 +20,8 @@ import org.apache.flink.table.types.DataType;
 
 import com.alibaba.feathub.flink.udf.aggregation.AggFunc;
 import com.alibaba.feathub.flink.udf.aggregation.AggFuncUtils;
+import com.alibaba.feathub.flink.udf.aggregation.AggFuncWithFilterFlag;
+import com.alibaba.feathub.flink.udf.aggregation.AggFuncWithLimit;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -86,10 +88,18 @@ public class AggregationFieldsDescriptor implements Serializable {
                 DataType inDataType,
                 DataType outDataType,
                 Long windowSizeMs,
+                Long limit,
+                String filterExpr,
                 String aggFunc) {
             aggregationFieldDescriptors.add(
                     new AggregationFieldDescriptor(
-                            fieldName, inDataType, outDataType, windowSizeMs, aggFunc));
+                            fieldName,
+                            inDataType,
+                            outDataType,
+                            windowSizeMs,
+                            limit,
+                            filterExpr,
+                            aggFunc));
             return this;
         }
 
@@ -103,40 +113,41 @@ public class AggregationFieldsDescriptor implements Serializable {
         public final String fieldName;
         public final DataType dataType;
         public final Long windowSizeMs;
+        public final Long limit;
+        public final String filterExpr;
         public final AggFunc<Object, ?, Object> aggFunc;
         public final AggFunc<Object, ?, Object> aggFuncWithoutRetract;
 
-        // TODO: unify the two constructors below after FeatHub supports limit parameter at Feature
-        // granularity.
-        // https://github.com/alibaba/feathub/issues/97
         @SuppressWarnings({"unchecked"})
         public AggregationFieldDescriptor(
                 String fieldName,
                 DataType inDataType,
                 DataType outDataType,
                 Long windowSizeMs,
+                Long limit,
+                String filterExpr,
                 String aggFuncName) {
-            this(
-                    fieldName,
-                    outDataType,
-                    windowSizeMs,
-                    (AggFunc<Object, ?, Object>)
-                            AggFuncUtils.getAggFunc(aggFuncName, inDataType, true),
-                    (AggFunc<Object, ?, Object>)
-                            AggFuncUtils.getAggFunc(aggFuncName, inDataType, false));
-        }
-
-        public AggregationFieldDescriptor(
-                String fieldName,
-                DataType dataType,
-                Long windowSizeMs,
-                AggFunc<Object, ?, Object> aggFunc,
-                AggFunc<Object, ?, Object> aggFuncWithoutRetract) {
             this.fieldName = fieldName;
-            this.dataType = dataType;
+            this.dataType = outDataType;
             this.windowSizeMs = windowSizeMs;
-            this.aggFunc = aggFunc;
-            this.aggFuncWithoutRetract = aggFuncWithoutRetract;
+            this.limit = limit;
+            this.filterExpr = filterExpr;
+
+            AggFunc tmpAggFunc = AggFuncUtils.getAggFunc(aggFuncName, inDataType, true);
+            AggFunc tmpAggFuncWithoutRetract =
+                    AggFuncUtils.getAggFunc(aggFuncName, inDataType, false);
+
+            if (limit != null) {
+                tmpAggFunc = new AggFuncWithLimit<>(tmpAggFuncWithoutRetract, limit);
+                tmpAggFuncWithoutRetract = tmpAggFunc;
+            }
+
+            if (filterExpr != null) {
+                tmpAggFuncWithoutRetract = new AggFuncWithFilterFlag(tmpAggFuncWithoutRetract);
+            }
+
+            this.aggFunc = tmpAggFunc;
+            this.aggFuncWithoutRetract = tmpAggFuncWithoutRetract;
         }
     }
 }
