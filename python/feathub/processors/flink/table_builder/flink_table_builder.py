@@ -63,7 +63,6 @@ from feathub.processors.flink.table_builder.flink_sql_expr_utils import (
 )
 from feathub.processors.flink.table_builder.join_utils import (
     join_table_on_key,
-    full_outer_join_on_key_with_default_value,
     temporal_join,
     JoinFieldDescriptor,
 )
@@ -298,6 +297,10 @@ class FlinkTableBuilder:
                     stream, to_flink_schema(transform.schema)
                 )
 
+        # We group the over window aggregation fields by group-by keys, window size,
+        # limit, and filter expr.
+        # TODO: Optimize the over window operator to compute aggregation fields with
+        #  different window_size, limit and filter_expr.
         window_agg_map: Dict[
             OverWindowDescriptor, List[AggregationFieldDescriptor]
         ] = {}
@@ -514,17 +517,19 @@ class FlinkTableBuilder:
         dependent_features = self._get_dependent_features(feature_view)
 
         tmp_table = source_table
-        sliding_window_agg_map: Dict[
-            SlidingWindowDescriptor, List[AggregationFieldDescriptor]
-        ] = {}
+
+        sliding_window_descriptor = SlidingWindowDescriptor.from_sliding_feature_view(
+            feature_view
+        )
+        agg_field_descriptors: List[AggregationFieldDescriptor] = []
 
         # This list contains all per-row transform features listed after the first
         # SlidingWindowTransform feature in the dependent_features.
-        per_row_transform_features_following_first_sliding_feature = []
+        per_row_transform_features_following_first_sliding_feature: List[Feature] = []
 
         for feature in dependent_features:
             if isinstance(feature.transform, ExpressionTransform):
-                if len(sliding_window_agg_map) > 0:
+                if len(agg_field_descriptors) > 0:
                     per_row_transform_features_following_first_sliding_feature.append(
                         feature
                     )
@@ -536,7 +541,7 @@ class FlinkTableBuilder:
                         feature.dtype,
                     )
             elif isinstance(feature.transform, PythonUdfTransform):
-                if len(sliding_window_agg_map) > 0:
+                if len(agg_field_descriptors) > 0:
                     per_row_transform_features_following_first_sliding_feature.append(
                         feature
                     )
@@ -553,47 +558,28 @@ class FlinkTableBuilder:
                         "SlidingFeatureView must have timestamp field for "
                         "SlidingWindowTransform."
                     )
-                transform = feature.transform
-                window_aggs = sliding_window_agg_map.setdefault(
-                    SlidingWindowDescriptor.from_sliding_window_transform(transform),
-                    [],
+                agg_field_descriptors.append(
+                    AggregationFieldDescriptor.from_feature(feature)
                 )
-                window_aggs.append(AggregationFieldDescriptor.from_feature(feature))
             else:
                 raise FeathubTransformationException(
                     f"Unsupported transformation type "
                     f"{type(feature.transform).__name__} for feature {feature.name}."
                 )
 
-        agg_table = None
         field_default_value: Dict[str, Tuple[Any, DataType]] = {}
-        for window_descriptor, agg_descriptors in sliding_window_agg_map.items():
-            for agg_descriptor in agg_descriptors:
-                field_default_value[
-                    agg_descriptor.field_name
-                ] = get_default_value_and_type(agg_descriptor)
-            tmp_agg_table = evaluate_sliding_window_transform(
-                self.t_env,
-                tmp_table,
-                window_descriptor,
-                agg_descriptors,
-                feature_view.config,
+        for agg_descriptor in agg_field_descriptors:
+            field_default_value[agg_descriptor.field_name] = get_default_value_and_type(
+                agg_descriptor
             )
-            if agg_table is None:
-                agg_table = tmp_agg_table
-            else:
-                join_keys = list(window_descriptor.group_by_keys)
-                join_keys.append(EVENT_TIME_ATTRIBUTE_NAME)
-                agg_table = full_outer_join_on_key_with_default_value(
-                    self.t_env,
-                    agg_table,
-                    tmp_agg_table,
-                    join_keys,
-                    field_default_value,
-                )
 
-        if agg_table is not None:
-            tmp_table = agg_table
+        tmp_table = evaluate_sliding_window_transform(
+            self.t_env,
+            tmp_table,
+            sliding_window_descriptor,
+            agg_field_descriptors,
+            feature_view.config,
+        )
 
         # Add the timestamp field according to the timestamp format from
         # event time(window time).

@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from datetime import timedelta
-from typing import List, Dict, Tuple, Any, Sequence, Optional, cast
+from typing import List, Dict, Any, Sequence, Optional, cast
 
 from pyflink.table import (
     Table as NativeFlinkTable,
@@ -42,7 +42,6 @@ from feathub.processors.constants import (
 from feathub.processors.flink.flink_types_utils import (
     to_flink_type,
     cast_field_type_without_changing_nullability,
-    to_flink_sql_type,
 )
 from feathub.processors.flink.table_builder.aggregation_utils import (
     get_default_value_and_type,
@@ -241,66 +240,6 @@ def _append_processing_time_attribute(
     return table
 
 
-def full_outer_join_on_key_with_default_value(
-    t_env: StreamTableEnvironment,
-    left: NativeFlinkTable,
-    right: NativeFlinkTable,
-    key_fields: List[str],
-    field_default_values: Dict[str, Tuple[Any, DataType]],
-) -> NativeFlinkTable:
-    """
-    Full outer join the left and right table on the given key fields. NULL fields after
-    join are set to its default value.
-
-    :param left: The left table.
-    :param right: The right table.
-    :param key_fields: The join keys.
-    :param field_default_values: A map that map the field to its default value. If a
-                                 field does not exist in the map, its default value is
-                                 NULL.
-    :return: The joined table.
-    """
-
-    # Use SQL instead of Table API to get around the issue in FLINK-32464.
-
-    predicate = _get_join_predicate(key_fields)
-
-    select_field_exprs = []
-    for key in key_fields:
-        select_field_exprs.append(
-            f"CASE WHEN left_table.`{key}` IS NOT NULL "
-            f"THEN left_table.`{key}` "
-            f"ELSE right_table.`{key}` "
-            f"END AS `{key}`"
-        )
-    for field_name in left.get_schema().get_field_names():
-        if field_name in key_fields:
-            continue
-        select_field_exprs.append(
-            _field_with_default_value_if_null(field_name, field_default_values)
-        )
-    for field_name in right.get_schema().get_field_names():
-        if field_name in key_fields:
-            continue
-        select_field_exprs.append(
-            _field_with_default_value_if_null(field_name, field_default_values)
-        )
-    select_statement = ", ".join(select_field_exprs)
-
-    t_env.create_temporary_view("left_table", left)
-    t_env.create_temporary_view("right_table", right)
-    table = t_env.sql_query(
-        f"SELECT {select_statement} FROM left_table "
-        f"FULL OUTER JOIN right_table ON {predicate};"
-    )
-    t_env.drop_temporary_view("left_table")
-    t_env.drop_temporary_view("right_table")
-
-    return cast_field_type_without_changing_nullability(
-        table, {key: value[1] for key, value in field_default_values.items()}
-    )
-
-
 def temporal_join(
     t_env: StreamTableEnvironment,
     left: NativeFlinkTable,
@@ -407,20 +346,3 @@ def _get_join_predicate(key_fields: List[str]) -> str:
     else:
         predicate = predicates[0]
     return predicate
-
-
-def _field_with_default_value_if_null(
-    field_name: str, field_default_values: Dict[str, Tuple[Any, DataType]]
-) -> str:
-    if (
-        field_name not in field_default_values
-        or field_default_values[field_name][0] is None
-    ):
-        return f"`{field_name}`"
-
-    return (
-        f"CASE WHEN `{field_name}` IS NOT NULL THEN `{field_name}` ELSE "
-        f"CAST({field_default_values[field_name][0]} AS "
-        f"{to_flink_sql_type(field_default_values[field_name][1])}) END "
-        f"AS `{field_name}`"
-    )

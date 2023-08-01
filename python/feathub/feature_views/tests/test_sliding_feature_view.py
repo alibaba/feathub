@@ -488,6 +488,78 @@ class SlidingFeatureViewTest(unittest.TestCase):
         self.assertTrue(built_feature.config.get(ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG))
         self.assertFalse(built_feature.config.get(SKIP_SAME_WINDOW_OUTPUT_CONFIG))
 
+    def test_sliding_feature_view_step_size(self):
+        feature_1 = Feature(
+            name="feature_1",
+            dtype=types.Float32,
+            transform=SlidingWindowTransform(
+                expr="CAST(fare_amount AS FLOAT)",
+                agg_func="SUM",
+                window_size=timedelta(seconds=30),
+                group_by_keys=["id"],
+                step_size=timedelta(seconds=10),
+            ),
+        )
+
+        feature_2 = Feature(
+            name="feature_2",
+            dtype=types.Float32,
+            transform=SlidingWindowTransform(
+                expr="CAST(fare_amount AS FLOAT) + 1",
+                agg_func="SUM",
+                window_size=timedelta(seconds=30),
+                group_by_keys=["id"],
+                step_size=timedelta(seconds=10),
+            ),
+        )
+
+        feature_view = SlidingFeatureView(
+            name="feature_view_1",
+            source=self.source,
+            features=[
+                feature_1,
+                feature_2,
+            ],
+        )
+
+        self.assertEqual(timedelta(seconds=10), feature_view.step_size)
+
+    def test_sliding_feature_view_group_by_keys(self):
+        feature_1 = Feature(
+            name="feature_1",
+            dtype=types.Float32,
+            transform=SlidingWindowTransform(
+                expr="CAST(fare_amount AS FLOAT)",
+                agg_func="SUM",
+                window_size=timedelta(seconds=30),
+                group_by_keys=["id"],
+                step_size=timedelta(seconds=10),
+            ),
+        )
+
+        feature_2 = Feature(
+            name="feature_2",
+            dtype=types.Float32,
+            transform=SlidingWindowTransform(
+                expr="CAST(fare_amount AS FLOAT) + 1",
+                agg_func="SUM",
+                window_size=timedelta(seconds=30),
+                group_by_keys=["id"],
+                step_size=timedelta(seconds=10),
+            ),
+        )
+
+        feature_view = SlidingFeatureView(
+            name="feature_view_1",
+            source=self.source,
+            features=[
+                feature_1,
+                feature_2,
+            ],
+        )
+
+        self.assertEqual(("id",), feature_view.group_by_keys)
+
 
 class SlidingFeatureViewITTest(ABC, FeathubITTestBase):
     def test_sliding_feature_view_filter_expr(self):

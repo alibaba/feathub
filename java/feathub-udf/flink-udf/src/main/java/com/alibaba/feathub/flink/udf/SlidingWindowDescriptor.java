@@ -24,21 +24,16 @@ import java.util.Objects;
 /** Descriptor of a sliding window. */
 public class SlidingWindowDescriptor implements Serializable {
     public final Duration stepSize;
-    public final Integer limit;
     public final List<String> groupByKeys;
-    public final String filterExpr;
 
-    public SlidingWindowDescriptor(
-            Duration stepSize, Integer limit, List<String> groupByKeys, String filterExpr) {
+    public SlidingWindowDescriptor(Duration stepSize, List<String> groupByKeys) {
         this.stepSize = stepSize;
-        this.limit = limit;
         this.groupByKeys = groupByKeys;
-        this.filterExpr = filterExpr;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(stepSize, limit, groupByKeys, filterExpr);
+        return Objects.hash(stepSize, groupByKeys);
     }
 
     @Override
@@ -48,8 +43,6 @@ public class SlidingWindowDescriptor implements Serializable {
         }
         SlidingWindowDescriptor descriptor = (SlidingWindowDescriptor) obj;
         return Objects.equals(this.stepSize, descriptor.stepSize)
-                && Objects.equals(this.limit, descriptor.limit)
-                && Objects.equals(this.groupByKeys, descriptor.groupByKeys)
-                && Objects.equals(this.filterExpr, descriptor.filterExpr);
+                && Objects.equals(this.groupByKeys, descriptor.groupByKeys);
     }
 }
