@@ -49,7 +49,7 @@ metric_store_config_defs: List[ConfigDef] = [
         name=METRIC_STORE_REPORT_INTERVAL_SEC_CONFIG,
         value_type=float,
         description=METRIC_STORE_REPORT_INTERVAL_SEC_DOC,
-        default_value=10,
+        default_value=2,
         validator=gt(0),  # type: ignore
     ),
     ConfigDef(

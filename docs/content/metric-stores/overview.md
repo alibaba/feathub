@@ -13,7 +13,7 @@ configurations.
 | Key                 | Required | Default   | Type    | Description                                                  |
 | ------------------- | -------- | --------- | ------- | ------------------------------------------------------------ |
 | type                | Required | -         | String  | The type of the metric store to use.                         |
-| report_interval_sec | Optional | 10        | Float   | The interval in seconds to report metrics.                   |
+| report_interval_sec | Optional | 2        | Float   | The interval in seconds to report metrics.                   |
 | namespace           | Optional | "default" | String  | The namespace to report metrics to the metric store. Metrics within different namespace will not overwrite each other. |
 
 ## Defining metrics
