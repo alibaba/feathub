@@ -18,6 +18,7 @@ from pyflink.java_gateway import get_gateway
 from pyflink.table import (
     StreamTableEnvironment,
     Table as NativeFlinkTable,
+    TableSchema as NativeFlinkTableSchema,
     expressions as native_flink_expr,
 )
 from pyflink.table.types import _to_java_data_type
@@ -78,6 +79,50 @@ class SlidingWindowDescriptor:
         return hash((self.step_size, tuple(self.group_by_keys)))
 
 
+def evaluate_infinite_size_sliding_window(
+    flink_table: NativeFlinkTable,
+    window_descriptor: SlidingWindowDescriptor,
+    agg_descriptors: List[AggregationFieldDescriptor],
+    config: SlidingFeatureViewConfig,
+) -> NativeFlinkTable:
+    """
+    Evaluate the infinite size sliding window transforms on the given flink table and
+    return the result table.
+
+    :param flink_table: The input Flink table.
+    :param window_descriptor: The descriptor of the sliding window.
+    :param agg_descriptors: A list of descriptor that descriptor the aggregation to
+                            perform.
+    :param config: The config of the SlidingFeatureView that the window_descriptor
+                   belongs to.
+    :return: The result table.
+    """
+    if not config.get(SKIP_SAME_WINDOW_OUTPUT_CONFIG):
+        raise FeathubException(
+            "When step size is 0, skip_same_window_output must be true."
+        )
+    for agg_descriptor in agg_descriptors:
+        flink_table = flink_table.add_or_replace_columns(
+            native_flink_expr.call_sql(agg_descriptor.expr).alias(
+                agg_descriptor.field_name
+            )
+        )
+
+    SlidingWindowUtils = (
+        get_gateway().jvm.com.alibaba.feathub.flink.udf.SlidingWindowUtils
+    )
+
+    j_table = SlidingWindowUtils.applyGlobalWindow(
+        flink_table._t_env._j_tenv,
+        flink_table._j_table,
+        window_descriptor.to_java_descriptor(),
+        _get_java_agg_descriptors(agg_descriptors, flink_table.get_schema()),
+        EVENT_TIME_ATTRIBUTE_NAME,
+    )
+
+    return NativeFlinkTable(j_table, flink_table._t_env)
+
+
 # TODO: Retracting the value when the window becomes empty when the Sink support
 #  DynamicTable with retraction.
 def evaluate_sliding_window_transform(
@@ -101,49 +146,32 @@ def evaluate_sliding_window_transform(
     :return: The result table.
     """
 
+    if window_descriptor.step_size.total_seconds() == 0:
+        return evaluate_infinite_size_sliding_window(
+            flink_table, window_descriptor, agg_descriptors, config
+        )
+
     for agg_descriptor in agg_descriptors:
-        if agg_descriptor.window_size <= timedelta(seconds=0):
-            raise FeathubException(
-                f"Sliding window size {agg_descriptor.window_size} must be a positive "
-                f"value."
-            )
         flink_table = flink_table.add_or_replace_columns(
             native_flink_expr.call_sql(agg_descriptor.expr).alias(
                 agg_descriptor.field_name
             )
         )
 
-    table_schema = flink_table.get_schema()
-
-    gateway = get_gateway()
-    descriptor_builder = (
-        gateway.jvm.com.alibaba.feathub.flink.udf.AggregationFieldsDescriptor.builder()
+    SlidingWindowUtils = (
+        get_gateway().jvm.com.alibaba.feathub.flink.udf.SlidingWindowUtils
     )
-
-    for agg_descriptor in agg_descriptors:
-        descriptor_builder.addField(
-            agg_descriptor.field_name,
-            _to_java_data_type(
-                table_schema.get_field_data_type(agg_descriptor.field_name)
-            ),
-            _to_java_data_type(agg_descriptor.field_data_type),
-            int(agg_descriptor.window_size.total_seconds() * 1000),
-            agg_descriptor.limit,
-            agg_descriptor.filter_expr,
-            agg_descriptor.agg_func.name,
-        )
-
-    SlidingWindowUtils = gateway.jvm.com.alibaba.feathub.flink.udf.SlidingWindowUtils
 
     j_stream = SlidingWindowUtils.applySlidingWindowPreAggregationProcess(
         flink_table._t_env._j_tenv,
         flink_table._j_table,
         window_descriptor.to_java_descriptor(),
-        descriptor_builder.build(),
+        _get_java_agg_descriptors(agg_descriptors, flink_table.get_schema()),
         EVENT_TIME_ATTRIBUTE_NAME,
     )
 
     data_type_map = dict()
+    table_schema = flink_table.get_schema()
     for key in window_descriptor.group_by_keys:
         data_type_map[key] = table_schema._j_table_schema.getFieldDataType(key).get()
     for agg_descriptor in agg_descriptors:
@@ -158,7 +186,7 @@ def evaluate_sliding_window_transform(
 
     default_row = None
     if config.get(ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG):
-        default_row = gateway.jvm.org.apache.flink.types.Row.withNames()
+        default_row = get_gateway().jvm.org.apache.flink.types.Row.withNames()
         for agg_descriptor in agg_descriptors:
             default_value, data_type = get_default_value_and_type(agg_descriptor)
             default_row.setField(agg_descriptor.field_name, default_value)
@@ -172,8 +200,31 @@ def evaluate_sliding_window_transform(
         data_type_map,
         window_descriptor.to_java_descriptor(),
         EVENT_TIME_ATTRIBUTE_NAME,
-        descriptor_builder.build(),
+        _get_java_agg_descriptors(agg_descriptors, flink_table.get_schema()),
         default_row,
         config.get(SKIP_SAME_WINDOW_OUTPUT_CONFIG),
     )
     return NativeFlinkTable(j_table, flink_table._t_env)
+
+
+def _get_java_agg_descriptors(
+    agg_descriptors: List[AggregationFieldDescriptor],
+    table_schema: NativeFlinkTableSchema,
+) -> Any:
+    descriptor_builder = (
+        get_gateway().jvm.com.alibaba.feathub.flink.udf.AggregationFieldsDescriptor.builder()  # noqa
+    )
+    for agg_descriptor in agg_descriptors:
+        descriptor_builder.addField(
+            agg_descriptor.field_name,
+            _to_java_data_type(
+                table_schema.get_field_data_type(agg_descriptor.field_name)
+            ),
+            _to_java_data_type(agg_descriptor.field_data_type),
+            int(agg_descriptor.window_size.total_seconds() * 1000),
+            agg_descriptor.limit,
+            agg_descriptor.filter_expr,
+            agg_descriptor.agg_func.name,
+        )
+    java_agg_descriptors = descriptor_builder.build()
+    return java_agg_descriptors

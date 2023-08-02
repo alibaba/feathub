@@ -13,7 +13,7 @@
 import re
 from abc import ABC
 from datetime import timedelta
-from typing import List
+from typing import List, Dict, Optional
 from urllib import request
 
 from prometheus_client import (
@@ -25,7 +25,6 @@ from prometheus_client import (
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_container_is_ready
 
-from feathub.common.exceptions import FeathubException
 from feathub.feature_tables.sinks.black_hole_sink import BlackHoleSink
 from feathub.feature_views.feature import Feature
 from feathub.feature_views.sliding_feature_view import (
@@ -135,7 +134,26 @@ class PrometheusMetricStoreITTest(ABC, FeathubITTestBase):
             ]
         )
 
-    def _test_prometheus_metric_store(self, metric_definitions: List[Metric]):
+    def test_prometheus_metric_store_zero_window_size(self):
+        self._test_prometheus_metric_store(
+            [
+                Count(
+                    filter_expr="> 0",
+                    window_size=timedelta(seconds=0),
+                ),
+                Ratio(
+                    filter_expr="> 0",
+                    window_size=timedelta(seconds=0),
+                ),
+            ],
+            {"count": "8", "ratio": "0.7272727272727273"},
+        )
+
+    def _test_prometheus_metric_store(
+        self,
+        metric_definitions: List[Metric],
+        expected_value: Optional[Dict[str, str]] = None,
+    ):
         self.server_url = self.prometheus_push_gateway_container.get_server_url()
         self.client = self.get_client(
             extra_config={
@@ -215,11 +233,11 @@ class PrometheusMetricStoreITTest(ABC, FeathubITTestBase):
             self.assertEqual(metrics[i][1]["job"], "default")
             # TODO: setup Prometheus server together with Prometheus PushGateway
             #  and verify history metric value.
-            self.assertEqual(metrics[i][2], "0")
 
-    def test_prometheus_metric_store_zero_window_size(self):
-        with self.assertRaises(FeathubException) as cm:
-            Count(window_size=timedelta(seconds=0))
-        self.assertIn(
-            "Metric window size 0:00:00 must be a positive value.", cm.exception.args[0]
-        )
+            if expected_value is None:
+                self.assertEqual(metrics[i][2], "0")
+            else:
+                self.assertEqual(
+                    metrics[i][2],
+                    expected_value.get(metric_definitions[i].metric_type),
+                )

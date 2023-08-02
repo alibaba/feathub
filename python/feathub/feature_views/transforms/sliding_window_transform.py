@@ -14,6 +14,7 @@
 from datetime import timedelta
 from typing import Union, Sequence, Optional, Dict
 
+from feathub.common.exceptions import FeathubException
 from feathub.common.utils import append_metadata_to_json
 from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.transformation import Transformation
@@ -39,8 +40,12 @@ class SlidingWindowTransform(Transformation):
         :param expr: A FeatHub expression composed of UDF and feature names.
         :param agg_func: The aggregation function or the name of the aggregation
                          function as string such as "MAX", "AVG".
-        :param window_size: The size of the sliding window.
+        :param window_size: The size of the sliding window. If it is timedelta(0), it
+                            means that the sliding window has infinite size. All the
+                            rows are aggregated.
         :param step_size: The step_size specifies how often the sliding windows starts.
+                          If it is timedelta(0), it means that each input will trigger
+                          an immediate output of the aggregated result.
         :param group_by_keys: The names of fields to be used as the grouping key.
         :param filter_expr: Optional. If it is not None, it represents a FeatHub
                             expression. Only rows that match the filter expression can
@@ -57,6 +62,19 @@ class SlidingWindowTransform(Transformation):
         self.group_by_keys = group_by_keys
         self.filter_expr = filter_expr
         self.limit = limit
+
+        # TODO: Support infinite window size with non-zero step size.
+        if window_size == timedelta(0) and step_size != timedelta(0):
+            raise FeathubException(
+                "SlidingWindowTransform with zero window size and non-zero "
+                "step size is not supported yet."
+            )
+
+        if window_size != timedelta(0) and step_size == timedelta(0):
+            raise FeathubException(
+                "SlidingWindowTransform with non-zero window size must have "
+                "non-zero step size"
+            )
 
     @append_metadata_to_json
     def to_json(self) -> Dict:
