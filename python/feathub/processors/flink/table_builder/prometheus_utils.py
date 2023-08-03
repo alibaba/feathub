@@ -13,6 +13,7 @@
 #  limitations under the License.
 import glob
 import os
+from datetime import timedelta
 
 from pyflink.table import (
     expressions as native_flink_expr,
@@ -61,6 +62,9 @@ def add_prometheus_sink_to_statement_set(
         .option(
             "extraLabels",
             ",".join(f"{key}={value}" for key, value in sink.extra_labels.items()),
+        )
+        .option(
+            "retryTimeoutMs", str(int(sink.retry_timeout / timedelta(milliseconds=1)))
         )
     )
 
