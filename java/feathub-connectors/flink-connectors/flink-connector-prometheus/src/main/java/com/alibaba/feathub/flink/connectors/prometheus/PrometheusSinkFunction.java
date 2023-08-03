@@ -36,6 +36,8 @@ import org.apache.flink.util.StringUtils;
 
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.exporter.PushGateway;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -51,6 +53,7 @@ import java.util.regex.Pattern;
 import static com.alibaba.feathub.flink.connectors.prometheus.PrometheusConfigs.DELETE_ON_SHUTDOWN;
 import static com.alibaba.feathub.flink.connectors.prometheus.PrometheusConfigs.EXTRA_LABELS;
 import static com.alibaba.feathub.flink.connectors.prometheus.PrometheusConfigs.JOB_NAME;
+import static com.alibaba.feathub.flink.connectors.prometheus.PrometheusConfigs.RETRY_TIMEOUT_MS;
 import static com.alibaba.feathub.flink.connectors.prometheus.PrometheusConfigs.SERVER_URL;
 
 /**
@@ -111,11 +114,16 @@ import static com.alibaba.feathub.flink.connectors.prometheus.PrometheusConfigs.
  */
 public class PrometheusSinkFunction extends RichSinkFunction<RowData> {
 
+    private static final Logger LOG = LoggerFactory.getLogger(PrometheusSinkFunction.class);
+
+    private static final long RETRY_INTERVAL_MS = 1000; // 1 second.
+
     private final String jobName;
     private final Map<String, String> extraLabels;
     private final List<ColumnInfo> columnInfos;
     private final String serverUrl;
     private final Boolean deleteOnShutdown;
+    private final long retryTimeoutMs;
     private CollectorRegistry registry;
     private PushGateway pushGateway;
     private List<MetricUpdater<?>> metricUpdaters;
@@ -125,6 +133,7 @@ public class PrometheusSinkFunction extends RichSinkFunction<RowData> {
         this.extraLabels = parseLabels(config.get(EXTRA_LABELS));
         this.serverUrl = config.get(SERVER_URL);
         this.deleteOnShutdown = config.get(DELETE_ON_SHUTDOWN);
+        this.retryTimeoutMs = config.get(RETRY_TIMEOUT_MS);
 
         this.columnInfos = new ArrayList<>();
         for (Column column : schema.getColumns()) {
@@ -149,7 +158,24 @@ public class PrometheusSinkFunction extends RichSinkFunction<RowData> {
         for (int i = 0; i < columnInfos.size(); i++) {
             updateMetric(row, i);
         }
-        pushGateway.pushAdd(registry, jobName, extraLabels);
+
+        long startTimeMs = System.currentTimeMillis();
+        while (true) {
+            try {
+                pushGateway.pushAdd(registry, jobName, extraLabels);
+                break;
+            } catch (Exception e) {
+                LOG.warn(
+                        "Failed to push metrics to PushGateway with jobName {}, groupingKey {}.",
+                        jobName,
+                        extraLabels,
+                        e);
+                if (System.currentTimeMillis() - startTimeMs > retryTimeoutMs) {
+                    break;
+                }
+                Thread.sleep(RETRY_INTERVAL_MS);
+            }
+        }
     }
 
     public void updateMetric(RowData row, int index) throws IOException {
@@ -274,7 +300,15 @@ public class PrometheusSinkFunction extends RichSinkFunction<RowData> {
     public void close() throws Exception {
         super.close();
         if (deleteOnShutdown) {
-            pushGateway.delete(jobName, extraLabels);
+            try {
+                pushGateway.delete(jobName, extraLabels);
+            } catch (IOException e) {
+                LOG.warn(
+                        "Failed to delete metrics from PushGateway with jobName {}, groupingKey {}.",
+                        jobName,
+                        extraLabels,
+                        e);
+            }
         }
     }
 

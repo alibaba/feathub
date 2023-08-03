@@ -11,6 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import collections
+from datetime import timedelta
 from typing import Any
 from typing import Dict, List, OrderedDict
 
@@ -106,4 +107,5 @@ class PrometheusMetricStore(MetricStore):
             job_name=self.namespace,
             delete_on_shutdown=self.delete_on_shutdown,
             extra_labels={"table_name": data_sink.name},
+            retry_timeout=timedelta(seconds=self.report_interval_sec),
         )

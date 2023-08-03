@@ -27,6 +27,7 @@ import java.util.Set;
 import static com.alibaba.feathub.flink.connectors.prometheus.PrometheusConfigs.DELETE_ON_SHUTDOWN;
 import static com.alibaba.feathub.flink.connectors.prometheus.PrometheusConfigs.EXTRA_LABELS;
 import static com.alibaba.feathub.flink.connectors.prometheus.PrometheusConfigs.JOB_NAME;
+import static com.alibaba.feathub.flink.connectors.prometheus.PrometheusConfigs.RETRY_TIMEOUT_MS;
 import static com.alibaba.feathub.flink.connectors.prometheus.PrometheusConfigs.SERVER_URL;
 
 /** The table factory for {@link PrometheusDynamicTableSink}. */
@@ -58,6 +59,7 @@ public class PrometheusDynamicTableFactory implements DynamicTableSinkFactory {
         Set<ConfigOption<?>> options = new HashSet<>();
         options.add(EXTRA_LABELS);
         options.add(DELETE_ON_SHUTDOWN);
+        options.add(RETRY_TIMEOUT_MS);
         return options;
     }
 }

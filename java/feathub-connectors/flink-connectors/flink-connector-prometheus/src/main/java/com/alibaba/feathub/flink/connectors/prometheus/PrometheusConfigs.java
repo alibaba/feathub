@@ -58,4 +58,12 @@ public class PrometheusConfigs {
                                     + "and value are separated by '=', and labels are separated by ',', e.g., "
                                     + "k1=v1,k2=v2. Please ensure that your grouping key meets the Prometheus requirements. "
                                     + "Use backslash '\\' to escape '=' and ',' if they are used in label value.");
+
+    public static final ConfigOption<Long> RETRY_TIMEOUT_MS =
+            ConfigOptions.key("retryTimeoutMs")
+                    .longType()
+                    .defaultValue(0L)
+                    .withDescription(
+                            "The max timeout in milliseconds this sink may take retrying in case of occasional exceptions."
+                                    + "If timeout is reached before the retry succeeds, the sink would drop the record being processed.");
 }
