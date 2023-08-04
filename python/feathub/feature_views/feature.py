@@ -73,8 +73,11 @@ class Feature:
         :param description: The description of the feature.
         :param extra_props: The extra properties of the feature that are defined by
                             user.
-        :param metrics: The metrics of this feature. These metrics would be reported iff
-                        the host FeatureView is materialized to a sink.
+        :param metrics: The metrics of this feature. These metrics would be reported if
+                        the host FeatureView is directly materialized to a sink, or if
+                        the host FeatureView is upstream of a materialized FeatureView
+                        where all downstream FeatureView of the host FeatureView on this
+                        chain has keep_source_metrics = true.
         """
         if name.startswith("__") or name.endswith("__"):
             raise FeathubException(
