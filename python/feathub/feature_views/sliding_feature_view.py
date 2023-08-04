@@ -124,6 +124,7 @@ class SlidingFeatureView(FeatureView):
         timestamp_format: str = "epoch_millis",
         filter_expr: Optional[str] = None,
         extra_props: Optional[Dict] = None,
+        keep_source_metrics: bool = False,
     ):
         """
         :param name: The unique identifier of this feature view in the registry.
@@ -158,6 +159,11 @@ class SlidingFeatureView(FeatureView):
                             will be outputted by the feature view.
         :param extra_props: Optional. It is not None, it is the extra properties of the
                             SlidingFeatureView.
+        :param keep_source_metrics: If it is true and this feature view is materialized
+                                    to a sink, FeatHub will recursively enumerate source
+                                    feature view of this and every upstream feature
+                                    view whose keep_source_fields == true, and report
+                                    metrics defined in those feature views.
         """
         window_time_feature = self._get_window_time_feature(
             timestamp_field, timestamp_format
@@ -169,6 +175,7 @@ class SlidingFeatureView(FeatureView):
             keep_source_fields=False,
             timestamp_field=timestamp_field,
             timestamp_format=timestamp_format,
+            keep_source_metrics=keep_source_metrics,
         )
 
         self.filter_expr = filter_expr
@@ -271,6 +278,7 @@ class SlidingFeatureView(FeatureView):
             timestamp_format=self.timestamp_format,
             filter_expr=self.filter_expr,
             extra_props={**props, **self.config.original_props},
+            keep_source_metrics=self.keep_source_metrics,
         )
         return feature_view
 
@@ -345,6 +353,7 @@ class SlidingFeatureView(FeatureView):
             "timestamp_format": self.timestamp_format,
             "filter_expr": self.filter_expr,
             "extra_props": self.config.original_props,
+            "keep_source_metrics": self.keep_source_metrics,
         }
 
     @classmethod
@@ -362,6 +371,7 @@ class SlidingFeatureView(FeatureView):
             timestamp_format=json_dict["timestamp_format"],
             filter_expr=json_dict["filter_expr"],
             extra_props=json_dict["extra_props"],
+            keep_source_metrics=json_dict["keep_source_metrics"],
         )
 
     def _validate(self, source: TableDescriptor, features: Sequence[Feature]) -> None:

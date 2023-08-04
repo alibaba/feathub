@@ -51,6 +51,7 @@ class DerivedFeatureView(FeatureView):
         features: Sequence[Union[str, Feature]],
         keep_source_fields: bool = False,
         filter_expr: Optional[str] = None,
+        keep_source_metrics: bool = False,
     ):
         """
         :param name: The unique identifier of this feature view in the registry.
@@ -80,6 +81,11 @@ class DerivedFeatureView(FeatureView):
                             expression is evaluated after other transformations in the
                             feature view, and only those rows which evaluate to True
                             will be outputted by the feature view.
+        :param keep_source_metrics: If it is true and this feature view is materialized
+                                    to a sink, FeatHub will recursively enumerate source
+                                    feature view of this and every upstream feature
+                                    view whose keep_source_fields == true, and report
+                                    metrics defined in those feature views.
         """
         if any(
             isinstance(feature, Feature)
@@ -101,6 +107,7 @@ class DerivedFeatureView(FeatureView):
             source=source,
             features=features,
             keep_source_fields=keep_source_fields,
+            keep_source_metrics=keep_source_metrics,
         )
         self.filter_expr = filter_expr
 
@@ -158,6 +165,7 @@ class DerivedFeatureView(FeatureView):
             features=features,
             keep_source_fields=self.keep_source_fields,
             filter_expr=self.filter_expr,
+            keep_source_metrics=self.keep_source_metrics,
         )
 
     @staticmethod
@@ -269,6 +277,7 @@ class DerivedFeatureView(FeatureView):
             ],
             "keep_source_fields": self.keep_source_fields,
             "filter_expr": self.filter_expr,
+            "keep_source_metrics": self.keep_source_metrics,
         }
 
     @classmethod
@@ -284,4 +293,5 @@ class DerivedFeatureView(FeatureView):
             ],
             keep_source_fields=json_dict["keep_source_fields"],
             filter_expr=json_dict["filter_expr"],
+            keep_source_metrics=json_dict["keep_source_metrics"],
         )
