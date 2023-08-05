@@ -37,10 +37,10 @@ engines, connectors, expression language, and more.
 
 Similar to other feature stores, FeatHub provides the following core benefits:
 
-- **Simplified feature development**: The Python SDK provided by FeatHub makes
-it easy to develop features without worrying about point-in-time correctness.
-This helps to avoid training-serving skew, which can negatively impact the
-accuracy of machine learning models.
+- **Simplified feature development**: The Pythonic [FeatHub
+SDK](docs/content/feathub-sdk) makes it easy to develop features without worrying
+about point-in-time correctness.  This helps to avoid training-serving skew,
+which can negatively impact the accuracy of machine learning models.
 - **Faster feature deployment**: FeatHub automatically compiles user-specified
 declarative feature definitions into performant distributed ETL jobs using
 state-of-the-art computation engines, such as Flink or Spark. This speeds up
@@ -78,10 +78,12 @@ Flink](docs/content/engines/flink.md) for real-time features with low latency,
 throughput, and FeatureService for computing features online when the request
 is received.
 
-- **Extensible framework**: FeatHub's Python SDK is declarative and decoupled
-from the APIs of the underlying computation engines, providing flexibility and
-avoiding lock-in. This allows for the support of additional computation engines
-in the future.
+- **Extensible framework**: FeatHub's Python SDK is decoupled from the APIs of
+the underlying computation engines, providing flexibility and avoiding lock-in.
+This allows for the support of additional computation engines in the future.
+For example, FeatHub supports [Local
+Processor](docs/content/engines/local.md) that is implemented using Pandas
+library, in addition to its support for Apache Flink and Apache Spark.
 
 Usability is a crucial factor that sets feature store projects apart. Our SDK is
 designed to be **Pythonic**, **declarative**, intuitive, and highly expressive to
@@ -120,24 +122,20 @@ The workflow of defining, computing, and serving features using FeatHub is illus
 
 <img src="docs/static/img/architecture_2.png" width="70%" height="auto">
 
-See [Basic Concepts](docs/content/concepts/basic-concepts.md) for more details about the key components in FeatHub.
+See [Basic Concepts](docs/content/basic-concepts.md) for more details about the key components in FeatHub.
 
 ## Supported Compute Engines
 
 FeatHub supports the following compute engines to execute feature ETL pipeline:
 - [Apache Flink 1.16](docs/content/engines/flink.md)
 - [Aapche Spark 3.3](docs/content/engines/spark.md)
-- Local processor, which is implemented using the Pandas library and computes
-  features in the given Python process. Additionally, if the
-  feathub-nightly[spark] is installed, the Local processor can utilize Spark's
-  local mode for accessing storages (e.g. HDFS) that it otherwise did not
-  support.
-
+- [Local Processor](docs/content/engines/local.md)
 
 ## FeatHub SDK Highlights
 
 The following examples demonstrate how to define a variety of features
-concisely using FeatHub SDK.
+concisely using FeatHub SDK. See [FeatHub
+SDK](docs/content/feathub-sdk) for more details.
 
 See [NYC Taxi Demo](docs/examples/nyc_taxi.ipynb) to learn more about how to
 define, generate and serve features using FeatHub SDK.
@@ -192,8 +190,6 @@ f_trip_time_duration = Feature(
     transform="UNIX_TIMESTAMP(taxi_dropoff_datetime) - UNIX_TIMESTAMP(taxi_pickup_datetime)",
 )
 ```
-
-See [FeatHub Expression Language](docs/content/concepts/expression-language.md) for more details.
 
 - Define a feature via Python UDF:
 

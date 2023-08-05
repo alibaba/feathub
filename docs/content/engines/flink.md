@@ -1,8 +1,10 @@
 # Apache Flink
 
-The FlinkProcessor does feature ETL using Flink as the compute engine. In the
-following sections we describe the deployment modes supported by FlinkProcessor
-and the configuration keys accepted by each mode.
+The
+[FlinkProcessor](https://github.com/alibaba/feathub/blob/master/python/feathub/processors/flink/flink_processor.py)
+does feature ETL using Flink as the compute engine. In the following sections we
+describe the deployment modes supported by FlinkProcessor and the configuration
+keys accepted by each mode.
 
 ## Supported Versions
 

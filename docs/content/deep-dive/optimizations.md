@@ -52,5 +52,5 @@ significantly reduce I/O costs and network bandwidth usage.
 
 This optimization is enabled by default. See
 [SlidingFeatureView](../configurations.md#slidingfeatureview) configuration for
-more detail.
+more details.
 

@@ -1,8 +1,10 @@
 # Apache Spark
 
-The SparkProcessor does feature ETL using Spark as the compute engine. In the
-following sections we describe the deployment modes supported by SparkProcessor
-and the configuration keys accepted by each mode.
+The
+[SparkProcessor](https://github.com/alibaba/feathub/blob/master/python/feathub/processors/spark/spark_processor.py)
+does feature ETL using Spark as the compute engine. In the following sections we
+describe the deployment modes supported by SparkProcessor and the configuration
+keys accepted by each mode.
 
 ## Supported Versions
 
