@@ -38,43 +38,48 @@ engines, connectors, expression language, and more.
 Similar to other feature stores, FeatHub provides the following core benefits:
 
 - **Simplified feature development**: The Python SDK provided by FeatHub makes
-  it easy to develop features without worrying about point-in-time correctness.
+it easy to develop features without worrying about point-in-time correctness.
 This helps to avoid training-serving skew, which can negatively impact the
 accuracy of machine learning models.
 - **Faster feature deployment**: FeatHub automatically compiles user-specified
-  declarative feature definitions into performant distributed ETL jobs using
-state-of-the-art computation engines, such as Flink or Spark. This speeds up the
-feature deployment process and eliminates the need for data engineers to
+declarative feature definitions into performant distributed ETL jobs using
+state-of-the-art computation engines, such as Flink or Spark. This speeds up
+the feature deployment process and eliminates the need for data engineers to
 re-write Python programs into distributed stream or batch processing jobs.
 - **Performant feature generation**: FeatHub offers a range of [built-in
   optimizations](docs/content/deep-dive/optimizations.md) that leverage commonly
 observed feature ETL job patterns. These optimizations are automatically applied
 to ETL jobs compiled from the declarative feature definitions, much like how SQL
 optimizations are applied.
-- **Assisted feature monitoring**: FeatHub provides built-in metrics to monitor
-  the quality of features and alert users to issues such as feature drift. This
-helps to improve the accuracy and reliability of machine learning models.
-- **Facilitated feature sharing**: FeatHub allows developers to register, query,
-  and re-use production-ready feature definitions and datasets already generated
-by other developers in the organization. This reduces the duplication of data
-engineering efforts and the cost of feature generation.
+- **Assisted feature monitoring**: FeatHub provides [built-in
+metrics](docs/content/metric-stores) to monitor the quality of features and
+alert users to issues such as feature drift. This helps to improve the accuracy
+and reliability of machine learning models.
+- **Facilitated feature sharing**: FeatHub allows developers to register and
+query feature definitions in a persistent [feature
+registry](docs/content/registries). This capability reduces the duplication of
+data engineering efforts and the resource cost of feature generation by
+allowing developers in the organization to share and re-use existing feature
+definitions and datasets.
 
 In addition to the above benefits, FeatHub provides several architectural
 benefits compared to other feature stores, including:
 
 - **Real-time feature generation**: FeatHub supports real-time feature
-  generation using Apache Flink as the stream computation engine with milli-second
-latency. This provides better performance than other open-source feature stores
-that only support feature generation using Apache Spark.
+generation using [Apache Flink](docs/content/engines/flink.md) as the stream
+computation engine with milli-second latency. This provides better performance
+than other open-source feature stores that only support feature generation
+using Apache Spark.
 
 - **Stream-batch unified computation**: FeatHub allows for consistent feature
-  computation across offline, nearline, and online stacks using Apache Flink for
-real-time features with low latency, Apache Spark for offline features with high
-throughput, and FeatureService for computing features online when the request is
-received.
+computation across offline, nearline, and online stacks using [Apache
+Flink](docs/content/engines/flink.md) for real-time features with low latency,
+[Apache Spark](docs/content/engines/spark.md) for offline features with high
+throughput, and FeatureService for computing features online when the request
+is received.
 
 - **Extensible framework**: FeatHub's Python SDK is declarative and decoupled
-  from the APIs of the underlying computation engines, providing flexibility and
+from the APIs of the underlying computation engines, providing flexibility and
 avoiding lock-in. This allows for the support of additional computation engines
 in the future.
 
@@ -343,11 +348,10 @@ Here is a list of key features that we plan to support:
 - [x] Support all FeatureView transformations with SparkProcessor
 - [x] Support common online and offline feature storages (e.g. Kafka, Redis, Hive, MySQL)
 - [x] Support persisting feature metadata in MySQL
-- [ ] Support pre-defined and user-defined feature metrics
+- [x] Support exporting pre-defined and user-defined feature metrics to Prometheus
 - [ ] Support online transformation with feature service
 - [ ] Support integration with Notebook
 - [ ] Support feature metadata exploration (e.g. definition, lineage, metrics) with FeatHub UI
-- [ ] Support feature monitoring
 
 ## Contact Us
 
