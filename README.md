@@ -51,10 +51,6 @@ re-write Python programs into distributed stream or batch processing jobs.
 observed feature ETL job patterns. These optimizations are automatically applied
 to ETL jobs compiled from the declarative feature definitions, much like how SQL
 optimizations are applied.
-- **Assisted feature monitoring**: FeatHub provides [built-in
-metrics](docs/content/metric-stores) to monitor the quality of features and
-alert users to issues such as feature drift. This helps to improve the accuracy
-and reliability of machine learning models.
 - **Facilitated feature sharing**: FeatHub allows developers to register and
 query feature definitions in a persistent [feature
 registry](docs/content/registries). This capability reduces the duplication of
@@ -70,6 +66,11 @@ generation using [Apache Flink](docs/content/engines/flink.md) as the stream
 computation engine with milli-second latency. This provides better performance
 than other open-source feature stores that only support feature generation
 using Apache Spark.
+
+- **Assisted feature monitoring**: FeatHub provides [built-in
+metrics](docs/content/metric-stores) to monitor the quality of features and
+alert users to issues such as feature drift. This helps to improve the accuracy
+and reliability of machine learning models.
 
 - **Stream-batch unified computation**: FeatHub allows for consistent feature
 computation across offline, nearline, and online stacks using [Apache
@@ -261,11 +262,17 @@ Spark cluster.
 
 ### Examples
 
+The following examples can be run on Google Colab.
+
 | Name                                                         | Description                                                  |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | [NYC Taxi Demo](./docs/examples/nyc_taxi.ipynb)              | Quickstart notebook that demonstrates how to define, extract, transform and materialize features with NYC taxi-fare prediction sample data. |
 | [Feature Embedding Demo](./docs/examples/feature_embedding.ipynb) | FeatHub UDF example showing how to define and use feature embedding with a pre-trained Transformer model and hotel review sample data. |
 | [Fraud Detection Demo](./docs/examples/fraud_detection.ipynb) | An example to demonstrate usage with multiple data sources such as user account and transaction data. |
+
+Examples in this [this](https://github.com/flink-extended/feathub-examples)
+repo can be run using docker-compose.
+
 
 ## Developer Guide
 
@@ -346,7 +353,6 @@ Here is a list of key features that we plan to support:
 - [x] Support persisting feature metadata in MySQL
 - [x] Support exporting pre-defined and user-defined feature metrics to Prometheus
 - [ ] Support online transformation with feature service
-- [ ] Support integration with Notebook
 - [ ] Support feature metadata exploration (e.g. definition, lineage, metrics) with FeatHub UI
 
 ## Contact Us

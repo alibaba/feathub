@@ -26,6 +26,10 @@ It exposes the following metric-specific tags:
 - filter_expr: The value of the filter_expr parameter.
 - window_size_sec: The value of the window_size parameter in seconds.
 
+See
+[here](https://github.com/alibaba/feathub/blob/master/python/feathub/metric_stores/tests/test_prometheus_metric_store.py#L108)
+for example usages.
+
 ## Ratio
 
 Ratio is a metric that shows the proportion of the number features that meets
@@ -48,3 +52,6 @@ It exposes the following metric-specific tags:
 - filter_expr: The value of the filter_expr parameter.
 - window_size_sec: The value of the window_size parameter in seconds.
 
+See
+[here](https://github.com/alibaba/feathub/blob/master/python/feathub/metric_stores/tests/test_prometheus_metric_store.py#L122)
+for example usages.
