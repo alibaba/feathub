@@ -54,3 +54,25 @@ This optimization is enabled by default. See
 [SlidingFeatureView](../configurations.md#slidingfeatureview) configuration for
 more details.
 
+## Querying Only Part of a Map-Typed Feature During Lookup Join
+
+**Target Feature Pattern**: A map-typed feature needs to be appended to a
+feature table through lookup join, and only certain fixed keys of the map is
+needed. For example, there is a map-typed feature containing some metadata of
+products, and users only need the "production_location" information among all
+metadata.
+
+A naive Flink job would read the whole map from external system, and then
+extract the required key and value from the map. If the map contains 1000
+entries but only 1 is needed, this behavior would read 999 unnecessary entries,
+which adds burden to the network.
+
+Feathub Redis lookup source can identify this work pattern and only read the
+desired entry from a Redis hash.This can help reduce I/O costs and network
+bandwidth usage.
+
+See
+[here](https://github.com/flink-extended/feathub-examples/tree/master/flink-filesystem-join-redis)
+for an example program that only takes a fixed entry from a map-typed feature
+during lookup join. The optimization takes effect in this example.
+
