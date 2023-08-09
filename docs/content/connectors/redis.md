@@ -95,6 +95,7 @@ lookup_source_schema = (
     .column("user_id", types.Int64)
     .column("item_id", types.Int64)
     .column("feature_1", types.Int64)
+    .column("map_feature", types.MapType(types.String, types.String))
     .build()
 )
 
@@ -131,6 +132,14 @@ feature_view = DerivedFeatureView(
         "user_id",
         "item_id",
         f"{lookup_source.name}.feature_1",
+        Feature(
+            name="feature_2",
+            transform=JoinTransform(
+                table_name=lookup_source.name,
+                expr="map_feature['key_value']",
+            ),
+            dtype=types.String,
+        ),
         "ts",
     ],
     keep_source_fields=False,
