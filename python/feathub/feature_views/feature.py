@@ -25,6 +25,7 @@ from feathub.feature_views.transforms.sliding_window_transform import (
 from feathub.feature_views.transforms.transformation import Transformation
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
 from feathub.feature_views.transforms.expression_transform import ExpressionTransform
+from feathub.metric_stores.metric import Metric
 
 
 def get_default_feature_name(disallowed_names: Collection[str]) -> str:
@@ -53,6 +54,7 @@ class Feature:
         input_features: Sequence[Feature] = (),
         description: str = "",
         extra_props: Optional[Dict[str, str]] = None,
+        metrics: Optional[Sequence[Metric]] = None,
     ):
         """
         :param name: The name that uniquely identifies this feature in the
@@ -71,6 +73,7 @@ class Feature:
         :param description: The description of the feature.
         :param extra_props: The extra properties of the feature that are defined by
                             user.
+        :param metrics: The metrics of this feature.
         """
         if name.startswith("__") or name.endswith("__"):
             raise FeathubException(
@@ -100,6 +103,7 @@ class Feature:
         self.input_features = input_features
         self.description = description
         self.extra_props = {} if extra_props is None else extra_props
+        self.metrics = [] if metrics is None else metrics
 
     @append_metadata_to_json
     def to_json(self) -> Dict:
@@ -111,6 +115,7 @@ class Feature:
             "input_features": [feature.to_json() for feature in self.input_features],
             "description": self.description,
             "extra_props": self.extra_props,
+            "metrics": [metric.to_json() for metric in self.metrics],
         }
 
     @classmethod
@@ -127,6 +132,7 @@ class Feature:
             ],
             description=json_dict["description"],
             extra_props=json_dict["extra_props"],
+            metrics=[from_json(metric) for metric in json_dict["metrics"]],
         )
 
     def __str__(self) -> str:

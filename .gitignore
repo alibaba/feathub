@@ -23,3 +23,4 @@ build
 dist
 *.egg-info
 *.ipynb_checkpoints
+**/dependency-reduced-pom.xml

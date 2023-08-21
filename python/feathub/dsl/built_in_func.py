@@ -14,7 +14,7 @@
 from typing import List, Callable
 
 from feathub.common.exceptions import FeathubExpressionException
-from feathub.common.types import DType, String, Int64, MapType
+from feathub.common.types import DType, String, Int64, MapType, VectorType
 
 
 class BuiltInFuncDefinition:
@@ -62,6 +62,11 @@ BUILTIN_FUNCS = [
         name="JSON_STRING", result_type_strategy=lambda input_types: String
     ),
     BuiltInFuncDefinition(name="MAP", result_type_strategy=map_type_strategy),
+    # TODO: Add test and document for ARRAY.
+    BuiltInFuncDefinition(
+        name="ARRAY",
+        result_type_strategy=lambda input_types: VectorType(input_types[0]),
+    ),
 ]
 
 BUILTIN_FUNC_DEF_MAP = {f.name: f for f in BUILTIN_FUNCS}

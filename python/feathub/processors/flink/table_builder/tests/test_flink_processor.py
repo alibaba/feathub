@@ -66,6 +66,9 @@ from feathub.feature_views.transforms.tests.test_python_udf_transform import (
 from feathub.feature_views.transforms.tests.test_sliding_window_transform import (
     SlidingWindowTransformITTest,
 )
+from feathub.metric_stores.tests.test_prometheus_metric_store import (
+    PrometheusMetricStoreITTest,
+)
 from feathub.online_stores.memory_online_store import MemoryOnlineStore
 from feathub.processors.flink import flink_table
 from feathub.processors.flink.flink_class_loader_utils import (
@@ -267,6 +270,7 @@ class FlinkProcessorITTest(
     KafkaSourceSinkITTest,
     OverWindowTransformITTest,
     PrintSinkITTest,
+    PrometheusMetricStoreITTest,
     PythonUDFTransformITTest,
     RedisSourceSinkStandaloneModeITTest,
     RedisSourceSinkClusterModeITTest,

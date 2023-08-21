@@ -22,6 +22,7 @@ from pyflink.table import (
 )
 from pyflink.table.types import _to_java_data_type
 
+from feathub.common.exceptions import FeathubException
 from feathub.feature_views.sliding_feature_view import (
     SlidingFeatureViewConfig,
     ENABLE_EMPTY_WINDOW_OUTPUT_CONFIG,
@@ -128,6 +129,11 @@ def evaluate_sliding_window_transform(
     """
 
     for agg_descriptor in agg_descriptors:
+        if agg_descriptor.window_size <= timedelta(seconds=0):
+            raise FeathubException(
+                f"Sliding window size {agg_descriptor.window_size} must be a positive "
+                f"value."
+            )
         flink_table = flink_table.add_or_replace_columns(
             native_flink_expr.call_sql(agg_descriptor.expr).alias(
                 agg_descriptor.field_name

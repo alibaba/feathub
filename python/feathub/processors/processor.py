@@ -20,6 +20,7 @@ from typing import Dict, Union, Optional, Sequence
 
 import pandas as pd
 
+from feathub.metric_stores.metric_store import MetricStore
 from feathub.processors.materialization_descriptor import (
     MaterializationDescriptor,
 )
@@ -93,6 +94,7 @@ class Processor(ABC):
     def instantiate(
         props: Dict,
         registry: Registry,
+        metric_store: Optional[MetricStore],
     ) -> Processor:
         """
         Instantiates a processor using the given properties and the store instances.
@@ -108,7 +110,9 @@ class Processor(ABC):
         elif processor_type == ProcessorType.FLINK:
             from feathub.processors.flink.flink_processor import FlinkProcessor
 
-            return FlinkProcessor(props=props, registry=registry)
+            return FlinkProcessor(
+                props=props, registry=registry, metric_store=metric_store
+            )
         elif processor_type == ProcessorType.SPARK:
             from feathub.processors.spark.spark_processor import SparkProcessor
 

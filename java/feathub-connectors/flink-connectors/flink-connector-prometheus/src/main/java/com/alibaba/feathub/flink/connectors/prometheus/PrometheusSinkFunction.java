@@ -274,7 +274,7 @@ public class PrometheusSinkFunction extends RichSinkFunction<RowData> {
     public void close() throws Exception {
         super.close();
         if (deleteOnShutdown) {
-            pushGateway.delete(jobName);
+            pushGateway.delete(jobName, extraLabels);
         }
     }
 
@@ -299,14 +299,20 @@ public class PrometheusSinkFunction extends RichSinkFunction<RowData> {
                 continue;
             }
 
+            String labelName;
+            String labelValue;
             final String[] splitKv = split(kv, "=");
-            if (splitKv.length != 2) {
+            if (splitKv.length == 2) {
+                labelName = splitKv[0];
+                labelValue = splitKv[1];
+            } else if (splitKv.length == 1) {
+                labelName = splitKv[0];
+                labelValue = "";
+            } else {
                 throw new RuntimeException(
                         String.format("Invalid prometheusPushGateway labels:%s", kv));
             }
 
-            String labelName = splitKv[0];
-            String labelValue = splitKv[1];
             if (StringUtils.isNullOrWhitespaceOnly(labelName)) {
                 throw new RuntimeException(
                         String.format("Invalid labelName:%s must not be empty", labelName));
