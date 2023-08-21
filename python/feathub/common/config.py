@@ -174,6 +174,11 @@ class BaseConfig:
                     f"Duplicate configuration of {config_def.name} is detected."
                 )
             value = self.original_props.get(config_def.name, config_def.default_value)
+
+            # TODO: Add general support for castable types.
+            if config_def.value_type == float and isinstance(value, int):
+                value = float(value)
+
             if value is not None and not isinstance(value, config_def.value_type):
                 raise FeathubConfigurationException(
                     f"Configuration type error: {config_def.name} expects type "

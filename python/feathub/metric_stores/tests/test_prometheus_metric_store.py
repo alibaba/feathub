@@ -199,6 +199,9 @@ class PrometheusMetricStoreITTest(ABC, FeathubITTestBase):
             )
             self.assertEqual(metrics[i][1]["feature_name"], "total_cost")
             self.assertEqual(
+                metrics[i][1]["metric_type"], metric_definitions[i].metric_type
+            )
+            self.assertEqual(
                 metrics[i][1]["filter_expr"],
                 ""
                 if metric_definitions[i].filter_expr is None  # type: ignore

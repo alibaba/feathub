@@ -120,32 +120,55 @@ public class SlidingWindowUtils {
 
         final OutputTag<Row> lateDataOutputTag = new OutputTag<Row>("late-data") {};
 
-        SingleOutputStreamOperator<Row> resultStream =
-                stream.keyBy(
-                                (KeySelector<Row, Object>)
-                                        value ->
-                                                Row.of(
-                                                        windowDescriptor.groupByKeys.stream()
-                                                                .map(value::getField)
-                                                                .toArray()))
-                        .window(
-                                TumblingEventTimeWindows.of(
-                                        Time.milliseconds(windowDescriptor.stepSize.toMillis()),
-                                        Time.milliseconds(offset)))
-                        .sideOutputLateData(lateDataOutputTag)
-                        .aggregate(
-                                new SlidingWindowPreprocessAggregateFunction(
-                                        windowDescriptor.groupByKeys,
-                                        rowTimeFieldName,
-                                        aggDescriptors,
-                                        windowDescriptor.stepSize.toMillis(),
-                                        offset),
-                                Types.ROW_NAMED(
-                                        fieldNames.toArray(new String[0]),
-                                        accumulatorFieldTypes.toArray(new TypeInformation[0])),
-                                Types.ROW_NAMED(
-                                        fieldNames.toArray(new String[0]),
-                                        resultFieldTypes.toArray(new TypeInformation[0])));
+        SingleOutputStreamOperator<Row> resultStream;
+        if (windowDescriptor.groupByKeys.isEmpty()) {
+            resultStream =
+                    stream.windowAll(
+                                    TumblingEventTimeWindows.of(
+                                            Time.milliseconds(windowDescriptor.stepSize.toMillis()),
+                                            Time.milliseconds(offset)))
+                            .sideOutputLateData(lateDataOutputTag)
+                            .aggregate(
+                                    new SlidingWindowPreprocessAggregateFunction(
+                                            windowDescriptor.groupByKeys,
+                                            rowTimeFieldName,
+                                            aggDescriptors,
+                                            windowDescriptor.stepSize.toMillis(),
+                                            offset),
+                                    Types.ROW_NAMED(
+                                            fieldNames.toArray(new String[0]),
+                                            accumulatorFieldTypes.toArray(new TypeInformation[0])),
+                                    Types.ROW_NAMED(
+                                            fieldNames.toArray(new String[0]),
+                                            resultFieldTypes.toArray(new TypeInformation[0])));
+        } else {
+            resultStream =
+                    stream.keyBy(
+                                    (KeySelector<Row, Object>)
+                                            value ->
+                                                    Row.of(
+                                                            windowDescriptor.groupByKeys.stream()
+                                                                    .map(value::getField)
+                                                                    .toArray()))
+                            .window(
+                                    TumblingEventTimeWindows.of(
+                                            Time.milliseconds(windowDescriptor.stepSize.toMillis()),
+                                            Time.milliseconds(offset)))
+                            .sideOutputLateData(lateDataOutputTag)
+                            .aggregate(
+                                    new SlidingWindowPreprocessAggregateFunction(
+                                            windowDescriptor.groupByKeys,
+                                            rowTimeFieldName,
+                                            aggDescriptors,
+                                            windowDescriptor.stepSize.toMillis(),
+                                            offset),
+                                    Types.ROW_NAMED(
+                                            fieldNames.toArray(new String[0]),
+                                            accumulatorFieldTypes.toArray(new TypeInformation[0])),
+                                    Types.ROW_NAMED(
+                                            fieldNames.toArray(new String[0]),
+                                            resultFieldTypes.toArray(new TypeInformation[0])));
+        }
 
         DataStream<Row> lateDataStream =
                 resultStream
@@ -363,6 +386,7 @@ public class SlidingWindowUtils {
                                         windowDescriptor.stepSize.toMillis(),
                                         expiredRowHandler,
                                         skipSameWindowOutput))
+                        .setParallelism(rowDataStream.getParallelism())
                         .returns(resultRowTypeInfo);
 
         Table table =

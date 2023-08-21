@@ -37,8 +37,8 @@ class Metric(ABC):
         :param metric_type: The type of the metric.
         :param window_size: The time range to compute the metric. It should be zero or
                             a positive time span. If it is zero, the metric will be
-                            computed from all features that have been processed since
-                            the Feathub job is created.
+                            computed from all feature values that have been processed
+                            since the Feathub job is created.
         """
         if window_size <= timedelta(seconds=0):
             raise FeathubException(
@@ -53,7 +53,10 @@ class Metric(ABC):
         Gets the tags of this metric for tag-based metric reporters.
         """
         return collections.OrderedDict(
-            [("window_time_sec", str(int(self.window_size / timedelta(seconds=1))))]
+            [
+                ("metric_type", self.metric_type),
+                ("window_time_sec", str(int(self.window_size / timedelta(seconds=1)))),
+            ],
         )
 
     @abstractmethod
@@ -97,8 +100,8 @@ class Count(Metric):
                             metric.
         :param window_size: The time range to compute the metric. It should be zero or
                             a positive time span. If it is zero, the metric will be
-                            computed from all features that have been processed since
-                            the Feathub job is created.
+                            computed from all feature values that have been processed
+                            since the Feathub job is created.
         """
         super().__init__("count", window_size)
         self.filter_expr = filter_expr
@@ -157,8 +160,8 @@ class Ratio(Metric):
                             computing the metric.
         :param window_size: The time range to compute the metric. It should be zero or
                             a positive time span. If it is zero, the metric will be
-                            computed from all features that have been processed since
-                            the Feathub job is created.
+                            computed from all feature values that have been processed
+                            since the Feathub job is created.
         """
         super().__init__("ratio", window_size)
         self.filter_expr = filter_expr
