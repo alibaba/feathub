@@ -75,8 +75,7 @@ public class SlidingWindowKeyedProcessFunctionTest {
             AggregationFieldsDescriptor aggDescriptors, Row zeroValuedRow, List<Row> expected) {
 
         SlidingWindowDescriptor windowDescriptor =
-                new SlidingWindowDescriptor(
-                        Duration.ofSeconds(1), null, Collections.singletonList("id"), null);
+                new SlidingWindowDescriptor(Duration.ofSeconds(1), Collections.singletonList("id"));
 
         Table table = inputTable;
         for (AggregationFieldsDescriptor.AggregationFieldDescriptor descriptor :
@@ -121,15 +120,45 @@ public class SlidingWindowKeyedProcessFunctionTest {
     void testMultiSlidingWindowSizeProcessFunction() {
         AggregationFieldsDescriptor aggDescriptors =
                 AggregationFieldsDescriptor.builder()
-                        .addField("val_sum_1", DataTypes.BIGINT(), DataTypes.BIGINT(), 1000L, "SUM")
-                        .addField("val_sum_2", DataTypes.BIGINT(), DataTypes.BIGINT(), 2000L, "SUM")
-                        .addField("val_avg_1", DataTypes.BIGINT(), DataTypes.FLOAT(), 1000L, "AVG")
-                        .addField("val_avg_2", DataTypes.BIGINT(), DataTypes.DOUBLE(), 2000L, "AVG")
+                        .addField(
+                                "val_sum_1",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                1000L,
+                                null,
+                                null,
+                                "SUM")
+                        .addField(
+                                "val_sum_2",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                2000L,
+                                null,
+                                null,
+                                "SUM")
+                        .addField(
+                                "val_avg_1",
+                                DataTypes.BIGINT(),
+                                DataTypes.FLOAT(),
+                                1000L,
+                                null,
+                                null,
+                                "AVG")
+                        .addField(
+                                "val_avg_2",
+                                DataTypes.BIGINT(),
+                                DataTypes.DOUBLE(),
+                                2000L,
+                                null,
+                                null,
+                                "AVG")
                         .addField(
                                 "val_value_counts_2",
                                 DataTypes.BIGINT(),
                                 DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
                                 2000L,
+                                null,
+                                null,
                                 "VALUE_COUNTS")
                         .build();
 
@@ -259,13 +288,29 @@ public class SlidingWindowKeyedProcessFunctionTest {
 
         AggregationFieldsDescriptor aggDescriptors =
                 AggregationFieldsDescriptor.builder()
-                        .addField("val_sum_2", DataTypes.BIGINT(), DataTypes.BIGINT(), 2000L, "SUM")
-                        .addField("val_avg_2", DataTypes.BIGINT(), DataTypes.DOUBLE(), 2000L, "AVG")
+                        .addField(
+                                "val_sum_2",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                2000L,
+                                null,
+                                null,
+                                "SUM")
+                        .addField(
+                                "val_avg_2",
+                                DataTypes.BIGINT(),
+                                DataTypes.DOUBLE(),
+                                2000L,
+                                null,
+                                null,
+                                "AVG")
                         .addField(
                                 "val_value_counts_2",
                                 DataTypes.BIGINT(),
                                 DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
                                 2000L,
+                                null,
+                                null,
                                 "VALUE_COUNTS")
                         .build();
 
@@ -380,13 +425,29 @@ public class SlidingWindowKeyedProcessFunctionTest {
 
         AggregationFieldsDescriptor aggDescriptors =
                 AggregationFieldsDescriptor.builder()
-                        .addField("val_sum_2", DataTypes.BIGINT(), DataTypes.BIGINT(), 2000L, "SUM")
-                        .addField("val_avg_2", DataTypes.BIGINT(), DataTypes.DOUBLE(), 2000L, "AVG")
+                        .addField(
+                                "val_sum_2",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                2000L,
+                                null,
+                                null,
+                                "SUM")
+                        .addField(
+                                "val_avg_2",
+                                DataTypes.BIGINT(),
+                                DataTypes.DOUBLE(),
+                                2000L,
+                                null,
+                                null,
+                                "AVG")
                         .addField(
                                 "val_value_counts_2",
                                 DataTypes.BIGINT(),
                                 DataTypes.MAP(DataTypes.BIGINT(), DataTypes.BIGINT()),
                                 2000L,
+                                null,
+                                null,
                                 "VALUE_COUNTS")
                         .build();
 
@@ -496,10 +557,38 @@ public class SlidingWindowKeyedProcessFunctionTest {
     void testMinMax() {
         AggregationFieldsDescriptor aggDescriptors =
                 AggregationFieldsDescriptor.builder()
-                        .addField("val_max_1", DataTypes.BIGINT(), DataTypes.BIGINT(), 1000L, "MAX")
-                        .addField("val_max_2", DataTypes.BIGINT(), DataTypes.BIGINT(), 2000L, "MAX")
-                        .addField("val_min_1", DataTypes.BIGINT(), DataTypes.BIGINT(), 1000L, "MIN")
-                        .addField("val_min_2", DataTypes.BIGINT(), DataTypes.BIGINT(), 2000L, "MIN")
+                        .addField(
+                                "val_max_1",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                1000L,
+                                null,
+                                null,
+                                "MAX")
+                        .addField(
+                                "val_max_2",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                2000L,
+                                null,
+                                null,
+                                "MAX")
+                        .addField(
+                                "val_min_1",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                1000L,
+                                null,
+                                null,
+                                "MIN")
+                        .addField(
+                                "val_min_2",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                2000L,
+                                null,
+                                null,
+                                "MIN")
                         .build();
 
         List<Row> expected =
@@ -526,12 +615,16 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                 DataTypes.BIGINT(),
                                 DataTypes.BIGINT(),
                                 1000L,
+                                null,
+                                null,
                                 "FIRST_VALUE")
                         .addField(
                                 "val_first_value_2",
                                 DataTypes.BIGINT(),
                                 DataTypes.BIGINT(),
                                 2000L,
+                                null,
+                                null,
                                 "FIRST_VALUE")
                         .build();
 
@@ -559,12 +652,16 @@ public class SlidingWindowKeyedProcessFunctionTest {
                                 DataTypes.BIGINT(),
                                 DataTypes.BIGINT(),
                                 1000L,
+                                null,
+                                null,
                                 "LAST_VALUE")
                         .addField(
                                 "val_last_value_2",
                                 DataTypes.BIGINT(),
                                 DataTypes.BIGINT(),
                                 2000L,
+                                null,
+                                null,
                                 "LAST_VALUE")
                         .build();
 
@@ -579,6 +676,123 @@ public class SlidingWindowKeyedProcessFunctionTest {
                         Row.of(0, 4L, 4L, Instant.ofEpochMilli(5999)),
                         Row.of(0, 5L, 5L, Instant.ofEpochMilli(6999)),
                         Row.of(0, null, 5L, Instant.ofEpochMilli(7999)));
+
+        verifyResult(aggDescriptors, null, expected);
+    }
+
+    @Test
+    void testMultipleLimitSize() {
+        final Row zeroValuedRow = Row.withNames();
+        zeroValuedRow.setField("val_sum_1", 0);
+        zeroValuedRow.setField("val_sum_2", 0);
+        zeroValuedRow.setField("val_sum_3", 0);
+        zeroValuedRow.setField("val_sum_4", 0);
+        AggregationFieldsDescriptor aggDescriptors =
+                AggregationFieldsDescriptor.builder()
+                        .addField(
+                                "val_sum_1",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                3000L,
+                                1L,
+                                null,
+                                "SUM")
+                        .addField(
+                                "val_sum_2",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                3000L,
+                                2L,
+                                null,
+                                "SUM")
+                        .addField(
+                                "val_sum_3",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                2000L,
+                                1L,
+                                null,
+                                "SUM")
+                        .addField(
+                                "val_sum_4",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                2000L,
+                                null,
+                                null,
+                                "SUM")
+                        .build();
+
+        List<Row> expected =
+                java.util.Arrays.asList(
+                        Row.of(1, 2L, 2L, 2L, 2L, Instant.ofEpochMilli(999)),
+                        Row.of(1, 3L, 5L, 3L, 5L, Instant.ofEpochMilli(1999)),
+                        Row.of(1, 3L, 5L, 3L, 3L, Instant.ofEpochMilli(2999)),
+                        Row.of(1, 3L, 3L, 0L, 0L, Instant.ofEpochMilli(3999)),
+                        Row.of(1, 0L, 0L, 0L, 0L, Instant.ofEpochMilli(4999)),
+                        Row.of(0, 1L, 1L, 1L, 1L, Instant.ofEpochMilli(999)),
+                        Row.of(0, 1L, 1L, 1L, 1L, Instant.ofEpochMilli(1999)),
+                        Row.of(0, 1L, 1L, 0L, 0L, Instant.ofEpochMilli(2999)),
+                        Row.of(0, 0L, 0L, 0L, 0L, Instant.ofEpochMilli(3999)),
+                        Row.of(0, 3L, 3L, 3L, 3L, Instant.ofEpochMilli(4999)),
+                        Row.of(0, 4L, 7L, 4L, 7L, Instant.ofEpochMilli(5999)),
+                        Row.of(0, 5L, 9L, 5L, 9L, Instant.ofEpochMilli(6999)),
+                        Row.of(0, 5L, 9L, 5L, 5L, Instant.ofEpochMilli(7999)),
+                        Row.of(0, 5L, 5L, 0L, 0L, Instant.ofEpochMilli(8999)),
+                        Row.of(0, 0L, 0L, 0L, 0L, Instant.ofEpochMilli(9999)));
+
+        verifyResult(aggDescriptors, zeroValuedRow, expected);
+    }
+
+    @Test
+    void testWithFilterExpr() {
+        AggregationFieldsDescriptor aggDescriptors =
+                AggregationFieldsDescriptor.builder()
+                        .addField(
+                                "val_sum_1",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                2000L,
+                                null,
+                                null,
+                                "SUM")
+                        .addField(
+                                "val_sum_2",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                2000L,
+                                null,
+                                "`val` = 2",
+                                "SUM")
+                        .addField(
+                                "val_sum_3",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                2000L,
+                                null,
+                                "`val` = 2 OR `val` = 3",
+                                "SUM")
+                        .addField(
+                                "val_sum_4",
+                                DataTypes.BIGINT(),
+                                DataTypes.BIGINT(),
+                                2000L,
+                                1L,
+                                "`val` = 2 OR `val` = 3",
+                                "SUM")
+                        .build();
+
+        List<Row> expected =
+                java.util.Arrays.asList(
+                        Row.of(1, 2L, 2L, 2L, 2L, Instant.ofEpochMilli(999)),
+                        Row.of(1, 5L, 2L, 5L, 3L, Instant.ofEpochMilli(1999)),
+                        Row.of(1, 3L, 0L, 3L, 3L, Instant.ofEpochMilli(2999)),
+                        Row.of(0, 1L, 0L, 0L, 0L, Instant.ofEpochMilli(999)),
+                        Row.of(0, 1L, 0L, 0L, 0L, Instant.ofEpochMilli(1999)),
+                        Row.of(0, 3L, 0L, 3L, 3L, Instant.ofEpochMilli(4999)),
+                        Row.of(0, 7L, 0L, 3L, 3L, Instant.ofEpochMilli(5999)),
+                        Row.of(0, 9L, 0L, 0L, 0L, Instant.ofEpochMilli(6999)),
+                        Row.of(0, 5L, 0L, 0L, 0L, Instant.ofEpochMilli(7999)));
 
         verifyResult(aggDescriptors, null, expected);
     }
