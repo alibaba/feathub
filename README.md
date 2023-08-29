@@ -386,4 +386,5 @@ repository provides a wide variety of FeatHub demos that can be executed using
 Docker Compose. It's a great resource if you want to try out FeatHub and see
 what it can do.
 - Tech Talks and Articles
+  - DataFun 2023 ([slides](https://www.slideshare.net/DongLin1/feathubdatafun2023pptx))
   - Flink Forward Asia 2022 ([slides](https://www.slideshare.net/DongLin1/feathub), [video](https://www.bilibili.com/video/BV1714y1E7fQ/?spm_id_from=333.337.search-card.all.click), [article](https://mp.weixin.qq.com/s/ZFKRNaQODe0LwRT1nlwZgA))
