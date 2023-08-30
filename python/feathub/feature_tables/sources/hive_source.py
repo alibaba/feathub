@@ -15,7 +15,7 @@ import hashlib
 import os.path
 import random
 import string
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 
 from feathub.common.utils import (
     is_local_file_or_dir,
@@ -56,6 +56,8 @@ class HiveSource(FeatureTable):
         table: str,
         hive_catalog_conf_dir: str,
         schema: Schema,
+        data_format: str,
+        data_format_props: Optional[Dict[str, Any]] = None,
         keys: Optional[List[str]] = None,
         processor_specific_props: Optional[Dict[str, str]] = None,
     ):
@@ -70,6 +72,8 @@ class HiveSource(FeatureTable):
                                       supported by Hadoop FileSystem. If the URI is
                                       relative, i.e. without a scheme, local file
                                       system is assumed.
+        :param data_format: The format that should be used to write to hive.
+        :param data_format_props: The properties of the data format.
         :param keys: Optional. The names of fields in this feature view that are
                      necessary to interpret a row of this table. If it is not None, it
                      must be a superset of keys of any feature in this table.
@@ -90,6 +94,8 @@ class HiveSource(FeatureTable):
             keys=keys,
             schema=schema,
             timestamp_field=None,
+            data_format=data_format,
+            data_format_props=data_format_props,
         )
         self.name = name
         self.table = table
@@ -110,6 +116,8 @@ class HiveSource(FeatureTable):
             "schema": None if self.schema is None else self.schema.to_json(),
             "keys": self.keys,
             "hive_catalog_conf_dir": self.hive_catalog_conf_dir,
+            "data_format": self.data_format,
+            "data_format_props": self.data_format_props,
             "processor_specific_props": self.processor_specific_props,
         }
 
@@ -124,5 +132,7 @@ class HiveSource(FeatureTable):
             else None,
             keys=json_dict["keys"],
             hive_catalog_conf_dir=json_dict["hive_catalog_conf_dir"],
+            data_format=json_dict["data_format"],
+            data_format_props=json_dict["data_format_props"],
             processor_specific_props=json_dict["processor_specific_props"],
         )

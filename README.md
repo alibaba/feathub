@@ -316,10 +316,26 @@ $ python -m pip install "./python[spark]"
 
 ### Run Tests
 
+Please execute the following commands under Feathub's root folder to run tests.
+
 ```bash
 $ mvn clean package -f ./java
 $ pytest --tb=line -W ignore::DeprecationWarning ./python
 ```
+
+While the commands above cover most of Feathub's tests, some FlinkProcessor's
+python tests, such as tests related to Parquet format, have been ignored by
+default as they require a Hadoop environment to function correctly. In order to
+run these tests, please install Hadoop on your local machine and set up
+environment variables as follows before executing the commands above.
+
+```bash
+export FEATHUB_TEST_HADOOP_CLASSPATH=`hadoop classpath`
+```
+
+You may refer to [Flink's document for Hive
+connector](https://nightlies.apache.org/flink/flink-docs-release-1.16/docs/connectors/table/hive/overview/#supported-hive-versions)
+for supported Hadoop & Hive versions.
 
 ### Format Code Style
 

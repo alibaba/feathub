@@ -31,7 +31,10 @@ from feathub.feature_tables.sinks.hive_sink import HiveSink
 from feathub.feature_tables.sources.hive_source import HiveSource
 from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_env
 from feathub.processors.flink.flink_types_utils import to_flink_sql_type
-
+from feathub.processors.flink.table_builder.format_utils import (
+    load_format,
+    get_flink_format_config,
+)
 
 DEFAULT_PROPS = {
     "streaming-source.enable": "true",
@@ -122,6 +125,22 @@ def get_table_from_hive_source(
         source.hive_catalog_conf_dir,
         source.table_uri["hive_catalog_identifier"],
     )
+
+    load_format(t_env, source.data_format, source.data_format_props)
+    processor_specific_props = {"format": source.data_format}
+
+    if source.data_format_props is not None:
+        processor_specific_props = {
+            **processor_specific_props,
+            **get_flink_format_config(source.data_format, source.data_format_props),
+        }
+
+    if source.processor_specific_props is not None:
+        processor_specific_props = {
+            **processor_specific_props,
+            **source.processor_specific_props,
+        }
+
     catalog = t_env.get_current_catalog()
     t_env.use_catalog(hive_catalog_name)
 
@@ -130,7 +149,7 @@ def get_table_from_hive_source(
         table=source.table,
         field_names=source.schema.field_names,
         field_types=source.schema.field_types,
-        processor_specific_props=source.processor_specific_props,
+        processor_specific_props=processor_specific_props,
     )
 
     table = t_env.from_path(f"{source.table}")
@@ -151,6 +170,22 @@ def add_hive_sink_to_statement_set(
         sink.hive_catalog_conf_dir,
         sink.table_uri["hive_catalog_identifier"],
     )
+
+    load_format(t_env, sink.data_format, sink.data_format_props)
+    processor_specific_props = {"format": sink.data_format}
+
+    if sink.data_format_props is not None:
+        processor_specific_props = {
+            **processor_specific_props,
+            **get_flink_format_config(sink.data_format, sink.data_format_props),
+        }
+
+    if sink.processor_specific_props is not None:
+        processor_specific_props = {
+            **processor_specific_props,
+            **sink.processor_specific_props,
+        }
+
     catalog = t_env.get_current_catalog()
     t_env.use_catalog(hive_catalog_name)
 
@@ -160,7 +195,7 @@ def add_hive_sink_to_statement_set(
         table=sink.table,
         field_names=flink_schema.get_field_names(),
         field_types=flink_schema.get_field_data_types(),
-        processor_specific_props=sink.processor_specific_props,
+        processor_specific_props=processor_specific_props,
     )
 
     statement_set.add_insert(sink.table, features_table)

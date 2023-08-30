@@ -82,7 +82,7 @@ class SparkAstEvaluatorTest(unittest.TestCase):
         )
 
     def test_cast(self):
-        self.assertEqual("CAST('59' AS BYTES)", self._eval('cast("59" AS bytes)'))
+        self.assertEqual("CAST('59' AS BINARY)", self._eval('cast("59" AS bytes)'))
         self.assertEqual("CAST(0.1 AS STRING)", self._eval("CAST(0.1 AS STRING)"))
         self.assertEqual("CAST('59' AS INTEGER)", self._eval('CAST("59" AS INTEGER)'))
         self.assertEqual("CAST(`a` AS INTEGER)", self._eval("CAST(a AS INTEGER)"))

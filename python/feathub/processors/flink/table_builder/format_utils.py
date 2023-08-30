@@ -44,6 +44,9 @@ def load_format(
         protobuf_jar_path = config.get(PROTOBUF_JAR_PATH_CONFIG)
         _load_protobuf_format_jar(t_env, protobuf_jar_path)
         return
+    elif data_format == DataFormat.PARQUET:
+        _load_parquet_format_jar(t_env)
+        return
 
     raise FeathubException(f"Unsupported format {data_format}.")
 
@@ -63,6 +66,8 @@ def get_flink_format_config(
             "protobuf.message-class-name": config.get(PROTOBUF_CLASS_NAME_CONFIG),
             "protobuf.ignore-parse-errors": str(config.get(IGNORE_PARSE_ERRORS_CONFIG)),
         }
+    elif data_format == DataFormat.PARQUET:
+        return {}
 
     raise FeathubException(f"Unsupported format {data_format}.")
 
@@ -72,6 +77,10 @@ def _load_protobuf_format_jar(
 ) -> None:
     avro_jar_path = _get_jar_path("flink-sql-protobuf-*.jar")
     add_jar_to_t_env(t_env, avro_jar_path, protobuf_jar_path)
+
+
+def _load_parquet_format_jar(t_env: StreamTableEnvironment) -> None:
+    add_jar_to_t_env(t_env, _get_jar_path("flink-sql-parquet-*.jar"))
 
 
 def _get_jar_path(jar_files_pattern: str) -> str:

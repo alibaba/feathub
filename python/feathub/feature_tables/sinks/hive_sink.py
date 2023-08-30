@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 from feathub.common.utils import append_metadata_to_json
 from feathub.feature_tables.sinks.sink import Sink
@@ -30,6 +30,8 @@ class HiveSink(Sink):
         database: str,
         table: str,
         hive_catalog_conf_dir: str,
+        data_format: str,
+        data_format_props: Optional[Dict[str, Any]] = None,
         processor_specific_props: Optional[Dict[str, str]] = None,
         keep_timestamp_field: bool = True,
     ):
@@ -42,6 +44,8 @@ class HiveSink(Sink):
                                       supported by Hadoop FileSystem. If the URI is
                                       relative, i.e. without a scheme, local file
                                       system is assumed.
+        :param data_format: The format that should be used to read from hive.
+        :param data_format_props: The properties of the data format.
         :param processor_specific_props: Extra properties to be passthrough to the
                                          processor. The available configurations are
                                          different for different processors.
@@ -59,6 +63,8 @@ class HiveSink(Sink):
                 "database": database,
             },
             keep_timestamp_field=keep_timestamp_field,
+            data_format=data_format,
+            data_format_props=data_format_props,
         )
         self.database = database
         self.table = table
@@ -71,6 +77,8 @@ class HiveSink(Sink):
             "database": self.database,
             "table": self.table,
             "hive_catalog_conf_dir": self.hive_catalog_conf_dir,
+            "data_format": self.data_format,
+            "data_format_props": self.data_format_props,
             "processor_specific_props": self.processor_specific_props,
             "keep_timestamp_field": self.keep_timestamp_field,
         }
@@ -81,6 +89,8 @@ class HiveSink(Sink):
             database=json_dict["database"],
             table=json_dict["table"],
             hive_catalog_conf_dir=json_dict["hive_catalog_conf_dir"],
+            data_format=json_dict["data_format"],
+            data_format_props=json_dict["data_format_props"],
             processor_specific_props=json_dict["processor_specific_props"],
             keep_timestamp_field=json_dict["keep_timestamp_field"],
         )

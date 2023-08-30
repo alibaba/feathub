@@ -24,8 +24,8 @@ been tested and supported by each processor.
 ## Supported format
 
 - Local: CSV, JSON
-- Flink: CSV, JSON, Protobuf
-- Spark: CSV, JSON
+- Flink: CSV, JSON, Protobuf, Parquet
+- Spark: CSV, JSON, Parquet
 
 ## Examples
 

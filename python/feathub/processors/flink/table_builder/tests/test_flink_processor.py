@@ -15,11 +15,13 @@ import os
 import shutil
 import tempfile
 import unittest
+from functools import wraps
 from typing import Optional, Dict
 from unittest.mock import Mock, patch
 
 import pandas as pd
 from pyflink import java_gateway
+from pyflink.java_gateway import get_gateway, is_launch_gateway_disabled
 from pyflink.table import Table, TableSchema
 
 from feathub.common.exceptions import (
@@ -261,6 +263,50 @@ class FlinkProcessorTest(unittest.TestCase):
         )
 
 
+def _set_environment_variables_and_restart_java_gateway(
+    env_vars: Dict[str, Optional[str]]
+):
+    """
+    Restarts the PyFlink java gateway under a new set of environment variables.
+    """
+    with java_gateway._lock:
+        was_pyflink_gateway_disabled = is_launch_gateway_disabled()
+        os.environ.clear()
+        os.environ.update(env_vars)
+        os.environ["PYFLINK_GATEWAY_DISABLED"] = "False"
+        if java_gateway._gateway is not None:
+            java_gateway._gateway.shutdown()
+            java_gateway._gateway = None
+        get_gateway()
+        os.environ["PYFLINK_GATEWAY_DISABLED"] = str(was_pyflink_gateway_disabled)
+
+
+# Due to the resource leak in PyFlink StreamExecutionEnvironment and
+# StreamTableEnvironment https://issues.apache.org/jira/browse/FLINK-30258,
+# we cannot recreate stream environment for each test case. Below is a temporary
+# solution to support specific environment variables for a single test.
+# TODO: After the ticket is resolved, we should turn to a better test infrastructure
+#  that supports an individual flink environment and gateway for each test case.
+def run_with_environment_variables(*env_var_keys: str):
+    old_env_vars = dict(os.environ)
+    new_env_vars = dict(os.environ)
+    for key in env_var_keys:
+        new_env_vars[key] = os.environ.get(f"FEATHUB_TEST_{key}")
+
+    def decorate(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            _set_environment_variables_and_restart_java_gateway(new_env_vars)
+            try:
+                func(*args, **kwargs)
+            finally:
+                _set_environment_variables_and_restart_java_gateway(old_env_vars)
+
+        return wrapper
+
+    return decorate
+
+
 class FlinkProcessorITTest(
     DataGenSourceITTest,
     DerivedFeatureViewITTest,
@@ -291,8 +337,8 @@ class FlinkProcessorITTest(
         cls.invoke_all_base_class_setupclass()
 
         # Due to the resource leak in PyFlink StreamExecutionEnvironment and
-        # StreamTableEnvironment https://issues.apache.org/jira/browse/FLINK-30258.
-        # We want to share env and t_env across all the tests in one class to mitigate
+        # StreamTableEnvironment https://issues.apache.org/jira/browse/FLINK-30258,
+        # we want to share env and t_env across all the tests in one class to mitigate
         # the leak.
         # TODO: After the ticket is resolved, we should clean up the resource in
         #  StreamExecutionEnvironment and StreamTableEnvironment after every test to
@@ -328,6 +374,7 @@ class FlinkProcessorITTest(
                 },
                 extra_config,
             )
+
         return self._cached_clients[str(extra_config)]
 
     def test_unsupported_file_format(self):
@@ -345,3 +392,14 @@ class FlinkProcessorITTest(
 
     def test_random_field_length(self):
         pass
+
+    @unittest.skipIf(
+        os.environ.get("FEATHUB_TEST_HADOOP_CLASSPATH") is None,
+        "Hadoop environment is needed for Parquet format tests",
+    )
+    @run_with_environment_variables("HADOOP_CLASSPATH")
+    def test_parquet_all_types(self):
+        self._cached_clients.clear()
+        self.client = self.get_client()
+        super(FlinkProcessorITTest, self).test_parquet_all_types()
+        self._cached_clients.clear()

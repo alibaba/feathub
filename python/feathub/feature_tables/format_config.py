@@ -21,6 +21,7 @@ class DataFormat:
     CSV = "csv"
     JSON = "json"
     PROTOBUF = "protobuf"
+    PARQUET = "parquet"
 
 
 IGNORE_PARSE_ERRORS_CONFIG = "ignore_parse_error"
