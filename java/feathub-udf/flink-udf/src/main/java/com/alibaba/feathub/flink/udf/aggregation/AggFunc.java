@@ -21,7 +21,6 @@ import org.apache.flink.table.types.DataType;
 
 import java.io.Serializable;
 
-// TODO: Update AbstractTimeWindowedAggFunc to reuse the implementations of AggFunc.
 /**
  * Interface of aggregation function. The aggregation function can aggregate any number of records
  * with its timestamp and get the aggregation result.
@@ -41,6 +40,7 @@ public interface AggFunc<IN_T, OUT_T, ACC_T> extends Serializable {
     /**
      * Retracts the given input value from the given accumulator.
      *
+     * @param accumulator The accumulator to retract the value from.
      * @param value The value to be retracted.
      */
     void retract(ACC_T accumulator, IN_T value);

@@ -297,10 +297,9 @@ class FlinkTableBuilder:
                     stream, to_flink_schema(transform.schema)
                 )
 
-        # We group the over window aggregation fields by group-by keys, window size,
-        # limit, and filter expr.
+        # We group the over window aggregation fields by group-by keys and window size.
         # TODO: Optimize the over window operator to compute aggregation fields with
-        #  different window_size, limit and filter_expr.
+        #  different window_size.
         window_agg_map: Dict[
             OverWindowDescriptor, List[AggregationFieldDescriptor]
         ] = {}
@@ -475,7 +474,6 @@ class FlinkTableBuilder:
 
         for over_window_descriptor, agg_descriptor in window_agg_map.items():
             tmp_table = evaluate_over_window_transform(
-                self.t_env,
                 tmp_table,
                 over_window_descriptor,
                 agg_descriptor,

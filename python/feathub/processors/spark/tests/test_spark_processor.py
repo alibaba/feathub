@@ -152,6 +152,14 @@ class SparkProcessorITTest(
     def test_over_window_transform_count_with_limit(self):
         pass
 
+    # TODO: Add back the following two tests after SparkProcessor support over
+    #  window with filter expression.
+    def test_over_window_transform_filter_expr_with_window_size(self):
+        pass
+
+    def test_over_window_transform_filter_expr_with_limit(self):
+        pass
+
     # TODO: Support protobuf format for SparkProcessor FileSystem connector.
     def test_local_file_system_protobuf_source_sink(self):
         pass

@@ -92,8 +92,6 @@ from feathub.tests.test_materialize_features import MaterializeFeaturesITTest
 
 # TODO: move this file to python/feathub/processors/flink/tests folder after
 #  the resource leak problem of other flink processor's tests is fixed.
-
-
 class FlinkProcessorTest(unittest.TestCase):
     def setUp(self) -> None:
         self.registry = LocalRegistry(props={})

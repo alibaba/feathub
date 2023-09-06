@@ -85,23 +85,10 @@ def evaluate_over_window_transform(
     window_spec = _get_spark_window_spec(window_descriptor)
 
     if window_descriptor.filter_expr is not None:
-        agg_table = dataframe.filter(
-            functions.expr(window_descriptor.filter_expr)
-        ).withColumns(_get_over_window_agg_columns(agg_descriptors, window_spec))
-
-        # For rows that do not satisfy the filter predicate, set the feature col
-        # to NULL.
-        null_cols = {}
-        for descriptor in agg_descriptors:
-            null_cols[descriptor.field_name] = functions.lit(None)
-        null_feature_table = dataframe.filter(
-            ~functions.expr(window_descriptor.filter_expr)
-        ).withColumns(null_cols)
-
-        # After union, order of the row with same grouping key is not preserved. We
-        # can only preserve the order of the row with the same grouping keys and
-        # filter condition.
-        result_table = agg_table.unionAll(null_feature_table)
+        # TODO: Support new behavior of over window filter expression
+        raise FeathubTransformationException(
+            "Over window with filter expression is not yet supported by SparkProcessor."
+        )
     else:
         result_table = dataframe.withColumns(
             _get_over_window_agg_columns(agg_descriptors, window_spec)

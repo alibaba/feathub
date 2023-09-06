@@ -19,8 +19,8 @@ package com.alibaba.feathub.flink.udf.aggregation;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.util.Preconditions;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 
 import static com.alibaba.feathub.flink.udf.aggregation.AggFuncUtils.insertIntoSortedList;
@@ -61,20 +61,28 @@ public abstract class RawDataAccumulatingAggFunc<IN_T, OUT_T>
 
     @Override
     public void retract(RawDataAccumulator<IN_T> accumulator, IN_T value) {
-        Preconditions.checkState(
-                accumulator.rawDataList.getFirst().f0.equals(value),
-                "Value must be retracted by the ordered as they added to the AggFuncWithLimit.");
-        accumulator.rawDataList.removeFirst();
+        final Iterator<Tuple2<IN_T, Long>> iter = accumulator.rawDataList.iterator();
+        boolean removed = false;
+        while (iter.hasNext()) {
+            final IN_T v = iter.next().f0;
+            if ((v == null && value == null) || (v != null && v.equals(value))) {
+                iter.remove();
+                removed = true;
+                break;
+            }
+        }
+
+        if (!removed) {
+            throw new RuntimeException(
+                    String.format("The value %s to retract is not in the list.", value));
+        }
     }
 
     @Override
     public void retractAccumulator(
             RawDataAccumulator<IN_T> target, RawDataAccumulator<IN_T> source) {
         for (Tuple2<IN_T, Long> value : source.rawDataList) {
-            Preconditions.checkState(
-                    target.rawDataList.getFirst().equals(value),
-                    "Value must be retracted by the order as they added to the AggFuncWithLimit.");
-            target.rawDataList.removeFirst();
+            retract(target, value.f0);
         }
     }
 

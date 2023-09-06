@@ -13,18 +13,12 @@
 #  limitations under the License.
 import glob
 import os
-from typing import Optional, TYPE_CHECKING, Dict
+from typing import Dict
 
 from pyflink.table import StreamTableEnvironment
 
 from feathub.common.exceptions import FeathubException
-from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.processors.flink.flink_jar_utils import find_jar_lib, add_jar_to_t_env
-
-if TYPE_CHECKING:
-    from feathub.processors.flink.table_builder.over_window_utils import (
-        OverWindowDescriptor,
-    )
 
 
 class JavaUDFDescriptor:
@@ -48,63 +42,6 @@ def get_feathub_udf_jar_path() -> str:
     return jars[0]
 
 
-def _is_row_and_time_based_over_window(
-    over_window_descriptor: Optional["OverWindowDescriptor"],
-) -> bool:
-    return (
-        over_window_descriptor is not None
-        and over_window_descriptor.limit is not None
-        and over_window_descriptor.window_size is not None
-    )
-
-
-AGG_JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
-    AggFunc.VALUE_COUNTS: JavaUDFDescriptor(
-        "VALUE_COUNTS", "com.alibaba.feathub.flink.udf.ValueCountsAggFunc"
-    ),
-    AggFunc.COLLECT_LIST: JavaUDFDescriptor(
-        "COLLECT_LIST", "com.alibaba.feathub.flink.udf.CollectListAggFunc"
-    ),
-}
-
-ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF: Dict[AggFunc, JavaUDFDescriptor] = {
-    AggFunc.AVG: JavaUDFDescriptor(
-        "TIME_WINDOWED_AVG", "com.alibaba.feathub.flink.udf.TimeWindowedAvgAggFunc"
-    ),
-    AggFunc.COUNT: JavaUDFDescriptor(
-        "TIME_WINDOWED_COUNT", "com.alibaba.feathub.flink.udf.TimeWindowedCountAggFunc"
-    ),
-    AggFunc.SUM: JavaUDFDescriptor(
-        "TIME_WINDOWED_SUM", "com.alibaba.feathub.flink.udf.TimeWindowedSumAggFunc"
-    ),
-    AggFunc.MIN: JavaUDFDescriptor(
-        "TIME_WINDOWED_MIN", "com.alibaba.feathub.flink.udf.TimeWindowedMinAggFunc"
-    ),
-    AggFunc.MAX: JavaUDFDescriptor(
-        "TIME_WINDOWED_MAX", "com.alibaba.feathub.flink.udf.TimeWindowedMaxAggFunc"
-    ),
-    AggFunc.FIRST_VALUE: JavaUDFDescriptor(
-        "TIME_WINDOWED_FIRST_VALUE",
-        "com.alibaba.feathub.flink.udf.TimeWindowedFirstValueAggFunc",
-    ),
-    AggFunc.LAST_VALUE: JavaUDFDescriptor(
-        "TIME_WINDOWED_LAST_VALUE",
-        "com.alibaba.feathub.flink.udf.TimeWindowedLastValueAggFunc",
-    ),
-    AggFunc.ROW_NUMBER: JavaUDFDescriptor(
-        "TIME_WINDOWED_ROW_NUMBER",
-        "com.alibaba.feathub.flink.udf.TimeWindowedRowNumberAggFunc",
-    ),
-    AggFunc.VALUE_COUNTS: JavaUDFDescriptor(
-        "TIME_WINDOWED_VALUE_COUNTS",
-        "com.alibaba.feathub.flink.udf.TimeWindowedValueCountsAggFunc",
-    ),
-    AggFunc.COLLECT_LIST: JavaUDFDescriptor(
-        "TIME_WINDOWED_COLLECT_LIST",
-        "com.alibaba.feathub.flink.udf.TimeWindowedCollectListAggFunc",
-    ),
-}
-
 SCALAR_JAVA_UDF: Dict[str, JavaUDFDescriptor] = {
     # TODO: Introduce a UDF for UNIX_TIMESTAMP that throw exception on illegal data.
     "UNIX_TIMESTAMP_MILLIS": JavaUDFDescriptor(
@@ -116,8 +53,6 @@ SCALAR_JAVA_UDF: Dict[str, JavaUDFDescriptor] = {
 def register_all_feathub_udf(t_env: StreamTableEnvironment) -> None:
     add_jar_to_t_env(t_env, get_feathub_udf_jar_path())
     for udf_descriptor in {
-        *AGG_JAVA_UDF.values(),
-        *ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF.values(),
         *SCALAR_JAVA_UDF.values(),
     }:
         t_env.create_java_temporary_function(

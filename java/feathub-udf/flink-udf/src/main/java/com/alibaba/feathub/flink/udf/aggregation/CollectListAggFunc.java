@@ -19,6 +19,7 @@ package com.alibaba.feathub.flink.udf.aggregation;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.types.DataType;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 /** An aggregate function that collects values into a list. */
@@ -31,12 +32,35 @@ public class CollectListAggFunc extends RawDataAccumulatingAggFunc<Object, Objec
 
     @Override
     public Object getResult(RawDataAccumulator<Object> accumulator) {
-        return com.alibaba.feathub.flink.udf.CollectListAggFunc.toArray(
+        return toArray(
                 accumulator.rawDataList.stream().map(x -> x.f0).collect(Collectors.toList()));
     }
 
     @Override
     public DataType getResultDatatype() {
         return DataTypes.ARRAY(inDataType);
+    }
+
+    public static Object toArray(List<Object> values) {
+        if (values.isEmpty()) {
+            return new Object[0];
+        }
+
+        if (values.get(0) instanceof Long) {
+            return values.toArray(new Long[0]);
+        } else if (values.get(0) instanceof Integer) {
+            return values.toArray(new Integer[0]);
+        } else if (values.get(0) instanceof Double) {
+            return values.toArray(new Double[0]);
+        } else if (values.get(0) instanceof Float) {
+            return values.toArray(new Float[0]);
+        } else if (values.get(0) instanceof String) {
+            return values.toArray(new String[0]);
+        }
+
+        throw new RuntimeException(
+                String.format(
+                        "Unsupported type for COLLECT_LIST %s.",
+                        values.get(0).getClass().getName()));
     }
 }
