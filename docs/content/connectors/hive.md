@@ -34,6 +34,7 @@ hive_sink = HiveSink(
     database="default",
     table="table",
     hive_catalog_conf_dir=".",
+    data_format="parquet",
     processor_specific_props={
         'sink.partition-commit.policy.kind': 'metastore,success-file',
     }
@@ -60,6 +61,7 @@ source = HiveSource(
     database="default",
     table="table",
     schema=schema,
+    data_format="parquet",
     keys=["key"],
     hive_catalog_conf_dir=".",
     timestamp_field="timestamp",
