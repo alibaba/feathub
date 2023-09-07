@@ -71,9 +71,10 @@ class SparkAstEvaluator(AbstractAstEvaluator):
         return ", ".join([self.eval(value, variables) for value in ast.values])
 
     def eval_cast_node(self, ast: CastOp, variables: Optional[Dict]) -> Any:
+        type_name = ast.type_name.upper().replace("BYTES", "BINARY")
         if ast.exception_on_failure:
-            return f"CAST({self.eval(ast.child, variables)} AS {ast.type_name})"
-        return f"TRY_CAST({self.eval(ast.child, variables)} AS {ast.type_name})"
+            return f"CAST({self.eval(ast.child, variables)} AS {type_name})"
+        return f"TRY_CAST({self.eval(ast.child, variables)} AS {type_name})"
 
     def eval_logical_op(self, ast: LogicalOp, variables: Optional[Dict]) -> Any:
         left_val = self.eval(ast.left_child, variables)

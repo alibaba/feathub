@@ -147,3 +147,6 @@ class LocalProcessorITTest(
 
     def test_transform_with_zero_window_size(self):
         pass
+
+    def test_parquet_all_types(self):
+        pass

@@ -9,6 +9,10 @@ materialize feature view to a Hive table.
 
 1. Only supports Hadoop 3.1.x
 
+## Supported format
+
+- Flink: CSV, Parquet
+
 ## Configuring Hive connector for FlinkProcessor
 
 Before using Hive connector in Flink Processor, make sure you have configured

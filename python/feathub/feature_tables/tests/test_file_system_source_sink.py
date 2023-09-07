@@ -25,6 +25,8 @@ from feathub.common.types import (
     Int32,
     Bool,
     VectorType,
+    Float64,
+    MapType,
 )
 from feathub.feature_tables.format_config import (
     PROTOBUF_JAR_PATH_CONFIG,
@@ -154,6 +156,89 @@ class FileSystemSourceSinkITTest(ABC, FeathubITTestBase):
                 "float64_v": np.float64,
                 "bool_v": bool,
                 "vector_v": object,
+            }
+        )
+
+        self.assertTrue(expected_result.equals(df))
+
+    def test_parquet_all_types(self):
+        df = pd.DataFrame(
+            [
+                ["abc", 1, True, [1, 2], {"abc": 1.0}],
+                [None, None, None, None, None],
+            ],
+            columns=["string_v", "float64_v", "bool_v", "vector_v", "map_v"],
+        )
+        source = self.create_file_source(
+            df,
+            data_format="json",
+            schema=Schema.new_builder()
+            .column("string_v", String)
+            .column("float64_v", Float64)
+            .column("bool_v", Bool)
+            .column("vector_v", VectorType(Int32))
+            .column("map_v", MapType(String, Float64))
+            .build(),
+            timestamp_field=None,
+        )
+
+        features = DerivedFeatureView(
+            name="features",
+            source=source,
+            features=[
+                Feature("string_v", transform="string_v"),
+                Feature("bytes_v", transform="CAST(string_v AS BYTES)"),
+                Feature("int32_v", transform="CAST(float64_v AS INTEGER)"),
+                Feature("int64_v", transform="CAST(float64_v AS BIGINT)"),
+                Feature("float32_v", transform="CAST(float64_v AS FLOAT)"),
+                Feature("float64_v", transform="float64_v"),
+                Feature("bool_v", transform="bool_v"),
+                Feature("vector_v", transform="vector_v"),
+                Feature("map_v", transform="map_v"),
+            ],
+            keep_source_fields=False,
+        )
+
+        path = tempfile.NamedTemporaryFile(dir=self.temp_dir, suffix=".parquet").name
+        sink = FileSystemSink(
+            path,
+            "parquet",
+        )
+
+        table = self.client.get_features(features)
+        table.execute_insert(sink, allow_overwrite=True).wait()
+
+        source = FileSystemSource(
+            name=self.generate_random_name("source"),
+            path=path,
+            data_format="parquet",
+            schema=table.get_schema(),
+        )
+
+        df = self.client.get_features(source).to_pandas()
+        expected_result = pd.DataFrame(
+            [
+                ["abc", b"abc", 1, 1, 1.0, 1.0, True, [1, 2], {"abc": 1.0}],
+                [None, None, np.NaN, np.NaN, np.NaN, np.NaN, None, None, None],
+            ],
+            columns=[
+                "string_v",
+                "bytes_v",
+                "int32_v",
+                "int64_v",
+                "float32_v",
+                "float64_v",
+                "bool_v",
+                "vector_v",
+                "map_v",
+            ],
+        ).astype(
+            {
+                "int32_v": np.float64,
+                "int64_v": np.float64,
+                "float32_v": np.float32,
+                "float64_v": np.float64,
+                "bool_v": object,
             }
         )
 
