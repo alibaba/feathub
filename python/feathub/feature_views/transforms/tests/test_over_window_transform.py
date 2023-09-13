@@ -476,7 +476,9 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         )
 
         schema = Schema(["name", "cost", "time"], [String, Float64, String])
-        source = self.create_file_source(df, schema=schema)
+        source = self.create_file_source(
+            df, schema=schema, max_out_of_orderness=timedelta(minutes=1)
+        )
 
         expected_df = df.copy()
         expected_df["last_2_last_2_minute_total_cost"] = pd.Series(
@@ -839,7 +841,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         )
         expected_df = df.copy()
         expected_df["last_2_pay_last_2_minute_total_cost"] = pd.Series(
-            [100.0, None, 300.0, None, 400.0, None, 700.0, None, 450.0]
+            [100.0, 300.0, 300.0, 400.0, 400.0, 300.0, 700.0, 0.0, 450.0]
         )
         expected_df.drop(["cost", "action"], axis=1, inplace=True)
         expected_df = expected_df.sort_values(by=["name", "time"]).reset_index(
@@ -851,7 +853,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         df, result_df = self._over_window_transform_filter_expr(limit=2)
         expected_df = df.copy()
         expected_df["last_2_pay_last_2_minute_total_cost"] = pd.Series(
-            [100.0, None, 300.0, None, 400.0, None, 700.0, None, 650.0]
+            [100.0, 300.0, 300.0, 400.0, 400.0, 300.0, 700.0, 0.0, 650.0]
         )
         expected_df.drop(["cost", "action"], axis=1, inplace=True)
         expected_df = expected_df.sort_values(by=["name", "time"]).reset_index(
@@ -865,7 +867,7 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         )
         expected_df = df.copy()
         expected_df["last_2_pay_last_2_minute_total_cost"] = pd.Series(
-            [100.0, None, 300.0, None, 400.0, None, 700.0, None, 450.0]
+            [100.0, 300.0, 300.0, 400.0, 400.0, 300.0, 700.0, 0.0, 450.0]
         )
         expected_df.drop(["cost", "action"], axis=1, inplace=True)
         expected_df = expected_df.sort_values(by=["name", "time"]).reset_index(
@@ -1148,7 +1150,9 @@ class OverWindowTransformITTest(ABC, FeathubITTestBase):
         schema = Schema(
             ["name", "action", "cost", "time"], [String, String, Float64, String]
         )
-        source = self.create_file_source(df, schema=schema, keys=["name"])
+        source = self.create_file_source(
+            df, schema=schema, keys=["name"], max_out_of_orderness=timedelta(minutes=1)
+        )
         features = DerivedFeatureView(
             name="features",
             source=source,

@@ -24,24 +24,32 @@ import org.apache.flink.table.api.Over;
 import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+import org.apache.flink.table.expressions.Expression;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.CollectionUtil;
 
+import com.alibaba.feathub.flink.udf.aggregation.AggFunc;
+import com.alibaba.feathub.flink.udf.aggregation.AggFuncAdaptor;
+import com.alibaba.feathub.flink.udf.aggregation.AggFuncUtils;
+import com.alibaba.feathub.flink.udf.aggregation.AggFuncWithLimit;
+import com.alibaba.feathub.flink.udf.aggregation.AggFuncWithLimitWithoutRetract;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.apache.flink.table.api.Expressions.$;
+import static org.apache.flink.table.api.Expressions.UNBOUNDED_RANGE;
 import static org.apache.flink.table.api.Expressions.call;
-import static org.apache.flink.table.api.Expressions.callSql;
-import static org.apache.flink.table.api.Expressions.rowInterval;
+import static org.apache.flink.table.api.Expressions.lit;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Base class for TimeWindowAggFunction tests. */
-public abstract class AbstractTimeWindowedAggFuncTest {
+/** Test for using {@link AggFuncAdaptor} in over window. */
+public class OverWindowTest {
 
     protected Table inputTable;
 
@@ -64,6 +72,43 @@ public abstract class AbstractTimeWindowedAggFuncTest {
                         .as("id", "val", "ts");
     }
 
+    @Test
+    void testTimeRangedOverWindow() {
+        List<Row> expected =
+                Arrays.asList(Row.of(0, 1.0), Row.of(0, 1.5), Row.of(0, 2.0), Row.of(0, 2.5));
+        applyOverWindow(
+                DataTypes.INT(),
+                expected,
+                new AggFuncAdaptor<>(AggFuncUtils.getAggFunc("AVG", DataTypes.INT(), true)),
+                lit(3).seconds());
+    }
+
+    @Test
+    void testTimeRangedOverWindowWithLimit() {
+        List<Row> expected =
+                Arrays.asList(Row.of(0, 1.0), Row.of(0, 1.5), Row.of(0, 2.5), Row.of(0, 3.5));
+        AggFunc<?, ?, ?> aggFunc = AggFuncUtils.getAggFunc("AVG", DataTypes.INT(), true);
+        aggFunc = new AggFuncWithLimit<>(aggFunc, 2);
+        applyOverWindow(DataTypes.INT(), expected, new AggFuncAdaptor<>(aggFunc), lit(3).seconds());
+    }
+
+    @Test
+    void testUnboundedOverWindowWithLimit() {
+        List<Row> expected =
+                Arrays.asList(Row.of(0, 1.0), Row.of(0, 1.5), Row.of(0, 2.0), Row.of(0, 3.0));
+        AggFunc<?, ?, ?> aggFunc = AggFuncUtils.getAggFunc("AVG", DataTypes.INT(), true);
+        aggFunc = new AggFuncWithLimitWithoutRetract<>(aggFunc, 3);
+        applyOverWindow(DataTypes.INT(), expected, new AggFuncAdaptor<>(aggFunc), UNBOUNDED_RANGE);
+    }
+
+    @Test
+    void testUnboundedOverWindow() {
+        List<Row> expected =
+                Arrays.asList(Row.of(0, 1.0), Row.of(0, 1.5), Row.of(0, 2.0), Row.of(0, 2.5));
+        AggFunc<?, ?, ?> aggFunc = AggFuncUtils.getAggFunc("AVG", DataTypes.INT(), true);
+        applyOverWindow(DataTypes.INT(), expected, new AggFuncAdaptor<>(aggFunc), UNBOUNDED_RANGE);
+    }
+
     protected DataStreamSource<Row> getData(StreamExecutionEnvironment env) {
         return env.fromElements(
                 Row.of(0, 1, Instant.ofEpochMilli(1000), ZoneId.systemDefault()),
@@ -72,26 +117,22 @@ public abstract class AbstractTimeWindowedAggFuncTest {
                 Row.of(0, 4, Instant.ofEpochMilli(4000), ZoneId.systemDefault()));
     }
 
-    protected abstract Class<? extends AbstractTimeWindowedAggFunc<?, ?>> getAggFunc();
-
-    protected void internalTest(DataType valueType, List<Row> expected) {
+    protected void applyOverWindow(
+            DataType valueType,
+            List<Row> expected,
+            AggFuncAdaptor<?, ?, ?> aggFunc,
+            Expression rangeExpr) {
         final Table table =
                 inputTable
                         .addOrReplaceColumns($("val").cast(valueType).as("val"))
                         .window(
                                 Over.partitionBy($("id"))
                                         .orderBy($("ts"))
-                                        .preceding(rowInterval(3L))
+                                        .preceding(rangeExpr)
                                         .as("w"))
                         .select(
                                 $("id"),
-                                call(
-                                                getAggFunc(),
-                                                callSql("INTERVAL '1' SECONDS"),
-                                                $("val"),
-                                                $("ts"))
-                                        .over($("w"))
-                                        .as("value_cnts"));
+                                call(aggFunc, $("val"), $("ts")).over($("w")).as("value_cnts"));
         List<Row> actual = CollectionUtil.iteratorToList(table.execute().collect());
         assertThat(actual).hasSameSizeAs(expected);
         for (int i = 0; i < actual.size(); i++) {

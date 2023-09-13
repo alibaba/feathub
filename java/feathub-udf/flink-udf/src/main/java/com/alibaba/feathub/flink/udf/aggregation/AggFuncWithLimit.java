@@ -26,7 +26,7 @@ import java.util.Iterator;
  */
 public class AggFuncWithLimit<IN_T, OUT_T, ACC_T> extends RawDataAccumulatingAggFunc<IN_T, OUT_T> {
     private final AggFunc<IN_T, OUT_T, ACC_T> aggFunc;
-    private final long limit;
+    protected final long limit;
 
     public AggFuncWithLimit(AggFunc<IN_T, OUT_T, ACC_T> aggFunc, long limit) {
         this.aggFunc = aggFunc;

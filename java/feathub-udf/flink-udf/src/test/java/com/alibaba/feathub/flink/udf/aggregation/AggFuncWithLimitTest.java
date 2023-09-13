@@ -27,9 +27,17 @@ public class AggFuncWithLimitTest {
     @Test
     void testAggFuncWithLimit() {
         final MinMaxAggFunc<Integer> internalAggFunc = new MinMaxAggFunc<>(DataTypes.INT(), true);
-        final AggFuncWithLimit<Integer, Integer, MinMaxAggFunc.MinMaxAccumulator<Integer>> aggFunc =
+        AggFuncWithLimit<Integer, Integer, MinMaxAggFunc.MinMaxAccumulator<Integer>> aggFunc =
                 new AggFuncWithLimit<>(internalAggFunc, 3);
+        innerTest(aggFunc, true);
 
+        aggFunc = new AggFuncWithLimitWithoutRetract<>(internalAggFunc, 3);
+        innerTest(aggFunc, false);
+    }
+
+    private static void innerTest(
+            AggFuncWithLimit<Integer, Integer, MinMaxAggFunc.MinMaxAccumulator<Integer>> aggFunc,
+            boolean testRetract) {
         AggFuncWithLimit.RawDataAccumulator<Integer> acc1 = aggFunc.createAccumulator();
         aggFunc.add(acc1, 1, 1L);
         aggFunc.add(acc1, 2, 2L);
@@ -45,7 +53,9 @@ public class AggFuncWithLimitTest {
         aggFunc.merge(acc, acc2);
         assertThat(aggFunc.getResult(acc)).isEqualTo(2);
 
-        aggFunc.retractAccumulator(acc, acc1);
-        assertThat(aggFunc.getResult(acc)).isEqualTo(3);
+        if (testRetract) {
+            aggFunc.retractAccumulator(acc, acc1);
+            assertThat(aggFunc.getResult(acc)).isEqualTo(3);
+        }
     }
 }

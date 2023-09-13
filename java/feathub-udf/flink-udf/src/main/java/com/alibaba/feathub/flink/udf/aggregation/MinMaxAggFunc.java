@@ -101,6 +101,6 @@ public class MinMaxAggFunc<T extends Comparable<T>>
 
     /** Accumulator for {@link MinMaxAggFunc}. */
     public static class MinMaxAccumulator<T extends Comparable<T>> {
-        public final TreeMap<T, Long> values = new TreeMap<>();
+        public TreeMap<T, Long> values = new TreeMap<>();
     }
 }

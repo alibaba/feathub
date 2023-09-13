@@ -17,6 +17,7 @@ import tempfile
 import unittest
 import uuid
 from abc import abstractmethod
+from datetime import timedelta
 from typing import Optional, List, Dict, Type, cast
 from unittest import TestLoader
 
@@ -170,6 +171,7 @@ class FeathubITTestBase(unittest.TestCase):
         timestamp_format: str = "%Y-%m-%d %H:%M:%S",
         name: str = None,
         data_format: str = "csv",
+        max_out_of_orderness: timedelta = timedelta(0),
     ) -> FileSystemSource:
         path = tempfile.NamedTemporaryFile(dir=self.temp_dir, suffix=".csv").name
         if schema is None:
@@ -193,6 +195,7 @@ class FeathubITTestBase(unittest.TestCase):
             keys=keys,
             timestamp_field=timestamp_field,
             timestamp_format=timestamp_format,
+            max_out_of_orderness=max_out_of_orderness,
         )
 
     # TODO: only invoke the corresponding base class's setUpClass()

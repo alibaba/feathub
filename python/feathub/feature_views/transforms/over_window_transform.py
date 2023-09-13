@@ -45,13 +45,8 @@ class OverWindowTransform(Transformation):
                             is effectively unlimited.
         :param group_by_keys: The names of fields to be used as the grouping key.
         :param filter_expr: Optional. If it is not None, it represents a FeatHub
-                            expression. If a row match the filter expression, the
-                            transformation result is computed by aggregating rows that
-                            match the filter expression and within the time window and
-                            row count. If a row does not match the filter expression,
-                            the transformation result is NULL. Note that the if filter
-                            expression is given, we can only preserve the order of rows
-                            with the same `group_by_keys` and filter expression result.
+                            expression. Only rows that match the filter expression can
+                            be included in the over window.
         :param limit: Optional. If it is not None, up to `limit` number of most recent
                       rows that match the `filter_expr` prior to this row can be
                       included in the aggregation.

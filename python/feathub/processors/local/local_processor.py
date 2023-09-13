@@ -566,11 +566,6 @@ class LocalProcessor(Processor):
         # TODO: optimize the performance for the following code.
         # Computes the feature's value for each row in the group.
         for idx, row in df_copy.iterrows():
-            if filter_expr_node is not None and not self.ast_evaluator.eval(
-                filter_expr_node, dict(row)
-            ):
-                result.append(None)
-                continue
             max_timestamp = row[EVENT_TIME_ATTRIBUTE_NAME]
             window_size = transform.window_size
             min_timestamp = (

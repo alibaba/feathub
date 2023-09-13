@@ -14,15 +14,16 @@
 from datetime import timedelta
 from typing import List, Optional, Sequence
 
+from pyflink.java_gateway import get_gateway
 from pyflink.table import (
     Table as NativeFlinkTable,
     expressions as native_flink_expr,
-    StreamTableEnvironment,
+    TableSchema as NativeFlinkTableSchema,
 )
+from pyflink.table.types import DataType, _to_java_data_type
 from pyflink.table.window import OverWindowPartitionedOrderedPreceding, Over
+from pyflink.util.java_utils import to_jarray
 
-from feathub.common.exceptions import FeathubTransformationException
-from feathub.feature_views.transforms.agg_func import AggFunc
 from feathub.feature_views.transforms.over_window_transform import OverWindowTransform
 from feathub.processors.constants import EVENT_TIME_ATTRIBUTE_NAME
 from feathub.processors.flink.flink_types_utils import (
@@ -30,15 +31,6 @@ from feathub.processors.flink.flink_types_utils import (
 )
 from feathub.processors.flink.table_builder.aggregation_utils import (
     AggregationFieldDescriptor,
-)
-from feathub.processors.flink.table_builder.flink_sql_expr_utils import (
-    to_flink_sql_expr,
-)
-from feathub.processors.flink.table_builder.time_utils import (
-    timedelta_to_flink_sql_interval,
-)
-from feathub.processors.flink.table_builder.udf import (
-    ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF,
 )
 
 
@@ -50,48 +42,32 @@ class OverWindowDescriptor:
     def __init__(
         self,
         window_size: Optional[timedelta],
-        limit: Optional[int],
         group_by_keys: Sequence[str],
-        filter_expr: Optional[str],
     ) -> None:
         self.window_size = window_size
-        self.limit = limit
         self.group_by_keys = group_by_keys
-        self.filter_expr = filter_expr
 
     @staticmethod
     def from_over_window_transform(
         window_agg_transform: OverWindowTransform,
     ) -> "OverWindowDescriptor":
-        filter_expr = (
-            to_flink_sql_expr(window_agg_transform.filter_expr)
-            if window_agg_transform.filter_expr is not None
-            else None
-        )
         return OverWindowDescriptor(
             window_agg_transform.window_size,
-            window_agg_transform.limit,
             window_agg_transform.group_by_keys,
-            filter_expr,
         )
 
     def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, self.__class__)
             and self.window_size == other.window_size
-            and self.limit == other.limit
             and self.group_by_keys == other.group_by_keys
-            and self.filter_expr == other.filter_expr
         )
 
     def __hash__(self) -> int:
-        return hash(
-            (self.window_size, self.limit, tuple(self.group_by_keys), self.filter_expr)
-        )
+        return hash((self.window_size, tuple(self.group_by_keys)))
 
 
 def evaluate_over_window_transform(
-    t_env: StreamTableEnvironment,
     flink_table: NativeFlinkTable,
     window_descriptor: "OverWindowDescriptor",
     agg_descriptors: List["AggregationFieldDescriptor"],
@@ -100,64 +76,35 @@ def evaluate_over_window_transform(
     Evaluate the over window transforms on the given flink table and return the
     result table.
 
-    :param t_env: The StreamTableEnvironment.
     :param flink_table: The input Flink table.
     :param window_descriptor: The descriptor of the over window.
     :param agg_descriptors: A list of descriptor that descriptor the aggregation to
                             perform.
-    :return:
+    :return: The result table.
     """
+    tmp_table = flink_table
+    for agg_descriptor in agg_descriptors:
+        tmp_table = tmp_table.add_or_replace_columns(
+            native_flink_expr.call_sql(agg_descriptor.expr).alias(
+                agg_descriptor.field_name
+            )
+        )
+
     window = _get_flink_over_window(window_descriptor)
-    if window_descriptor.filter_expr is not None:
-        agg_table = (
-            flink_table.filter(
-                native_flink_expr.call_sql(window_descriptor.filter_expr)
-            )
-            .over_window(window.alias("w"))
-            .select(
-                native_flink_expr.col("*"),
-                *_get_over_window_agg_column_list(window_descriptor, agg_descriptors),
-            )
-        )
-        agg_table = cast_field_type_without_changing_nullability(
-            agg_table,
-            {
-                descriptor.field_name: descriptor.field_data_type
-                for descriptor in agg_descriptors
-            },
-        )
 
-        # For rows that do not satisfy the filter predicate, set the feature col
-        # to NULL.
-        null_feature_table = flink_table.filter(
-            native_flink_expr.not_(
-                native_flink_expr.call_sql(window_descriptor.filter_expr)
-            )
-        ).add_columns(
-            *[
-                native_flink_expr.null_of(descriptor.field_data_type).alias(
-                    descriptor.field_name
-                )
-                for descriptor in agg_descriptors
-            ]
-        )
-
-        # After union, order of the row with same grouping key is not preserved. We
-        # can only preserve the order of the row with the same grouping keys and
-        # filter condition.
-        result_table = agg_table.union_all(null_feature_table)
-    else:
-        result_table = flink_table.over_window(window.alias("w")).select(
-            native_flink_expr.col("*"),
-            *_get_over_window_agg_column_list(window_descriptor, agg_descriptors),
-        )
-        result_table = cast_field_type_without_changing_nullability(
-            result_table,
-            {
-                descriptor.field_name: descriptor.field_data_type
-                for descriptor in agg_descriptors
-            },
-        )
+    result_table = flink_table.over_window(window.alias("w")).select(
+        native_flink_expr.col("*"),
+        *_get_over_window_agg_column_list(
+            tmp_table.get_schema(), window_descriptor, agg_descriptors
+        ),
+    )
+    result_table = cast_field_type_without_changing_nullability(
+        result_table,
+        {
+            descriptor.field_name: descriptor.field_data_type
+            for descriptor in agg_descriptors
+        },
+    )
 
     return result_table
 
@@ -177,14 +124,6 @@ def _get_flink_over_window(
             native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME)
         )
 
-    if over_window_descriptor.limit is not None:
-        # Flink over window only support ranging by either row-count or time. For
-        # feature that need to range by both row-count and time, it is handled in
-        # _get_over_window_agg_select_expr with the TimeWindowedAggFunction UDTAF.
-        return window.preceding(
-            native_flink_expr.row_interval(over_window_descriptor.limit - 1)
-        )
-
     if over_window_descriptor.window_size is not None:
         return window.preceding(
             native_flink_expr.lit(
@@ -196,14 +135,15 @@ def _get_flink_over_window(
 
 
 def _get_over_window_agg_column_list(
+    table_schema: NativeFlinkTableSchema,
     window_descriptor: "OverWindowDescriptor",
     agg_descriptors: List["AggregationFieldDescriptor"],
 ) -> List[native_flink_expr.Expression]:
     return [
         _get_over_window_agg_select_expr(
-            native_flink_expr.call_sql(descriptor.expr),
+            descriptor,
             window_descriptor,
-            descriptor.agg_func,
+            table_schema.get_field_data_type(descriptor.field_name),
             "w",
         ).alias(descriptor.field_name)
         for descriptor in agg_descriptors
@@ -211,58 +151,46 @@ def _get_over_window_agg_column_list(
 
 
 def _get_over_window_agg_select_expr(
-    expr: native_flink_expr.Expression,
+    agg_descriptor: AggregationFieldDescriptor,
     over_window_descriptor: "OverWindowDescriptor",
-    agg_func: AggFunc,
+    input_datatype: Optional[DataType],
     window_alias: str,
 ) -> native_flink_expr.Expression:
+    if input_datatype is None:
+        raise RuntimeError("Input datatype cannot be None.")
 
-    if (
-        over_window_descriptor.limit is not None
-        and over_window_descriptor.window_size is not None
-    ):
-        interval_expr = native_flink_expr.call_sql(
-            timedelta_to_flink_sql_interval(
-                over_window_descriptor.window_size, day_precision=3
-            )
+    gateway = get_gateway()
+    agg_field_expr = native_flink_expr.call_sql(agg_descriptor.expr)
+
+    if agg_descriptor.filter_expr is not None:
+        agg_field_expr = native_flink_expr.row(
+            agg_field_expr,
+            native_flink_expr.call_sql(agg_descriptor.filter_expr),
         )
 
-        java_udf_descriptor = ROW_AND_TIME_BASED_OVER_WINDOW_JAVA_UDF.get(
-            agg_func, None
+    j_agg_func = (
+        gateway.jvm.com.alibaba.feathub.flink.udf.OverWindowUtils.getAggregateFunction(
+            agg_descriptor.agg_func.value,
+            agg_descriptor.limit,
+            agg_descriptor.filter_expr,
+            over_window_descriptor.window_size is not None,
+            _to_java_data_type(input_datatype),
         )
-        if java_udf_descriptor is None:
-            raise FeathubTransformationException(
-                f"Unsupported aggregation for FlinkProcessor {agg_func}."
-            )
+    )
 
-        return native_flink_expr.call(
-            java_udf_descriptor.udf_name,
-            interval_expr,
-            expr,
-            native_flink_expr.col(EVENT_TIME_ATTRIBUTE_NAME),
-        ).over(native_flink_expr.col(window_alias))
+    j_expr = gateway.jvm.org.apache.flink.table.api.Expressions.call(
+        j_agg_func,
+        to_jarray(
+            gateway.jvm.Object,
+            [
+                agg_field_expr._j_expr_or_property_name,
+                native_flink_expr.col(
+                    EVENT_TIME_ATTRIBUTE_NAME
+                )._j_expr_or_property_name,
+            ],
+        ),
+    )
 
-    if agg_func == AggFunc.AVG:
-        result = expr.avg
-    elif agg_func == AggFunc.COUNT:
-        result = expr.count
-    elif agg_func == AggFunc.MIN:
-        result = expr.min
-    elif agg_func == AggFunc.MAX:
-        result = expr.max
-    elif agg_func == AggFunc.SUM:
-        result = expr.sum
-    elif agg_func == AggFunc.VALUE_COUNTS:
-        result = native_flink_expr.call("value_counts", expr)
-    elif agg_func == AggFunc.COLLECT_LIST:
-        result = native_flink_expr.call("collect_list", expr)
-    elif agg_func == AggFunc.FIRST_VALUE:
-        result = expr.first_value
-    elif agg_func == AggFunc.LAST_VALUE:
-        result = expr.last_value
-    else:
-        raise FeathubTransformationException(
-            f"Unsupported aggregation for FlinkProcessor {agg_func}."
-        )
-
-    return result.over(native_flink_expr.col(window_alias))
+    return native_flink_expr.Expression(j_expr).over(
+        native_flink_expr.col(window_alias)
+    )
