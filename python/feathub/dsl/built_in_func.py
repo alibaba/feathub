@@ -14,7 +14,7 @@
 from typing import List, Callable
 
 from feathub.common.exceptions import FeathubExpressionException
-from feathub.common.types import DType, String, Int64, MapType, VectorType
+from feathub.common.types import DType, String, Int64, MapType, VectorType, Int32
 
 
 class BuiltInFuncDefinition:
@@ -67,6 +67,8 @@ BUILTIN_FUNCS = [
         name="ARRAY",
         result_type_strategy=lambda input_types: VectorType(input_types[0]),
     ),
+    # TODO: Verify the length and type of arguments uniformly.
+    BuiltInFuncDefinition(name="SIZE", result_type_strategy=lambda input_types: Int32),
 ]
 
 BUILTIN_FUNC_DEF_MAP = {f.name: f for f in BUILTIN_FUNCS}

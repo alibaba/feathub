@@ -77,7 +77,7 @@ class SparkProcessor(Processor):
         spark_session_builder = spark_session_builder.master(config.get(MASTER_CONFIG))
         spark_session_builder = spark_session_builder.config(
             "spark.sql.session.timeZone", config.get(TIMEZONE_CONFIG)
-        )
+        ).config("spark.sql.legacy.sizeOfNull", False)
 
         prefix_len = len(NATIVE_CONFIG_PREFIX)
         for k, v in config.original_props_with_prefix(

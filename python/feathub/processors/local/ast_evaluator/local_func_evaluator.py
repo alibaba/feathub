@@ -48,4 +48,8 @@ class LocalFuncEvaluator:
             for i in range(0, len(values), 2):
                 res[values[i]] = values[i + 1]
             return res
+        elif func_name == "SIZE":
+            if values[0] is None:
+                return None
+            return len(values[0])
         raise RuntimeError(f"Unsupported function: {func_name}.")

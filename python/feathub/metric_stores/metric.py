@@ -24,7 +24,6 @@ from feathub.feature_views.transforms.sliding_window_transform import (
 from feathub.feature_views.transforms.transformation import Transformation
 
 
-# TODO: Add document to record built-in metrics.
 class Metric(ABC):
     """
     Common interface for all metrics. A metric refers to a statistic of a
@@ -189,6 +188,128 @@ class Ratio(Metric):
     @classmethod
     def from_json(cls, json_dict: Dict) -> "Ratio":
         return Ratio(
+            filter_expr=json_dict["filter_expr"],
+            window_size=timedelta(seconds=json_dict["window_size_sec"]),
+        )
+
+
+class CountMap(Metric):
+    """
+    A map-typed metric that maps each unique feature value to the number of occurrences
+    of this value.
+    """
+
+    def __init__(
+        self,
+        filter_expr: Optional[str] = None,
+        window_size: timedelta = timedelta(seconds=0),
+    ):
+        """
+        :param filter_expr: Optional. If it is not None, it represents a partial FeatHub
+                            expression which evaluates to a boolean value. The partial
+                            Feathub expression should be a binary operator whose left
+                            child is absent and would be filled in with the host feature
+                            name. For example, "IS NULL" will be enriched into
+                            "{feature_name} IS NULL". Only features that evaluate this
+                            expression into True will be considered when computing the
+                            metric.
+        :param window_size: The time range to compute the metric. It should be zero or
+                            a positive time span. If it is zero, the metric will be
+                            computed from all feature values that have been processed
+                            since the Feathub job is created.
+        """
+        super().__init__("count_map", window_size)
+        self.filter_expr = filter_expr
+
+    def get_tags(self) -> OrderedDict:
+        tags = super(CountMap, self).get_tags()
+        tags["value"] = "null"
+        tags["filter_expr"] = "" if self.filter_expr is None else self.filter_expr
+        return tags
+
+    def get_transform_functions(self) -> Sequence[Callable[[str], Transformation]]:
+        return [
+            lambda feature_name: SlidingWindowTransform(
+                expr=f"CAST({feature_name} AS STRING)",
+                agg_func="VALUE_COUNTS",
+                window_size=self.window_size,
+                step_size=self.window_size,
+                filter_expr=None
+                if self.filter_expr is None
+                else f"{feature_name} {self.filter_expr}",
+            ),
+        ]
+
+    @append_metadata_to_json
+    def to_json(self) -> Dict:
+        return {
+            "filter_expr": self.filter_expr,
+            "window_size_sec": self.window_size / timedelta(seconds=1),
+        }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "CountMap":
+        return CountMap(
+            filter_expr=json_dict["filter_expr"],
+            window_size=timedelta(seconds=json_dict["window_size_sec"]),
+        )
+
+
+class Average(Metric):
+    """
+    A Metric that shows the average of feature values.
+    """
+
+    def __init__(
+        self,
+        filter_expr: Optional[str] = None,
+        window_size: timedelta = timedelta(seconds=0),
+    ):
+        """
+        :param filter_expr: Optional. If it is not None, it represents a partial FeatHub
+                            expression which evaluates to a boolean value. The partial
+                            Feathub expression should be a binary operator whose left
+                            child is absent and would be filled in with the host feature
+                            name. For example, "IS NULL" will be enriched into
+                            "{feature_name} IS NULL". Only features that evaluate this
+                            expression into True will be considered when computing the
+                            metric.
+        :param window_size: The time range to compute the metric. It should be zero or
+                            a positive time span. If it is zero, the metric will be
+                            computed from all feature values that have been processed
+                            since the Feathub job is created.
+        """
+        super().__init__("average", window_size)
+        self.filter_expr = filter_expr
+
+    def get_tags(self) -> OrderedDict:
+        tags = super(Average, self).get_tags()
+        tags["filter_expr"] = "" if self.filter_expr is None else self.filter_expr
+        return tags
+
+    def get_transform_functions(self) -> Sequence[Callable[[str], Transformation]]:
+        return [
+            lambda feature_name: SlidingWindowTransform(
+                expr=feature_name,
+                agg_func="AVG",
+                window_size=self.window_size,
+                step_size=self.window_size,
+                filter_expr=None
+                if self.filter_expr is None
+                else f"{feature_name} {self.filter_expr}",
+            )
+        ]
+
+    @append_metadata_to_json
+    def to_json(self) -> Dict:
+        return {
+            "filter_expr": self.filter_expr,
+            "window_size_sec": self.window_size / timedelta(seconds=1),
+        }
+
+    @classmethod
+    def from_json(cls, json_dict: Dict) -> "Average":
+        return Average(
             filter_expr=json_dict["filter_expr"],
             window_size=timedelta(seconds=json_dict["window_size_sec"]),
         )

@@ -527,6 +527,50 @@ class ExpressionTransformITTest(ABC, FeathubITTestBase):
         result_df = self.client.get_features(feature_view_1).to_pandas()
         self.assertTrue(expected_result_df.equals(result_df))
 
+    def test_size(self):
+        input_data = pd.DataFrame(
+            [
+                [[1, 2, 3], {"a": 1, "b": 2}],
+                [[], {}],
+                [None, None],
+            ],
+            columns=["list_v", "map_v"],
+        )
+
+        source = self.create_file_source(
+            input_data,
+            schema=Schema.new_builder()
+            .column("list_v", VectorType(Int64))
+            .column("map_v", MapType(String, Int64))
+            .build(),
+            timestamp_field=None,
+            data_format="json",
+        )
+
+        feature_view_1 = DerivedFeatureView(
+            name="feature_view_1",
+            source=source,
+            features=[
+                Feature(name="list_v_size", transform="SIZE(list_v)"),
+                Feature(name="map_v_size", transform="SIZE(map_v)"),
+            ],
+            keep_source_fields=False,
+        )
+
+        expected_result_df = pd.DataFrame(
+            [
+                [3, 2],
+                [0, 0],
+                [None, None],
+            ],
+            columns=[
+                "list_v_size",
+                "map_v_size",
+            ],
+        )
+        result_df = self.client.get_features(feature_view_1).to_pandas()
+        self.assertTrue(expected_result_df.equals(result_df))
+
     def test_bracket(self):
         input_data = pd.DataFrame(
             [
