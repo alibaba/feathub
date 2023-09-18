@@ -18,6 +18,7 @@ from abc import abstractmethod
 from typing import Optional, List, TYPE_CHECKING, Dict
 
 from feathub.common.exceptions import FeathubException
+from feathub.common.utils import from_json
 from feathub.feature_views.feature import Feature
 from feathub.registries.entity import Entity
 
@@ -97,8 +98,7 @@ class TableDescriptor(Entity):
         :return: A resolved table descriptor.
         """
 
-        # TODO: return a COPY of self instead of the existing Python object.
-        return self
+        return from_json(self.to_json())
 
     def get_feature(self, feature_name: str) -> Feature:
         """
