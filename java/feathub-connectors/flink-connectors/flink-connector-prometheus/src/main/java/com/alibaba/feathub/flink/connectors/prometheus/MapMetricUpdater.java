@@ -22,6 +22,7 @@ import io.prometheus.client.SimpleCollector;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 /** The MapMetricUpdater updates Prometheus gauge metrics with a Map from String to Double. */
@@ -43,24 +44,32 @@ public class MapMetricUpdater implements MetricUpdater<Map<String, Double>> {
                         .register(registry);
     }
 
+    private String[] getLabelValues(String mapKey) {
+        final ArrayList<String> labelValues = new ArrayList<>(this.labels.size());
+        for (String labelValue : labels.values()) {
+            if (labelValue.equals("null")) {
+                labelValues.add(mapKey);
+            } else {
+                labelValues.add(labelValue);
+            }
+        }
+        return labelValues.toArray(new String[0]);
+    }
+
     Gauge.Child getChild(String mapKey) {
-        return children.computeIfAbsent(
-                mapKey,
-                label -> {
-                    final ArrayList<String> labelValues = new ArrayList<>(this.labels.size());
-                    for (String labelValue : labels.values()) {
-                        if (labelValue.equals("null")) {
-                            labelValues.add(mapKey);
-                        } else {
-                            labelValues.add(labelValue);
-                        }
-                    }
-                    return collector.labels(labelValues.toArray(new String[0]));
-                });
+        return children.computeIfAbsent(mapKey, label -> collector.labels(getLabelValues(mapKey)));
     }
 
     @Override
     public void update(Map<String, Double> value) {
+        final HashSet<String> labelsToRemove = new HashSet<>(children.keySet());
+        labelsToRemove.removeAll(value.keySet());
+
+        for (String label : labelsToRemove) {
+            collector.remove(getLabelValues(label));
+            children.remove(label);
+        }
+
         for (Map.Entry<String, Double> entry : value.entrySet()) {
             final String labelValue = entry.getKey();
             final Double metricValue = entry.getValue();

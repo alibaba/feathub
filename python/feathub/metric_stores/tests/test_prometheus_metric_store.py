@@ -13,7 +13,7 @@
 import re
 from abc import ABC
 from datetime import timedelta
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from urllib import request
 
 from prometheus_client import (
@@ -35,7 +35,7 @@ from feathub.feature_views.sliding_feature_view import (
 from feathub.feature_views.transforms.sliding_window_transform import (
     SlidingWindowTransform,
 )
-from feathub.metric_stores.metric import Count, Ratio, Metric
+from feathub.metric_stores.metric import Count, Ratio, Metric, CountMap
 from feathub.tests.feathub_it_test_base import FeathubITTestBase
 
 
@@ -99,6 +99,43 @@ class PrometheusMetricStoreITTest(ABC, FeathubITTestBase):
             ]
         )
 
+    def test_prometheus_metric_store_map_typed_metrics(self):
+        self._test_prometheus_metric_store(
+            [
+                CountMap(
+                    window_size=timedelta(seconds=0),
+                ),
+            ],
+            expected_value={
+                (
+                    "default_total_cost_count_map",
+                    tuple(
+                        sorted(
+                            {
+                                "value": str(label_value),
+                                "feature_name": "total_cost",
+                                "filter_expr": "",
+                                "instance": "",
+                                "job": "default",
+                                "metric_type": "count_map",
+                                "table_name": "",
+                                "window_time_sec": "0",
+                            }.items()
+                        )
+                    ),
+                ): metric_value
+                for label_value, metric_value in {
+                    0: "3",
+                    100: "1",
+                    200: "1",
+                    400: "2",
+                    500: "1",
+                    600: "2",
+                    900: "1",
+                }.items()
+            },
+        )
+
     def test_prometheus_metric_store_with_same_metric_name(self):
         self._test_prometheus_metric_store(
             [
@@ -148,7 +185,25 @@ class PrometheusMetricStoreITTest(ABC, FeathubITTestBase):
                     window_size=timedelta(seconds=0),
                 ),
             ],
-            {"count": "8", "ratio": "0.7272727272727273"},
+            {
+                (
+                    f"default_total_cost_{key}",
+                    tuple(
+                        sorted(
+                            {
+                                "feature_name": "total_cost",
+                                "filter_expr": "> 0",
+                                "instance": "",
+                                "job": "default",
+                                "metric_type": key,
+                                "table_name": "",
+                                "window_time_sec": "0",
+                            }.items()
+                        )
+                    ),
+                ): value
+                for key, value in {"count": "8", "ratio": "0.7272727272727273"}.items()
+            },
         )
 
     def test_prometheus_metric_store_non_final_metrics(self):
@@ -164,7 +219,7 @@ class PrometheusMetricStoreITTest(ABC, FeathubITTestBase):
     def _test_prometheus_metric_store(
         self,
         metric_definitions: List[Metric],
-        expected_value: Optional[Dict[str, str]] = None,
+        expected_value: Optional[Dict[Any, str]] = None,
         is_metric_of_final_view: bool = True,
     ):
         self.server_url = self.prometheus_push_gateway_container.get_server_url()
@@ -231,34 +286,42 @@ class PrometheusMetricStoreITTest(ABC, FeathubITTestBase):
                 tags_dict[tag_key] = tag_value
             metrics.append((metric_name, tags_dict, metric_value))
 
-        self.assertEqual(len(metrics), len(metric_definitions))
+        if expected_value is None:
+            self.assertEqual(len(metrics), len(metric_definitions))
+        else:
+            self.assertEqual(len(metrics), len(expected_value))
+
         for i in range(len(metrics)):
-            self.assertEqual(
-                metrics[i][0], f"default_total_cost_{metric_definitions[i].metric_type}"
-            )
             self.assertEqual(metrics[i][1]["feature_name"], "total_cost")
-            self.assertEqual(
-                metrics[i][1]["metric_type"], metric_definitions[i].metric_type
-            )
-            self.assertEqual(
-                metrics[i][1]["filter_expr"],
-                ""
-                if metric_definitions[i].filter_expr is None  # type: ignore
-                else metric_definitions[i].filter_expr,  # type: ignore
-            )
             self.assertEqual(metrics[i][1]["table_name"], "")
-            self.assertEqual(
-                metrics[i][1]["window_time_sec"],
-                str(int(metric_definitions[i].window_size / timedelta(seconds=1))),
-            )
             self.assertEqual(metrics[i][1]["job"], "default")
-            # TODO: setup Prometheus server together with Prometheus PushGateway
-            #  and verify history metric value.
 
             if expected_value is None:
+                self.assertEqual(
+                    metrics[i][0],
+                    f"default_total_cost_{metric_definitions[i].metric_type}",
+                )
+                self.assertEqual(
+                    metrics[i][1]["metric_type"], metric_definitions[i].metric_type
+                )
+                self.assertEqual(
+                    metrics[i][1]["filter_expr"]
+                    if "filter_expr" in metrics[i][1]
+                    else "",
+                    ""
+                    if not hasattr(metric_definitions[i], "filter_expr")
+                    or getattr(metric_definitions[i], "filter_expr") is None
+                    else getattr(metric_definitions[i], "filter_expr"),
+                )
+                self.assertEqual(
+                    metrics[i][1]["window_time_sec"],
+                    str(int(metric_definitions[i].window_size / timedelta(seconds=1))),
+                )
                 self.assertEqual(metrics[i][2], "0")
             else:
                 self.assertEqual(
                     metrics[i][2],
-                    expected_value.get(metric_definitions[i].metric_type),
+                    expected_value.get(
+                        (metrics[i][0], tuple(sorted(metrics[i][1].items())))
+                    ),
                 )

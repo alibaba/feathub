@@ -68,6 +68,7 @@ from feathub.feature_views.transforms.tests.test_python_udf_transform import (
 from feathub.feature_views.transforms.tests.test_sliding_window_transform import (
     SlidingWindowTransformITTest,
 )
+from feathub.metric_stores.tests.test_metric_store import MetricStoreITTest
 from feathub.metric_stores.tests.test_prometheus_metric_store import (
     PrometheusMetricStoreITTest,
 )
@@ -312,6 +313,7 @@ class FlinkProcessorITTest(
     FileSystemSourceSinkITTest,
     JoinTransformITTest,
     KafkaSourceSinkITTest,
+    MetricStoreITTest,
     OverWindowTransformITTest,
     PrintSinkITTest,
     PrometheusMetricStoreITTest,

@@ -41,4 +41,6 @@ def evaluate_function(func_name: str, args: List[Any]) -> str:
         return f"MAP[{', '.join(args)}]"
     elif func_name == "ARRAY":
         return f"ARRAY[{', '.join(args)}]"
+    elif func_name == "SIZE":
+        return f"CARDINALITY({', '.join(args)})"
     raise RuntimeError(f"Unsupported function: {func_name}.")

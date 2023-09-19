@@ -112,6 +112,11 @@ JSON_STRING(MAP("a", 1, "b", 2))
 The function expects to have at least two arguments and an even number of arguments. 
 All the keys must be of the same type, and all the values must be of the same type.
 
+### SIZE
+
+`SIZE(expr)` -  Returns the size of a vector or a map. The function returns null
+for null input.
+
 ### Type Conversion Functions
 
 | Function                          | Description                                                                               |

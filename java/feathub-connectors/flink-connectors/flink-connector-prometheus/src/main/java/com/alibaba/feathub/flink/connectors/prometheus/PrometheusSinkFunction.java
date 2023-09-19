@@ -193,6 +193,11 @@ public class PrometheusSinkFunction extends RichSinkFunction<RowData> {
                 break;
             case MAP:
                 final MapData mapData = row.getMap(index);
+                if (mapData == null) {
+                    // TODO: Remove this after the default value of VALUE_COUNTS for
+                    //  empty window is changed to empty map.
+                    return;
+                }
                 final ArrayData keyArray = mapData.keyArray();
                 final ArrayData valueArray = mapData.valueArray();
                 Map<String, Double> mapMetric = new HashMap<>();
@@ -406,7 +411,8 @@ public class PrometheusSinkFunction extends RichSinkFunction<RowData> {
             throw new RuntimeException(
                     "PrometheusSink only support numeric data type, map data type from string type to "
                             + "numeric type, and array data type of numeric type or map data type from "
-                            + "string type to numeric type.");
+                            + "string type to numeric type, while the input is "
+                            + logicalType);
         }
 
         private MetricUpdater<?> getMetricWrapper(CollectorRegistry registry) {
