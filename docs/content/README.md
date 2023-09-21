@@ -37,3 +37,4 @@ applications.
 	- [Built-in Optimizations](deep-dive/optimizations.md)
 - [How To](how-to)
   - [Deploy FeatHub Job on Alibaba Cloud](how-to/deploy-on-alibaba-cloud.md)
+  - [Create a FeatHub Release](how-to/create-a-feathub-release.md)
