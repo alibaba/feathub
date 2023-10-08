@@ -237,8 +237,17 @@ public class SlidingWindowKeyedProcessFunction extends KeyedProcessFunction<Row,
                     break;
                 }
                 for (Row row : state.timestampToRows.get(rowTime)) {
-                    descriptor.aggFunc.retractAccumulator(
-                            accumulatorState, row.getField(descriptor.fieldName));
+                    Object value;
+                    try {
+                        int idx =
+                                keyFieldNames.length
+                                        + 1
+                                        + aggregationFieldsDescriptor.getAggFieldIdx(descriptor);
+                        value = row.getField(idx);
+                    } catch (IllegalArgumentException e) {
+                        value = row.getField(descriptor.fieldName);
+                    }
+                    descriptor.aggFunc.retractAccumulator(accumulatorState, value);
                 }
             }
             if (leftIdx < timestampList.size() && timestampList.get(leftIdx) <= timestamp) {
